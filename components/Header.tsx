@@ -1,114 +1,133 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { Phone, Mail, Instagram, Facebook, Menu, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { Menu, X, ChevronDown, Phone } from "lucide-react";
 
 export default function Header() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [dropdownVenda, setDropdownVenda] = useState(false);
+  const [dropdownLocacao, setDropdownLocacao] = useState(false);
 
   return (
-    <header className="w-full font-sans shadow-sm bg-white relative z-50">
-      
-      {/* Barra Superior (Verde Escuro) */}
-      <div className="bg-[#0f2e20] text-gray-200 text-xs py-2 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
-          <div className="flex gap-6">
-            <span className="flex items-center gap-1 hover:text-white cursor-pointer">
-              <Phone size={14} className="text-green-500" /> (42) 99975-5493
-            </span>
-            <span className="hidden sm:flex items-center gap-1 hover:text-white cursor-pointer">
-              <Mail size={14} className="text-green-500" /> contato@imobiliariaportoiguacu.com.br
-            </span>
-          </div>
-          <div className="flex gap-4 items-center">
-            <span>Segunda a Sexta 08:30 às 18:30h</span>
-            <div className="flex gap-3 border-l border-gray-700 pl-4">
-              <Link href="#" className="hover:text-green-400 transition-colors"><Facebook size={16} /></Link>
-              <Link href="#" className="hover:text-green-400 transition-colors"><Instagram size={16} /></Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Menu Principal */}
-      <div className="bg-white sticky top-0">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 h-24 flex justify-between items-center">
+    <header className="bg-white shadow-md sticky top-0 z-50 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-24">
           
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0">
-            <Image 
-              src="/logo.png" 
-              alt="Porto Iguaçu" 
-              width={200} 
-              height={80} 
-              className="h-16 w-auto object-contain"
-            />
+          {/* LOGO */}
+          <Link href="/" className="flex-shrink-0 relative w-40 h-16">
+            <Image src="/logo.png" alt="Porto Iguaçu" fill className="object-contain" priority />
           </Link>
 
-          {/* Links Centrais (Desktop) */}
-          <nav className="hidden lg:flex gap-8 font-bold text-sm uppercase text-gray-600 tracking-wide items-center h-full">
-            <Link href="/" className="hover:text-green-700 transition-colors h-full flex items-center border-b-2 border-transparent hover:border-green-600">Início</Link>
-            <Link href="/sobre" className="hover:text-green-700 transition-colors h-full flex items-center border-b-2 border-transparent hover:border-green-600">Quem somos</Link>
-            
-            {/* MENU DROPDOWN VENDA (Estilo da sua foto) */}
-            <div className="group relative h-full flex items-center cursor-pointer">
-              <span className="flex items-center gap-1 hover:text-green-700 group-hover:text-green-700 transition-colors border-b-2 border-transparent group-hover:border-green-600 h-full">
+          {/* MENU DESKTOP */}
+          <nav className="hidden md:flex items-center gap-8">
+            <Link href="/" className="text-gray-700 hover:text-green-700 font-bold text-sm uppercase tracking-wide">
+              Home
+            </Link>
+
+            {/* Dropdown VENDA */}
+            <div 
+              className="relative group"
+              onMouseEnter={() => setDropdownVenda(true)}
+              onMouseLeave={() => setDropdownVenda(false)}
+            >
+              <button className="flex items-center gap-1 text-gray-700 group-hover:text-green-700 font-bold text-sm uppercase tracking-wide py-6">
                 Venda <ChevronDown size={14} />
-              </span>
+              </button>
               
-              {/* O Menu que abre (Verde igual a foto) */}
-              <div className="absolute top-full left-0 w-56 bg-[#0f2e20] text-white shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 rounded-b-lg overflow-hidden">
-                <Link href="/imoveis/venda?tipo=apartamento" className="block px-6 py-3 hover:bg-green-700 transition-colors border-b border-green-800/50 text-xs font-bold">Apartamento</Link>
-                <Link href="/imoveis/venda?tipo=casa" className="block px-6 py-3 hover:bg-green-700 transition-colors border-b border-green-800/50 text-xs font-bold">Casa</Link>
-                <Link href="/imoveis/venda?tipo=comercial" className="block px-6 py-3 hover:bg-green-700 transition-colors border-b border-green-800/50 text-xs font-bold">Comercial</Link>
-                <Link href="/imoveis/venda?tipo=sobrado" className="block px-6 py-3 hover:bg-green-700 transition-colors border-b border-green-800/50 text-xs font-bold">Sobrado</Link>
-                <Link href="/imoveis/venda?tipo=terreno" className="block px-6 py-3 hover:bg-green-700 transition-colors border-b border-green-800/50 text-xs font-bold">Terreno</Link>
-                <Link href="/imoveis/venda?tipo=rural" className="block px-6 py-3 hover:bg-green-700 transition-colors text-xs font-bold">Terreno Rural</Link>
+              {/* Menu Flutuante */}
+              <div className={`absolute top-full left-0 w-48 bg-[#0f2e20] shadow-xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownVenda ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
+                <Link href="/imoveis/venda" className="block px-6 py-3 text-white hover:bg-green-700 text-xs font-bold uppercase border-b border-green-800">
+                  Ver Todos
+                </Link>
+                <Link href="/imoveis/venda?tipo=casa" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-xs font-bold uppercase">Casa</Link>
+                <Link href="/imoveis/venda?tipo=apartamento" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-xs font-bold uppercase">Apartamento</Link>
+                <Link href="/imoveis/venda?tipo=terreno" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-xs font-bold uppercase">Terreno</Link>
+                <Link href="/imoveis/venda?tipo=comercial" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-xs font-bold uppercase">Comercial</Link>
+                <Link href="/imoveis/venda?tipo=rural" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-xs font-bold uppercase">Rural</Link>
               </div>
             </div>
 
-            {/* MENU DROPDOWN ALUGUEL (Para manter padrão) */}
-            <div className="group relative h-full flex items-center cursor-pointer">
-              <span className="flex items-center gap-1 hover:text-green-700 group-hover:text-green-700 transition-colors border-b-2 border-transparent group-hover:border-green-600 h-full">
+            {/* Dropdown LOCAÇÃO */}
+            <div 
+              className="relative group"
+              onMouseEnter={() => setDropdownLocacao(true)}
+              onMouseLeave={() => setDropdownLocacao(false)}
+            >
+              <button className="flex items-center gap-1 text-gray-700 group-hover:text-green-700 font-bold text-sm uppercase tracking-wide py-6">
                 Locação <ChevronDown size={14} />
-              </span>
-              <div className="absolute top-full left-0 w-56 bg-[#0f2e20] text-white shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 rounded-b-lg overflow-hidden">
-                <Link href="/imoveis/aluguel?tipo=apartamento" className="block px-6 py-3 hover:bg-green-700 transition-colors border-b border-green-800/50 text-xs font-bold">Apartamento</Link>
-                <Link href="/imoveis/aluguel?tipo=casa" className="block px-6 py-3 hover:bg-green-700 transition-colors border-b border-green-800/50 text-xs font-bold">Casa</Link>
-                <Link href="/imoveis/aluguel?tipo=comercial" className="block px-6 py-3 hover:bg-green-700 transition-colors text-xs font-bold">Comercial</Link>
+              </button>
+              
+              <div className={`absolute top-full left-0 w-48 bg-[#0f2e20] shadow-xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownLocacao ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
+                <Link href="/imoveis/aluguel" className="block px-6 py-3 text-white hover:bg-green-700 text-xs font-bold uppercase border-b border-green-800">
+                  Ver Todos
+                </Link>
+                <Link href="/imoveis/aluguel?tipo=casa" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-xs font-bold uppercase">Casa</Link>
+                <Link href="/imoveis/aluguel?tipo=apartamento" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-xs font-bold uppercase">Apartamento</Link>
+                <Link href="/imoveis/aluguel?tipo=comercial" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-xs font-bold uppercase">Comercial</Link>
               </div>
             </div>
 
-            <Link href="/anuncie" className="hover:text-green-700 transition-colors h-full flex items-center border-b-2 border-transparent hover:border-green-600">Anuncie Conosco</Link>
-            <Link href="/contato" className="hover:text-green-700 transition-colors h-full flex items-center border-b-2 border-transparent hover:border-green-600">Fale Conosco</Link>
-          </nav>
-
-          {/* Botão de Destaque */}
-          <div className="flex items-center gap-4">
-            <Link href="/imoveis/venda" className="hidden lg:block bg-green-600 text-white px-6 py-2.5 rounded-full font-bold shadow-md hover:bg-green-700 hover:shadow-lg transition-all transform hover:-translate-y-0.5 text-xs tracking-wider">
-              BUSCAR IMÓVEIS
+            <Link href="/sobre" className="text-gray-700 hover:text-green-700 font-bold text-sm uppercase tracking-wide">
+              A Imobiliária
             </Link>
             
-            {/* Mobile Menu Toggle */}
-            <button className="lg:hidden text-green-800" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              <Menu size={32} />
-            </button>
+            <Link href="/anuncie" className="text-gray-700 hover:text-green-700 font-bold text-sm uppercase tracking-wide">
+              Anuncie Conosco
+            </Link>
+          </nav>
+
+          {/* BOTÃO WHATSAPP (MANTIDO POIS É IMPORTANTE) */}
+          <div className="hidden md:block">
+            <Link 
+              href="https://api.whatsapp.com/send?phone=5542998439975" 
+              target="_blank"
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-full font-bold text-xs uppercase transition-all shadow-md hover:shadow-lg"
+            >
+              <Phone size={16} /> Fale Conosco
+            </Link>
           </div>
+
+          {/* BOTÃO MOBILE */}
+          <button 
+            onClick={() => setMenuAberto(!menuAberto)} 
+            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+          >
+            {menuAberto ? <X size={28} /> : <Menu size={28} />}
+          </button>
         </div>
       </div>
 
-      {/* Menu Mobile (Simples para funcionar em telas pequenas) */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-100 absolute w-full left-0 top-full shadow-lg">
-          <nav className="flex flex-col p-4 font-bold text-gray-600">
-            <Link href="/" className="py-3 border-b border-gray-100">Início</Link>
-            <Link href="/imoveis/venda" className="py-3 border-b border-gray-100 text-green-700">Comprar</Link>
-            <Link href="/imoveis/aluguel" className="py-3 border-b border-gray-100">Alugar</Link>
-            <Link href="/anuncie" className="py-3 border-b border-gray-100">Anuncie</Link>
-            <Link href="/sobre" className="py-3">Quem somos</Link>
-          </nav>
+      {/* MENU MOBILE (Expansível) */}
+      {menuAberto && (
+        <div className="md:hidden bg-white border-t border-gray-100 absolute w-full left-0 top-24 shadow-xl h-[calc(100vh-6rem)] overflow-y-auto">
+          <div className="p-4 space-y-2">
+            <Link href="/" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-gray-800 hover:bg-green-50 rounded-lg uppercase text-sm">Home</Link>
+            
+            {/* Mobile Venda */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="font-bold text-green-800 text-xs uppercase mb-3">Venda</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/imoveis/venda" onClick={() => setMenuAberto(false)} className="text-sm text-gray-600 font-medium hover:text-green-700">Ver Todos</Link>
+                <Link href="/imoveis/venda?tipo=casa" onClick={() => setMenuAberto(false)} className="text-sm text-gray-600 font-medium hover:text-green-700">Casas</Link>
+                <Link href="/imoveis/venda?tipo=apartamento" onClick={() => setMenuAberto(false)} className="text-sm text-gray-600 font-medium hover:text-green-700">Aps</Link>
+                <Link href="/imoveis/venda?tipo=terreno" onClick={() => setMenuAberto(false)} className="text-sm text-gray-600 font-medium hover:text-green-700">Terrenos</Link>
+              </div>
+            </div>
+
+            {/* Mobile Locação */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="font-bold text-green-800 text-xs uppercase mb-3">Locação</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/imoveis/aluguel" onClick={() => setMenuAberto(false)} className="text-sm text-gray-600 font-medium hover:text-green-700">Ver Todos</Link>
+                <Link href="/imoveis/aluguel?tipo=casa" onClick={() => setMenuAberto(false)} className="text-sm text-gray-600 font-medium hover:text-green-700">Casas</Link>
+                <Link href="/imoveis/aluguel?tipo=apartamento" onClick={() => setMenuAberto(false)} className="text-sm text-gray-600 font-medium hover:text-green-700">Aps</Link>
+              </div>
+            </div>
+            <Link href="/anuncie" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-gray-800 hover:bg-green-50 rounded-lg uppercase text-sm">Anuncie Conosco</Link>
+            <Link href="/admin/imoveis" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-gray-400 hover:bg-gray-50 rounded-lg uppercase text-xs">Área Administrativa</Link>
+          </div>
         </div>
       )}
     </header>
