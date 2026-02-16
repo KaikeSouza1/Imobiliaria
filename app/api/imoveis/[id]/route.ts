@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { query } from "@/lib/db";
 
-// GET: Puxa as informações que já existem
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+// GET: Puxa as informações do banco
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    // ESSENCIAL: Aguarda a Promise do params para o Next.js 15+
-    const { id } = await params;
+    const { id } = await params; // Unwrapping obrigatório no Next 15
 
     const res = await query("SELECT * FROM imoveis WHERE id = $1", [id]);
     
@@ -20,16 +22,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     return NextResponse.json(imovel);
   } catch (error) {
-    console.error("Erro ao buscar imóvel:", error);
-    return NextResponse.json({ error: "Erro interno no servidor" }, { status: 500 });
+    console.error(error);
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
 
-// PUT: Salva as alterações feitas
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+// PUT: Atualiza o imóvel
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params;
-    const body = await req.json();
+    const body = await request.json();
     
     const preco = parseFloat(body.preco) || 0;
     const area = parseInt(body.area) || 0;
@@ -50,21 +55,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       body.ativo, id
     ]);
 
-    return NextResponse.json({ message: "Imóvel atualizado com sucesso!" });
+    return NextResponse.json({ message: "Atualizado!" });
   } catch (error) {
-    console.error("Erro ao atualizar:", error);
-    return NextResponse.json({ error: "Erro ao atualizar no banco" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao atualizar" }, { status: 500 });
   }
 }
 
 // DELETE: Exclui o imóvel
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params;
     await query("DELETE FROM imoveis WHERE id = $1", [id]);
-    return NextResponse.json({ message: "Excluído com sucesso" });
+    return NextResponse.json({ message: "Excluído!" });
   } catch (error) {
-    console.error("Erro ao excluir:", error);
     return NextResponse.json({ error: "Erro ao excluir" }, { status: 500 });
   }
 }
