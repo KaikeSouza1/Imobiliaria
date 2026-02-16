@@ -1,34 +1,33 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
-// GET: Busca um único imóvel para carregar no formulário de edição
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+// GET: Buscar um único imóvel (para preencher o formulário de edição)
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const res = await query("SELECT * FROM imoveis WHERE id = $1", [params.id]);
-    const fotos = await query("SELECT url FROM imovel_fotos WHERE imovel_id = $1", [params.id]);
-    
-    if (res.rows.length === 0) return NextResponse.json({ error: "Imóvel não encontrado" }, { status: 404 });
+    const { id } = await params;
+    const res = await query("SELECT * FROM imoveis WHERE id = $1", [id]);
+    const fotos = await query("SELECT url FROM imovel_fotos WHERE imovel_id = $1", [id]);
+
+    if (res.rows.length === 0) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
     const imovel = res.rows[0];
-    imovel.fotos_adicionais = fotos.rows.map((f: any) => f.url);
+    imovel.fotos_adicionais = fotos.rows.map((f: { url: string }) => f.url);
 
     return NextResponse.json(imovel);
   } catch (error) {
-    return NextResponse.json({ error: "Erro ao buscar imóvel" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao buscar" }, { status: 500 });
   }
 }
 
-// PUT: Altera os dados ou o status (ativo/inativo)
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+// PUT: Atualizar dados (incluindo Inativar/Ativar)
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const body = await req.json();
-    
-    // Tratamento de números para evitar o erro de sintaxe que deu antes
-    const preco = parseFloat(body.preco) || 0;
-    const area = parseInt(body.area) || 0;
-    const quartos = parseInt(body.quartos) || 0;
-    const banheiros = parseInt(body.banheiros) || 0;
-    const vagas = parseInt(body.vagas) || 0;
+    const {
+      titulo, descricao, preco, tipo, finalidade, cidade, bairro,
+      endereco, area, quartos, banheiros, vagas, imagem_url, codigo, ativo
+    } = body;
 
     const sql = `
       UPDATE imoveis SET 
@@ -38,22 +37,21 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     `;
 
     await query(sql, [
-      body.titulo, body.descricao, preco, body.tipo, body.finalidade, body.cidade, 
-      body.bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo, 
-      body.ativo, params.id
+      titulo, descricao, preco, tipo, finalidade, cidade, bairro,
+      endereco, area, quartos, banheiros, vagas, imagem_url, codigo, ativo, id
     ]);
 
     return NextResponse.json({ message: "Atualizado com sucesso" });
   } catch (error) {
-    console.error(error);
     return NextResponse.json({ error: "Erro ao atualizar" }, { status: 500 });
   }
 }
 
-// DELETE: Remove o imóvel e as fotos (cascade)
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+// DELETE: Excluir imóvel
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await query("DELETE FROM imoveis WHERE id = $1", [params.id]);
+    const { id } = await params;
+    await query("DELETE FROM imoveis WHERE id = $1", [id]);
     return NextResponse.json({ message: "Excluído com sucesso" });
   } catch (error) {
     return NextResponse.json({ error: "Erro ao excluir" }, { status: 500 });
