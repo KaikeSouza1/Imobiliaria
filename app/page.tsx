@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation"; 
 import { Search, MapPin, Home, Key, ArrowRight, CheckCircle2, Hash, LayoutGrid, Lock, Loader2 } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
-import CustomSelect from "@/components/CustomSelect"; // Certifique-se que este componente suporta z-index alto
+import CustomSelect from "@/components/CustomSelect"; 
 import HomeContact from "@/components/HomeContact";
 
 interface Imovel {
@@ -74,11 +74,12 @@ export default function Page() {
     const params = new URLSearchParams();
     if (filters.tipo) params.append("tipo", filters.tipo);
     if (filters.cidade) params.append("cidade", filters.cidade);
+    if (filters.bairro) params.append("bairro", filters.bairro);
     router.push(`${baseRoute}?${params.toString()}`);
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(Filters => ({ ...Filters, [key]: value }));
   };
 
   const mapToCard = (imovel: Imovel) => ({
@@ -90,73 +91,78 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-slate-50 font-sans overflow-x-hidden relative">
       
-      {/* Luzes de Fundo */}
-      <div className="absolute top-[600px] -left-20 w-[500px] h-[500px] bg-green-200/40 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute top-[1200px] -right-20 w-[600px] h-[600px] bg-green-100/50 rounded-full blur-[120px] pointer-events-none"></div>
-
       {/* === HERO SECTION === */}
-      <section className="relative h-[700px] w-full flex items-center overflow-hidden z-10">
+      <section className="relative h-[750px] w-full flex items-center justify-center overflow-hidden z-10">
         <div className="absolute inset-0 z-0">
            <Image src="/banner.jpg" alt="Banner" fill className="object-cover" priority />
         </div>
-        <div className="absolute inset-0 z-1 bg-gradient-to-r from-black/90 via-black/50 to-transparent"></div>
+        <div className="absolute inset-0 z-1 bg-black/60"></div>
         
-        <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pt-10">
-          <h1 className="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6 drop-shadow-xl">
-            Aqui seu sonho <br/> <span className="text-green-400">acontece!</span>
+        <div className="relative z-10 max-w-5xl mx-auto px-6 w-full text-center mt-20">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-2xl uppercase tracking-wide">
+            Bem-Vindo À Imobiliária Porto Iguaçu
           </h1>
-          <p className="text-xl text-white max-w-xl mb-10 font-medium border-l-4 border-green-500 pl-6 drop-shadow-md">
-            Clique no botão abaixo e confira nossos imóveis exclusivos selecionados para você.
+          <p className="text-lg md:text-xl text-white/90 max-w-4xl mx-auto leading-relaxed drop-shadow-md font-medium">
+            Na Imobiliária Porto Iguaçu, conectamos sonhos aos endereços certos. Com experiência no mercado imobiliário das gêmeas do Iguaçu, nossa equipe de especialistas está aqui para ajudá-lo a encontrar o lar perfeito ou o investimento ideal.
           </p>
-          <Link href="/imoveis/venda" className="inline-flex bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-full font-bold shadow-lg transition-all transform hover:-translate-y-1 items-center gap-3">
-            Quero conferir!
-          </Link>
         </div>
       </section>
 
-      {/* === BARRA DE BUSCA (CORREÇÃO AQUI) === */}
-      <div className="relative -mt-32 z-30 px-4"> {/* Aumentei z-index para z-30 */}
-        
-        {/* CORREÇÃO IMPORTANTE: Removi 'overflow-hidden' desta div para o menu não cortar */}
-        <div className="max-w-6xl mx-auto bg-white rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] border border-gray-100 relative">
+      {/* === BARRA DE BUSCA (INTEIRA VERDE ESCURO SÓLIDO) === */}
+      <div className="relative -mt-32 z-30 px-4">
+        {/* Fundo sólido bg-[#0f2e20] para acabar com o problema do degradê */}
+        <div className="max-w-6xl mx-auto bg-[#0f2e20] rounded-[2rem] shadow-2xl border border-green-800 relative font-bold overflow-hidden">
           
+          {/* Parte Superior (Texto Branco) */}
           <div className="p-8 pb-6">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2 mb-8">
-              Encontre seu imóvel ideal
-              <span className="h-1.5 w-16 bg-green-600 rounded-full ml-4 block"></span>
+            <h2 className="text-2xl font-black text-white flex items-center gap-3 mb-8 uppercase tracking-tight">
+              ENCONTRE SEU IMÓVEL AQUI
+              <div className="h-1.5 w-12 bg-white rounded-full hidden md:block"></div>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <CustomSelect label="Finalidade" icon={<Key size={14}/>} value={filters.finalidade} onChange={(v) => handleFilterChange('finalidade', v)} options={[{ label: "Comprar", value: "Comprar" }, { label: "Alugar", value: "Alugar" }]} />
-              <CustomSelect label="Tipo" icon={<Home size={14}/>} value={filters.tipo} onChange={(v) => handleFilterChange('tipo', v)} options={[{ label: "Todos", value: "" }, { label: "Casa", value: "Casa" }, { label: "Apartamento", value: "Apartamento" }, { label: "Terreno", value: "Terreno" }, { label: "Comercial", value: "Comercial" }]} />
-              <CustomSelect label="Cidade" icon={<MapPin size={14}/>} value={filters.cidade} onChange={(v) => handleFilterChange('cidade', v)} options={[{ label: "Todas", value: "" }, { label: "Porto União", value: "Porto União" }, { label: "União da Vitória", value: "União da Vitória" }]} />
-              <CustomSelect label="Bairro" icon={<LayoutGrid size={14}/>} value={filters.bairro} onChange={(v) => handleFilterChange('bairro', v)} options={[{ label: "Todos", value: "" }, { label: "Centro", value: "Centro" }, { label: "São Cristóvão", value: "São Cristóvão" }]} />
+              {/* Os inputs brancos vão destacar muito bem no fundo escuro */}
+              <CustomSelect label="Finalidade" icon={<Key size={14} className="text-white"/>} value={filters.finalidade} onChange={(v) => handleFilterChange('finalidade', v)} options={[{ label: "Comprar", value: "Comprar" }, { label: "Alugar", value: "Alugar" }]} />
+              <CustomSelect label="Tipo" icon={<Home size={14} className="text-white"/>} value={filters.tipo} onChange={(v) => handleFilterChange('tipo', v)} options={[{ label: "Todos", value: "" }, { label: "Casa", value: "Casa" }, { label: "Apartamento", value: "Apartamento" }, { label: "Terreno", value: "Terreno" }, { label: "Comercial", value: "Comercial" }]} />
+              <CustomSelect label="Cidade" icon={<MapPin size={14} className="text-white"/>} value={filters.cidade} onChange={(v) => handleFilterChange('cidade', v)} options={[{ label: "Todas", value: "" }, { label: "Porto União", value: "Porto União" }, { label: "União da Vitória", value: "União da Vitória" }]} />
+              <CustomSelect label="Bairro" icon={<LayoutGrid size={14} className="text-white"/>} value={filters.bairro} onChange={(v) => handleFilterChange('bairro', v)} options={[{ label: "Todos", value: "" }, { label: "Centro", value: "Centro" }, { label: "São Cristóvão", value: "São Cristóvão" }]} />
             </div>
           </div>
           
-          {/* Mantive overflow-hidden APENAS na parte de baixo onde não tem dropdown */}
-          <div className="bg-gray-50 border-t border-gray-100 p-6 flex flex-col md:flex-row items-center justify-between gap-4 rounded-b-[2rem]">
+          {/* Parte Inferior (Separador sutil e texto branco) */}
+          <div className="bg-[#0a1f16]/50 border-t border-green-800/50 p-6 flex flex-col md:flex-row items-center justify-between gap-4 rounded-b-[2rem]">
             <div className="w-full md:w-auto flex items-center gap-3">
-              <span className="text-xs font-bold text-gray-400 uppercase hidden md:block tracking-wide">CÓDIGO DO IMÓVEL:</span>
+              <span className="text-xs font-black text-white uppercase hidden md:block tracking-wide">BUSCAR POR CÓDIGO:</span>
               <div className="relative group w-full md:w-64">
-                <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-600 transition-colors" />
-                <input type="text" placeholder="Digite aqui..." className="w-full bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all placeholder:text-gray-300" value={filters.codigo} onChange={(e) => handleFilterChange('codigo', e.target.value)} />
+                <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Digite o código..." 
+                  className="w-full bg-white text-gray-800 border-none text-sm font-black rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-4 focus:ring-green-500 transition-all placeholder:text-gray-400 shadow-md" 
+                  value={filters.codigo} 
+                  onChange={(e) => handleFilterChange('codigo', e.target.value)} 
+                />
               </div>
             </div>
-            <button onClick={handleSearch} className="w-full md:w-auto bg-[#0f2e20] hover:bg-green-900 text-white rounded-xl font-bold py-3 px-12 transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-green-900/20 active:scale-95 text-sm uppercase tracking-wider">
-              <Search size={18} strokeWidth={3} /> Ver Resultados
+            
+            {/* Botão Verde mais claro para destacar */}
+            <button 
+              onClick={handleSearch} 
+              className="w-full md:w-auto bg-[#009c3b] hover:bg-white hover:text-[#009c3b] text-white rounded-xl font-black py-3 px-12 transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95 text-sm uppercase tracking-wider transform hover:-translate-y-1"
+            >
+              <Search size={18} strokeWidth={3} /> Procurar
             </button>
           </div>
         </div>
       </div>
 
-      {/* === SEÇÃO 1: VENDA === */}
+      {/* === RESTO DO SITE === */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 mt-24 mb-16">
         <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
           <div>
-            <span className="text-green-600 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2"><CheckCircle2 size={16} /> Oportunidades Exclusivas</span>
+            <span className="text-green-700 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2"><CheckCircle2 size={16} /> Oportunidades Exclusivas</span>
             <h2 className="text-4xl font-extrabold text-slate-900">Venda</h2>
           </div>
-          <Link href="/imoveis/venda" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-green-600 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">Ver todos à venda <ArrowRight size={16}/></Link>
+          <Link href="/imoveis/venda" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-green-700 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">Ver todos à venda <ArrowRight size={16}/></Link>
         </div>
         
         {loading ? (
@@ -176,14 +182,13 @@ export default function Page() {
 
       <div className="max-w-7xl mx-auto px-4 relative z-10"><div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div></div>
 
-      {/* === SEÇÃO 2: ALUGUEL === */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 mt-16 mb-20">
         <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
           <div>
-            <span className="text-blue-600 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2"><CheckCircle2 size={16} /> Prontos para morar</span>
+            <span className="text-blue-700 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2"><CheckCircle2 size={16} /> Prontos para morar</span>
             <h2 className="text-4xl font-extrabold text-slate-900">Locação</h2>
           </div>
-          <Link href="/imoveis/aluguel" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-blue-600 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">Ver todos para alugar <ArrowRight size={16}/></Link>
+          <Link href="/imoveis/aluguel" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-blue-700 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">Ver todos para alugar <ArrowRight size={16}/></Link>
         </div>
         
         {loading ? (
