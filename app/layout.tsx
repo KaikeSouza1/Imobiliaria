@@ -7,7 +7,7 @@ import Footer from "@/components/Footer"; // Importando o Footer novo
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Pedroso Imóveis",
+  title: "Imobiliária Porto Iguaçu",
   description: "Encontre o imóvel dos seus sonhos",
 };
 
