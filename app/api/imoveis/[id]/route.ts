@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
-// GET: Puxa as informações do banco para o formulário
+// GET: Puxa as informações que já existem
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // CORREÇÃO: No Next.js 15+ precisamos dar await no params
+    // ESSENCIAL: Aguarda a Promise do params para o Next.js 15+
     const { id } = await params;
 
     const res = await query("SELECT * FROM imoveis WHERE id = $1", [id]);
@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// PUT: Salva as alterações
+// PUT: Salva as alterações feitas
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -50,8 +50,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       body.ativo, id
     ]);
 
-    return NextResponse.json({ message: "Atualizado com sucesso!" });
+    return NextResponse.json({ message: "Imóvel atualizado com sucesso!" });
   } catch (error) {
+    console.error("Erro ao atualizar:", error);
     return NextResponse.json({ error: "Erro ao atualizar no banco" }, { status: 500 });
   }
 }
@@ -63,6 +64,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await query("DELETE FROM imoveis WHERE id = $1", [id]);
     return NextResponse.json({ message: "Excluído com sucesso" });
   } catch (error) {
+    console.error("Erro ao excluir:", error);
     return NextResponse.json({ error: "Erro ao excluir" }, { status: 500 });
   }
 }
