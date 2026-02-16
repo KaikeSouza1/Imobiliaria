@@ -125,6 +125,7 @@ export default function Header() {
                 <Link href="/imoveis/aluguel?tipo=apartamento" onClick={() => setMenuAberto(false)} className="text-sm text-gray-600 font-medium hover:text-green-700">Aps</Link>
               </div>
             </div>
+
             <Link href="/anuncie" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-gray-800 hover:bg-green-50 rounded-lg uppercase text-sm">Anuncie Conosco</Link>
             <Link href="/admin/imoveis" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-gray-400 hover:bg-gray-50 rounded-lg uppercase text-xs">Área Administrativa</Link>
           </div>
