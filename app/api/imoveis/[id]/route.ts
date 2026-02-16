@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // Unwrapping obrigatório no Next 15
+    const { id } = await params;
 
     const res = await query("SELECT * FROM imoveis WHERE id = $1", [id]);
     
@@ -27,7 +27,7 @@ export async function GET(
   }
 }
 
-// PUT: Atualiza o imóvel
+// PUT: Atualiza o imóvel (incluindo status)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,18 +41,19 @@ export async function PUT(
     const quartos = parseInt(body.quartos) || 0;
     const banheiros = parseInt(body.banheiros) || 0;
     const vagas = parseInt(body.vagas) || 0;
+    const status = body.status || "disponivel"; // NOVO
 
     const sql = `
       UPDATE imoveis SET 
       titulo=$1, descricao=$2, preco=$3, tipo=$4, finalidade=$5, cidade=$6, bairro=$7, 
-      endereco=$8, area=$9, quartos=$10, banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15
-      WHERE id = $16
+      endereco=$8, area=$9, quartos=$10, banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15, status=$16
+      WHERE id = $17
     `;
 
     await query(sql, [
       body.titulo, body.descricao, preco, body.tipo, body.finalidade, body.cidade, 
       body.bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo, 
-      body.ativo, id
+      body.ativo, status, id
     ]);
 
     return NextResponse.json({ message: "Atualizado!" });

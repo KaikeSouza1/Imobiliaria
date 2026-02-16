@@ -11,13 +11,13 @@ export default function NovoImovelPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   
-  // Estado do formulário completo e unificado
   const [formData, setFormData] = useState({
     titulo: "", 
     codigo: "", 
     preco: "", 
     tipo: "Casa", 
     finalidade: "Venda",
+    status: "disponivel", // NOVO CAMPO
     cidade: "", 
     bairro: "", 
     endereco: "", 
@@ -26,23 +26,20 @@ export default function NovoImovelPage() {
     banheiros: "0", 
     vagas: "0", 
     descricao: "",
-    imagem_url: "", // Foto principal (capa)
-    fotos_adicionais: [] as string[] // Galeria de fotos
+    imagem_url: "",
+    fotos_adicionais: [] as string[]
   });
 
-  // Função de Upload que lida com múltiplos arquivos
   const uploadFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return null;
-
     setUploading(true);
     const data = new FormData();
     Array.from(files).forEach(file => data.append("file", file));
-
     try {
       const res = await fetch("/api/upload", { method: "POST", body: data });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Erro no upload");
-      return json.urls; // Retorna array de links do Cloudinary
+      return json.urls;
     } catch (error) {
       console.error(error);
       alert("Erro ao enviar imagem para o Cloudinary.");
@@ -52,7 +49,6 @@ export default function NovoImovelPage() {
     }
   };
 
-  // Upload da Capa (sempre pega apenas a primeira foto)
   const handleCapaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const urls = await uploadFiles(e.target.files);
     if (urls && urls.length > 0) {
@@ -60,7 +56,6 @@ export default function NovoImovelPage() {
     }
   };
 
-  // Upload da Galeria (permite adicionar várias ao que já existe)
   const handleGaleriaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const urls = await uploadFiles(e.target.files);
     if (urls) {
@@ -71,7 +66,6 @@ export default function NovoImovelPage() {
     }
   };
 
-  // Remover foto específica da galeria
   const removeFoto = (index: number) => {
     setFormData(prev => ({
       ...prev,
@@ -79,7 +73,6 @@ export default function NovoImovelPage() {
     }));
   };
 
-  // Enviar todos os dados para o Banco de Dados
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,7 +83,6 @@ export default function NovoImovelPage() {
 
     setLoading(true);
 
-    // CORREÇÃO: Converte strings vazias em números para não dar erro no Postgres
     const dadosParaEnviar = {
       ...formData,
       preco: parseFloat(formData.preco) || 0,
@@ -122,10 +114,18 @@ export default function NovoImovelPage() {
     }
   };
 
-  // Atualizador genérico de campos de texto e select
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+
+  const statusOptions = [
+    { value: "disponivel", label: "✅ Disponível", color: "text-green-700 bg-green-50 border-green-200" },
+    { value: "vendido",    label: "🔴 Vendido",    color: "text-red-700 bg-red-50 border-red-200" },
+    { value: "alugado",    label: "🟠 Alugado",    color: "text-orange-700 bg-orange-50 border-orange-200" },
+    { value: "reservado",  label: "🟡 Reservado",  color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
+  ];
+
+  const selectedStatusStyle = statusOptions.find(s => s.value === formData.status)?.color || "";
 
   return (
     <div className="max-w-5xl mx-auto pb-20">
@@ -138,7 +138,7 @@ export default function NovoImovelPage() {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         
-        {/* SEÇÃO 1: IMAGENS (Capa + Galeria) */}
+        {/* SEÇÃO 1: IMAGENS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Imagens</h2>
           
@@ -190,7 +190,36 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 2: DADOS BÁSICOS */}
+        {/* SEÇÃO 2: STATUS DO IMÓVEL (NOVO) */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Status do Imóvel</h2>
+          <p className="text-xs text-gray-400 mb-4">Defina o status atual. Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards.</p>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {statusOptions.map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer font-bold text-sm transition-all
+                  ${formData.status === opt.value
+                    ? opt.color + " border-current shadow-md scale-[1.02]"
+                    : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"
+                  }`}
+              >
+                <input
+                  type="radio"
+                  name="status"
+                  value={opt.value}
+                  checked={formData.status === opt.value}
+                  onChange={handleChange}
+                  className="hidden"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* SEÇÃO 3: DADOS BÁSICOS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
             <label className="label-admin">Título do Anúncio</label>
@@ -224,7 +253,7 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 3: LOCALIZAÇÃO FLEXÍVEL */}
+        {/* SEÇÃO 4: LOCALIZAÇÃO */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="label-admin">Cidade</label>
@@ -250,7 +279,7 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 4: CARACTERÍSTICAS TÉCNICAS */}
+        {/* SEÇÃO 5: CARACTERÍSTICAS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <label className="label-admin">Área (m²)</label>

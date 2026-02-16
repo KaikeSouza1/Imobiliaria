@@ -9,7 +9,7 @@ import Link from "next/link";
 export default function EditarImovelPage() {
   const router = useRouter();
   const params = useParams();
-  const id = params.id; // No client component do Next 15 ele já extrai o ID
+  const id = params.id;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -17,6 +17,7 @@ export default function EditarImovelPage() {
   
   const [formData, setFormData] = useState({
     titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
+    status: "disponivel", // NOVO CAMPO
     cidade: "", bairro: "", endereco: "", area: "",
     quartos: "0", banheiros: "0", vagas: "0", descricao: "",
     imagem_url: "", fotos_adicionais: [] as string[], ativo: true
@@ -25,13 +26,10 @@ export default function EditarImovelPage() {
   useEffect(() => {
     async function loadImovel() {
       if (!id) return;
-      
       try {
         const res = await fetch(`/api/imoveis/${id}`);
         if (!res.ok) throw new Error("Não encontrado");
-        
         const data = await res.json();
-        
         setFormData({
           ...data,
           preco: data.preco.toString(),
@@ -39,6 +37,7 @@ export default function EditarImovelPage() {
           quartos: data.quartos?.toString() || "0",
           banheiros: data.banheiros?.toString() || "0",
           vagas: data.vagas?.toString() || "0",
+          status: data.status || "disponivel", // NOVO
           fotos_adicionais: data.fotos_adicionais || []
         });
       } catch (error) {
@@ -91,6 +90,13 @@ export default function EditarImovelPage() {
     }
   };
 
+  const statusOptions = [
+    { value: "disponivel", label: "✅ Disponível", color: "text-green-700 bg-green-50 border-green-200" },
+    { value: "vendido",    label: "🔴 Vendido",    color: "text-red-700 bg-red-50 border-red-200" },
+    { value: "alugado",    label: "🟠 Alugado",    color: "text-orange-700 bg-orange-50 border-orange-200" },
+    { value: "reservado",  label: "🟡 Reservado",  color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
+  ];
+
   if (loading) return (
     <div className="p-20 text-center flex flex-col items-center gap-4">
       <Loader2 className="animate-spin text-green-700" size={40} />
@@ -106,6 +112,7 @@ export default function EditarImovelPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+
         {/* SEÇÃO FOTOS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-1">
@@ -141,7 +148,36 @@ export default function EditarImovelPage() {
           </div>
         </div>
 
-        {/* DADOS (IGUAL AO CADASTRO) */}
+        {/* SEÇÃO STATUS DO IMÓVEL (NOVO) */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider">Status do Imóvel</h2>
+          <p className="text-xs text-gray-400 mb-4">Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards do site.</p>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {statusOptions.map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer font-bold text-sm transition-all
+                  ${formData.status === opt.value
+                    ? opt.color + " border-current shadow-md scale-[1.02]"
+                    : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"
+                  }`}
+              >
+                <input
+                  type="radio"
+                  name="status"
+                  value={opt.value}
+                  checked={formData.status === opt.value}
+                  onChange={handleChange}
+                  className="hidden"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* DADOS BÁSICOS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2"><label className="label-admin">Título</label><input name="titulo" required value={formData.titulo} onChange={handleChange} className="input-admin" /></div>
           <div><label className="label-admin">Preço (R$)</label><input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="input-admin" /></div>

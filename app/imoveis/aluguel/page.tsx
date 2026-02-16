@@ -31,16 +31,13 @@ function AluguelContent() {
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState("Todos");
 
-  // 1. BUSCAR DO BANCO
   useEffect(() => {
     async function fetchImoveis() {
       try {
         const res = await fetch("/api/imoveis");
         if (res.ok) {
           const data = await res.json();
-          // Filtra só o que é ALUGUEL e está ATIVO
-          // Aceita tanto "Aluguel" quanto "Locação" se você tiver escrito diferente no cadastro
-          const apenasAluguel = data.filter((item: Imovel) => 
+          const apenasAluguel = data.filter((item: Imovel) =>
             item.ativo && (item.finalidade === "Aluguel" || item.finalidade === "Locação")
           );
           setImoveis(apenasAluguel);
@@ -54,7 +51,6 @@ function AluguelContent() {
     fetchImoveis();
   }, []);
 
-  // 2. ATUALIZAR FILTROS PELA URL
   useEffect(() => {
     if (tipoUrl) {
       const tipoFormatado = tipoUrl.charAt(0).toUpperCase() + tipoUrl.slice(1).toLowerCase();
@@ -64,11 +60,10 @@ function AluguelContent() {
     }
   }, [tipoUrl]);
 
-  const imoveisFiltrados = filtroTipo === "Todos" 
-    ? imoveis 
+  const imoveisFiltrados = filtroTipo === "Todos"
+    ? imoveis
     : imoveis.filter(imovel => imovel.tipo.toLowerCase().includes(filtroTipo.toLowerCase()));
 
-  // Formata o preço com "/mês" no final para aluguel
   const formatMoney = (val: number) => {
     const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
     return `${money}/mês`;
@@ -82,6 +77,7 @@ function AluguelContent() {
 
   return (
     <>
+      {/* BARRA DE FILTROS */}
       <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-20">
         <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-gray-600 font-medium text-sm order-2 md:order-1">
@@ -95,8 +91,8 @@ function AluguelContent() {
                 key={tipo}
                 onClick={() => setFiltroTipo(tipo)}
                 className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all border ${
-                  filtroTipo === tipo 
-                  ? "bg-blue-600 text-white border-blue-600 shadow-md" 
+                  filtroTipo === tipo
+                  ? "bg-blue-600 text-white border-blue-600 shadow-md"
                   : "bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600"
                 }`}
               >
@@ -107,6 +103,7 @@ function AluguelContent() {
         </div>
       </div>
 
+      {/* GRID */}
       <div className="max-w-7xl mx-auto px-4 mt-10">
         {loading ? (
           <div className="text-center py-20 flex flex-col items-center text-gray-400">
@@ -126,7 +123,9 @@ function AluguelContent() {
             </div>
             <h3 className="text-xl font-bold text-gray-800">Nenhum imóvel encontrado</h3>
             <p className="text-gray-500 mt-2">Não encontramos imóveis para alugar nesta categoria.</p>
-            <button onClick={() => setFiltroTipo("Todos")} className="mt-6 text-blue-600 font-bold hover:underline">Ver todos disponíveis</button>
+            <button onClick={() => setFiltroTipo("Todos")} className="mt-6 text-blue-600 font-bold hover:underline">
+              Ver todos disponíveis
+            </button>
           </div>
         )}
       </div>
@@ -137,9 +136,16 @@ function AluguelContent() {
 export default function AluguelPage() {
   return (
     <main className="min-h-screen bg-slate-50 font-sans pb-20">
-      <section className="relative h-[250px] bg-[#0f2e20] flex items-center justify-center">
+
+      {/* HERO — altura maior e conteúdo no fundo para não sobrepor o header fixo */}
+      <section className="relative h-[320px] bg-[#0f2e20] flex items-end justify-center pb-12">
         <div className="absolute inset-0 overflow-hidden">
-          <Image src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1920" alt="Fundo" fill className="object-cover opacity-20" />
+          <Image
+            src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1920"
+            alt="Fundo"
+            fill
+            className="object-cover opacity-20"
+          />
         </div>
         <div className="relative z-10 text-center text-white px-4">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-2">Alugar Imóvel</h1>

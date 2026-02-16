@@ -14,30 +14,29 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     
-    // Tratamento de tipos para evitar erros no PostgreSQL
     const preco = parseFloat(body.preco) || 0;
     const area = parseInt(body.area) || 0;
     const quartos = parseInt(body.quartos) || 0;
     const banheiros = parseInt(body.banheiros) || 0;
     const vagas = parseInt(body.vagas) || 0;
+    const status = body.status || "disponivel"; // NOVO
 
     const sqlImovel = `
       INSERT INTO imoveis (
         titulo, descricao, preco, tipo, finalidade, cidade, bairro, 
-        endereco, area, quartos, banheiros, vagas, imagem_url, codigo
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        endereco, area, quartos, banheiros, vagas, imagem_url, codigo, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id
     `;
 
     const values = [
       body.titulo, body.descricao, preco, body.tipo, body.finalidade, body.cidade, 
-      body.bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo
+      body.bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo, status
     ];
 
     const result = await query(sqlImovel, values);
     const novoImovelId = result.rows[0].id;
 
-    // Salva a galeria de fotos
     if (body.fotos_adicionais && body.fotos_adicionais.length > 0) {
       for (const url of body.fotos_adicionais) {
         await query(
