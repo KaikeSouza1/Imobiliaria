@@ -137,17 +137,18 @@ export default function Page() {
     <main className="min-h-screen bg-slate-50 font-sans overflow-x-hidden relative">
       
       {/* HERO SECTION */}
-      <section className="relative h-[650px] w-full flex items-center justify-center z-10">
+      <section className="relative h-[750px] w-full flex items-center justify-center overflow-hidden z-10">
         <div className="absolute inset-0 z-0">
            <Image src="/banner.jpg" alt="Banner" fill className="object-cover" priority />
         </div>
         <div className="absolute inset-0 z-1 bg-black/60"></div>
-        <div className="relative z-10 max-w-5xl mx-auto px-6 w-full text-center mt-10">
-          <h1 className="text-4xl md:text-7xl font-black text-white mb-4 drop-shadow-2xl uppercase tracking-tighter italic">
+        
+        <div className="relative z-10 max-w-5xl mx-auto px-6 w-full text-center mt-20">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-2xl uppercase tracking-wide">
             Bem-Vindo À Imobiliária Porto Iguaçu
           </h1>
-          <p className="text-lg md:text-2xl text-white/90 font-bold uppercase tracking-widest border-t border-white/20 pt-6">
-             Na Imobiliária Porto Iguaçu, conectamos sonhos aos endereços certos. Com experiência no mercado imobiliário das gêmeas do Iguaçu, nossa equipe de especialistas está aqui para ajudá-lo a encontrar o lar perfeito ou o investimento ideal.
+          <p className="text-lg md:text-xl text-white/90 max-w-4xl mx-auto leading-relaxed drop-shadow-md font-medium">
+            Na Imobiliária Porto Iguaçu, conectamos sonhos aos endereços certos. Com experiência no mercado imobiliário das gêmeas do Iguaçu, nossa equipe de especialistas está aqui para ajudá-lo a encontrar o lar perfeito ou o investimento ideal.
           </p>
         </div>
       </section>
