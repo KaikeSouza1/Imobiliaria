@@ -1,14 +1,12 @@
 import { NextResponse, NextRequest } from "next/server";
 import { query } from "@/lib/db";
 
-// GET: Puxa as informações do banco
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
     const res = await query("SELECT * FROM imoveis WHERE id = $1", [id]);
     
     if (res.rows.length === 0) {
@@ -22,12 +20,11 @@ export async function GET(
 
     return NextResponse.json(imovel);
   } catch (error) {
-    console.error(error);
+    console.error("ERRO NO GET:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
 
-// PUT: Atualiza o imóvel (incluindo status)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -35,34 +32,77 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    
+
     const preco = parseFloat(body.preco) || 0;
     const area = parseInt(body.area) || 0;
     const quartos = parseInt(body.quartos) || 0;
     const banheiros = parseInt(body.banheiros) || 0;
     const vagas = parseInt(body.vagas) || 0;
-    const status = body.status || "disponivel"; // NOVO
+    const status = body.status || "disponivel";
+    const ativo = body.ativo !== undefined ? body.ativo : true;
+    const latitude = body.latitude || -26.2303;
+    const longitude = body.longitude || -51.0904;
 
-    const sql = `
-      UPDATE imoveis SET 
-      titulo=$1, descricao=$2, preco=$3, tipo=$4, finalidade=$5, cidade=$6, bairro=$7, 
-      endereco=$8, area=$9, quartos=$10, banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15, status=$16
-      WHERE id = $17
-    `;
+    try {
+      const sql = `
+        UPDATE imoveis SET 
+          titulo=$1, descricao=$2, preco=$3, tipo=$4, finalidade=$5, 
+          cidade=$6, bairro=$7, endereco=$8, area=$9, quartos=$10, 
+          banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15, 
+          status=$16, latitude=$17, longitude=$18
+        WHERE id = $19
+      `;
 
-    await query(sql, [
-      body.titulo, body.descricao, preco, body.tipo, body.finalidade, body.cidade, 
-      body.bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo, 
-      body.ativo, status, id
-    ]);
+      await query(sql, [
+        body.titulo, body.descricao, preco, body.tipo, body.finalidade,
+        body.cidade, body.bairro, body.endereco, area, quartos,
+        banheiros, vagas, body.imagem_url, body.codigo, ativo, 
+        status, latitude, longitude, id
+      ]);
 
-    return NextResponse.json({ message: "Atualizado!" });
-  } catch (error) {
-    return NextResponse.json({ error: "Erro ao atualizar" }, { status: 500 });
+      return NextResponse.json({ message: "Atualizado!" });
+
+    } catch (innerError: any) {
+      const isColumnError =
+        innerError?.message?.includes("latitude") ||
+        innerError?.message?.includes("longitude") ||
+        innerError?.code === "42703";
+
+      if (isColumnError) {
+        console.warn("⚠️ Colunas latitude/longitude não existem. Salvando sem elas.");
+        
+        const sqlSemCoords = `
+          UPDATE imoveis SET 
+            titulo=$1, descricao=$2, preco=$3, tipo=$4, finalidade=$5, 
+            cidade=$6, bairro=$7, endereco=$8, area=$9, quartos=$10, 
+            banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15, status=$16
+          WHERE id = $17
+        `;
+
+        await query(sqlSemCoords, [
+          body.titulo, body.descricao, preco, body.tipo, body.finalidade,
+          body.cidade, body.bairro, body.endereco, area, quartos,
+          banheiros, vagas, body.imagem_url, body.codigo, ativo, status, id
+        ]);
+
+        return NextResponse.json({
+          message: "Atualizado (sem coordenadas)",
+          warning: "Execute: ALTER TABLE imoveis ADD COLUMN latitude DECIMAL(10,8), ADD COLUMN longitude DECIMAL(11,8);"
+        });
+      }
+
+      throw innerError;
+    }
+
+  } catch (error: any) {
+    console.error("❌ ERRO NO PUT:", error?.message || error);
+    return NextResponse.json(
+      { error: "Erro ao atualizar", detail: error?.message || "Erro desconhecido" },
+      { status: 500 }
+    );
   }
 }
 
-// DELETE: Exclui o imóvel
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -71,7 +111,8 @@ export async function DELETE(
     const { id } = await params;
     await query("DELETE FROM imoveis WHERE id = $1", [id]);
     return NextResponse.json({ message: "Excluído!" });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("ERRO NO DELETE:", error?.message || error);
     return NextResponse.json({ error: "Erro ao excluir" }, { status: 500 });
   }
 }

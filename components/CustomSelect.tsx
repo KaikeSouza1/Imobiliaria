@@ -1,7 +1,7 @@
-"use client"; // Obrigatório para interatividade
+"use client";
 
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 
 interface Option {
   label: string;
@@ -11,16 +11,16 @@ interface Option {
 interface CustomSelectProps {
   label: string;
   icon: React.ReactNode;
-  options: Option[];
   value: string;
   onChange: (value: string) => void;
+  options: Option[];
 }
 
-export default function CustomSelect({ label, icon, options, value, onChange }: CustomSelectProps) {
+export default function CustomSelect({ label, icon, value, onChange, options }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fecha o menu se clicar fora dele
+  // Fecha ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -31,47 +31,46 @@ export default function CustomSelect({ label, icon, options, value, onChange }: 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectedLabel = options.find((opt) => opt.value === value)?.label || "Selecione";
+  const selectedLabel = options.find((opt) => opt.value === value)?.label || "Todos";
 
   return (
-    <div className="relative w-full group" ref={containerRef}>
-      <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1 mb-2 ml-2 group-hover:text-green-600 transition-colors">
+    <div className="flex flex-col gap-2 w-full" ref={containerRef}>
+      <label className="text-[10px] font-black text-white/70 uppercase tracking-widest flex items-center gap-2 px-1">
         {icon} {label}
       </label>
       
-      {/* O Botão que parece um Select */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-slate-50 text-left px-4 py-3 rounded-xl border border-gray-200 flex justify-between items-center transition-all
-        ${isOpen ? 'border-green-500 ring-2 ring-green-100' : 'hover:border-green-400'}`}
-      >
-        <span className={`font-bold text-sm truncate ${value ? 'text-gray-800' : 'text-gray-400'}`}>
-          {value ? selectedLabel : "Todos"}
-        </span>
-        <ChevronDown size={16} className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180 text-green-500' : ''}`} />
-      </button>
+      <div className="relative w-full">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full bg-white text-gray-800 font-bold py-3.5 px-5 rounded-xl flex items-center justify-between shadow-sm hover:shadow-md transition-all border border-transparent focus:border-green-400 outline-none"
+        >
+          <span className="truncate">{selectedLabel}</span>
+          <ChevronDown size={16} className={`transition-transform duration-300 ${isOpen ? "rotate-180 text-green-600" : "text-gray-400"}`} />
+        </button>
 
-      {/* A Lista Flutuante (Dropdown) */}
-      {isOpen && (
-        <div className="absolute z-50 mt-2 w-full bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <div className="max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-green-200">
-            {options.map((option) => (
-              <div
-                key={option.value}
+        {/* LISTA DE OPÇÕES - Ajustada para w-full */}
+        {isOpen && (
+          <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-2xl z-[100] border border-gray-100 py-2 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+            {options.map((opt) => (
+              <button
+                key={opt.value}
                 onClick={() => {
-                  onChange(option.value);
+                  onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`px-4 py-3 text-sm font-medium cursor-pointer flex items-center justify-between transition-colors
-                ${value === option.value ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:bg-slate-50 hover:text-green-600'}`}
+                className={`w-full text-left px-5 py-3 text-sm font-bold transition-colors flex items-center justify-between
+                  ${value === opt.value ? "bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-50"}`}
               >
-                {option.label}
-                {value === option.value && <Check size={14} />}
-              </div>
+                {opt.label}
+                {value === opt.value && <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>}
+              </button>
             ))}
+            {options.length === 0 && (
+              <div className="px-5 py-3 text-xs text-gray-400 font-medium">Nenhuma opção disponível</div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -3,8 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus } from "lucide-react";
+import dynamic from "next/dynamic";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin } from "lucide-react";
 import Link from "next/link";
+
+const MapPicker = dynamic(() => import("@/components/MapPicker"), {
+  ssr: false,
+  loading: () => <div className="h-[400px] bg-gray-100 rounded-xl animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-gray-400" /></div>
+});
 
 export default function NovoImovelPage() {
   const router = useRouter();
@@ -17,7 +23,7 @@ export default function NovoImovelPage() {
     preco: "", 
     tipo: "Casa", 
     finalidade: "Venda",
-    status: "disponivel", // NOVO CAMPO
+    status: "disponivel",
     cidade: "", 
     bairro: "", 
     endereco: "", 
@@ -27,7 +33,9 @@ export default function NovoImovelPage() {
     vagas: "0", 
     descricao: "",
     imagem_url: "",
-    fotos_adicionais: [] as string[]
+    fotos_adicionais: [] as string[],
+    latitude: -26.2303,
+    longitude: -51.0904
   });
 
   const uploadFiles = async (files: FileList | null) => {
@@ -125,8 +133,6 @@ export default function NovoImovelPage() {
     { value: "reservado",  label: "🟡 Reservado",  color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
   ];
 
-  const selectedStatusStyle = statusOptions.find(s => s.value === formData.status)?.color || "";
-
   return (
     <div className="max-w-5xl mx-auto pb-20">
       <div className="flex items-center gap-4 mb-6">
@@ -190,7 +196,7 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 2: STATUS DO IMÓVEL (NOVO) */}
+        {/* SEÇÃO 2: STATUS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Status do Imóvel</h2>
           <p className="text-xs text-gray-400 mb-4">Defina o status atual. Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards.</p>
@@ -279,7 +285,46 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 5: CARACTERÍSTICAS */}
+        {/* SEÇÃO 5: MAPA */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-2">
+            <MapPin size={16} /> Localização no Mapa
+          </h2>
+          <p className="text-xs text-gray-400 mb-4">
+            Clique no mapa para marcar a localização exata do imóvel
+          </p>
+          
+          <MapPicker
+            lat={formData.latitude}
+            lng={formData.longitude}
+            onLocationChange={(lat, lng) => {
+              setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
+            }}
+          />
+          
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-admin">Latitude</label>
+              <input 
+                type="text" 
+                value={formData.latitude.toFixed(6)} 
+                readOnly 
+                className="input-admin bg-gray-50 cursor-not-allowed" 
+              />
+            </div>
+            <div>
+              <label className="label-admin">Longitude</label>
+              <input 
+                type="text" 
+                value={formData.longitude.toFixed(6)} 
+                readOnly 
+                className="input-admin bg-gray-50 cursor-not-allowed" 
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SEÇÃO 6: CARACTERÍSTICAS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <label className="label-admin">Área (m²)</label>

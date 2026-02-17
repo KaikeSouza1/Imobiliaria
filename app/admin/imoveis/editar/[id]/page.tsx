@@ -3,8 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus } from "lucide-react";
+import dynamic from "next/dynamic";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin } from "lucide-react";
 import Link from "next/link";
+
+const MapPicker = dynamic(() => import("@/components/MapPicker"), {
+  ssr: false,
+  loading: () => <div className="h-[400px] bg-gray-100 rounded-xl animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-gray-400" /></div>
+});
 
 export default function EditarImovelPage() {
   const router = useRouter();
@@ -17,10 +23,12 @@ export default function EditarImovelPage() {
   
   const [formData, setFormData] = useState({
     titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
-    status: "disponivel", // NOVO CAMPO
+    status: "disponivel",
     cidade: "", bairro: "", endereco: "", area: "",
     quartos: "0", banheiros: "0", vagas: "0", descricao: "",
-    imagem_url: "", fotos_adicionais: [] as string[], ativo: true
+    imagem_url: "", fotos_adicionais: [] as string[], ativo: true,
+    latitude: -26.2303,
+    longitude: -51.0904
   });
 
   useEffect(() => {
@@ -30,14 +38,18 @@ export default function EditarImovelPage() {
         const res = await fetch(`/api/imoveis/${id}`);
         if (!res.ok) throw new Error("Não encontrado");
         const data = await res.json();
+        
+        // Blindagem: Convertendo strings do banco para Numbers reais
         setFormData({
           ...data,
-          preco: data.preco.toString(),
+          preco: data.preco?.toString() || "0",
           area: data.area?.toString() || "0",
           quartos: data.quartos?.toString() || "0",
           banheiros: data.banheiros?.toString() || "0",
           vagas: data.vagas?.toString() || "0",
-          status: data.status || "disponivel", // NOVO
+          status: data.status || "disponivel",
+          latitude: Number(data.latitude) || -26.2303,
+          longitude: Number(data.longitude) || -51.0904,
           fotos_adicionais: data.fotos_adicionais || []
         });
       } catch (error) {
@@ -85,6 +97,7 @@ export default function EditarImovelPage() {
       }
     } catch (error) {
       console.error(error);
+      alert("Erro ao salvar alterações.");
     } finally {
       setSaving(false);
     }
@@ -116,7 +129,7 @@ export default function EditarImovelPage() {
         {/* SEÇÃO FOTOS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-1">
-            <label className="label-admin font-bold text-gray-600 block mb-2">CAPA ATUAL</label>
+            <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest">Capa Atual</label>
             <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
                <Image src={formData.imagem_url || "/logo.png"} fill className="object-cover" alt="Capa" />
                <label className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
@@ -129,7 +142,7 @@ export default function EditarImovelPage() {
             </div>
           </div>
           <div className="col-span-2">
-            <label className="label-admin font-bold text-gray-600 block mb-2">GALERIA</label>
+            <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest">Galeria</label>
             <div className="grid grid-cols-4 gap-2">
                <label className="aspect-square bg-gray-50 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-green-50 transition-colors">
                   <Plus className="text-green-600" />
@@ -148,7 +161,7 @@ export default function EditarImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO STATUS DO IMÓVEL (NOVO) */}
+        {/* SEÇÃO STATUS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider">Status do Imóvel</h2>
           <p className="text-xs text-gray-400 mb-4">Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards do site.</p>
@@ -190,7 +203,47 @@ export default function EditarImovelPage() {
           <div><label className="label-admin">Bairro</label><input name="bairro" list="bairros" value={formData.bairro} onChange={handleChange} className="input-admin" /><datalist id="bairros"><option value="Centro" /><option value="São Cristóvão" /></datalist></div>
         </div>
 
-        <button type="submit" disabled={saving || uploading} className="w-full bg-[#0f2e20] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2">
+        {/* SEÇÃO MAPA (AQUI ESTAVA O ERRO) */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-2">
+            <MapPin size={16} /> Localização no Mapa
+          </h2>
+          <p className="text-xs text-gray-400 mb-4">
+            Clique no mapa para atualizar a localização exata do imóvel
+          </p>
+          
+          <MapPicker
+            lat={formData.latitude}
+            lng={formData.longitude}
+            onLocationChange={(lat, lng) => {
+              setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
+            }}
+          />
+          
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-admin">Latitude</label>
+              <input 
+                type="text" 
+                // Blindagem extra: convertendo para Number antes do toFixed
+                value={Number(formData.latitude).toFixed(6)} 
+                readOnly 
+                className="input-admin bg-gray-50 cursor-not-allowed" 
+              />
+            </div>
+            <div>
+              <label className="label-admin">Longitude</label>
+              <input 
+                type="text" 
+                value={Number(formData.longitude).toFixed(6)} 
+                readOnly 
+                className="input-admin bg-gray-50 cursor-not-allowed" 
+              />
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" disabled={saving || uploading} className="w-full bg-[#0f2e20] hover:bg-black text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
           {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />} SALVAR ALTERAÇÕES
         </button>
       </form>

@@ -1,48 +1,65 @@
 import Link from "next/link";
-import { LayoutDashboard, Home, PlusCircle, LogOut, Settings } from "lucide-react";
+import { Home, PlusCircle, LogOut, Sparkles } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Proteção básica no lado do servidor
   const session = await getServerSession();
-  if (!session) {
-    redirect("/login");
-  }
+  if (!session) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-slate-100 flex font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-green-50 font-sans flex">
       
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-[#0f2e20] text-white flex flex-col fixed h-full z-10">
-        <div className="p-6 border-b border-green-800">
-          <h2 className="text-xl font-bold">Admin Porto</h2>
-          <p className="text-xs text-green-300">Gerenciamento</p>
+      {/* SIDEBAR CLEAN E MODERNO */}
+      <aside className="w-72 bg-gradient-to-b from-[#0a1f16] to-[#0f2e20] text-white flex flex-col fixed h-full z-10 shadow-2xl">
+        
+        {/* LOGO */}
+        <div className="p-8 border-b border-green-800/50">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Sparkles size={20} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black tracking-tight">Porto Iguaçu</h2>
+              <p className="text-[10px] text-green-300 font-bold uppercase tracking-widest">Painel Admin</p>
+            </div>
+          </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
-          <Link href="/admin" className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-800 transition-colors">
-            <LayoutDashboard size={20} /> Dashboard
+        {/* NAVEGAÇÃO */}
+        <nav className="flex-1 p-6 space-y-2">
+          <Link 
+            href="/admin/imoveis" 
+            className="flex items-center gap-3 p-4 rounded-xl bg-green-700/30 hover:bg-green-700/50 transition-all text-white font-bold group"
+          >
+            <Home size={20} className="group-hover:scale-110 transition-transform" />
+            <span>Meus Imóveis</span>
           </Link>
-          <Link href="/admin/imoveis" className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-800 transition-colors">
-            <Home size={20} /> Meus Imóveis
-          </Link>
-          <Link href="/admin/imoveis/novo" className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-800 transition-colors">
-            <PlusCircle size={20} /> Cadastrar Imóvel
+          
+          <Link 
+            href="/admin/imoveis/novo" 
+            className="flex items-center gap-3 p-4 rounded-xl hover:bg-white/5 transition-all text-green-100 font-bold group"
+          >
+            <PlusCircle size={20} className="group-hover:scale-110 transition-transform" />
+            <span>Cadastrar Novo</span>
           </Link>
         </nav>
 
-        <div className="p-4 border-t border-green-800">
-           {/* Botão de Sair (precisa ser Client Component ou link api/auth/signout) */}
-           <Link href="/api/auth/signout" className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-600/20 text-red-200 hover:text-red-100 transition-colors">
-            <LogOut size={20} /> Sair do Sistema
+        {/* FOOTER */}
+        <div className="p-6 border-t border-green-800/50">
+          <Link 
+            href="/api/auth/signout" 
+            className="flex items-center gap-3 p-4 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-300 hover:text-red-200 transition-all font-bold"
+          >
+            <LogOut size={20} />
+            <span>Sair do Sistema</span>
           </Link>
         </div>
       </aside>
 
-      {/* ÁREA DE CONTEÚDO */}
-      <main className="flex-1 ml-64 p-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 min-h-[500px] p-8">
+      {/* CONTEÚDO */}
+      <main className="flex-1 ml-72 p-10">
+        <div className="max-w-[1600px] mx-auto">
           {children}
         </div>
       </main>

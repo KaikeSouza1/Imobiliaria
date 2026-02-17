@@ -3,13 +3,37 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Edit, Trash2, Plus, Power, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, Power, Loader2, Home, Building2, TreePine, Store, CheckCircle, XCircle, TrendingUp } from "lucide-react";
+
+interface Imovel {
+  id: number;
+  titulo: string;
+  preco: number;
+  tipo: string;
+  finalidade: string;
+  cidade: string;
+  bairro: string;
+  imagem_url: string;
+  ativo: boolean;
+  status: string;
+}
+
+const tiposConfig = [
+  { value: "Todos", label: "Todos", icon: Home, color: "from-gray-600 to-gray-800" },
+  { value: "Casa", label: "Casas", icon: Home, color: "from-blue-600 to-blue-800" },
+  { value: "Apartamento", label: "Apartamentos", icon: Building2, color: "from-purple-600 to-purple-800" },
+  { value: "Terreno", label: "Terrenos", icon: TreePine, color: "from-green-600 to-green-800" },
+  { value: "Comercial", label: "Comerciais", icon: Store, color: "from-orange-600 to-orange-800" },
+];
 
 export default function AdminImoveisPage() {
-  const [imoveis, setImoveis] = useState<any[]>([]);
+  const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filtroTipo, setFiltroTipo] = useState("Todos");
+  const [filtroStatus, setFiltroStatus] = useState("Todos");
 
   const fetchImoveis = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/imoveis");
       const data = await res.json();
@@ -21,8 +45,8 @@ export default function AdminImoveisPage() {
 
   useEffect(() => { fetchImoveis(); }, []);
 
-  // ALTERAR STATUS (ATIVO/INATIVO)
-  const toggleStatus = async (imovel: any) => {
+  // TOGGLE ATIVO/INATIVO
+  const toggleAtivo = async (imovel: Imovel) => {
     try {
       const res = await fetch(`/api/imoveis/${imovel.id}`, {
         method: "PUT",
@@ -37,67 +61,248 @@ export default function AdminImoveisPage() {
 
   // DELETAR
   const handleExcluir = async (id: number) => {
-    if (!confirm("Isso excluirá o imóvel e todas as suas fotos permanentemente. Confirmar?")) return;
-    
+    if (!confirm("Confirma exclusão permanente deste imóvel?")) return;
     try {
       const res = await fetch(`/api/imoveis/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setImoveis(prev => prev.filter(im => im.id !== id));
-      }
+      if (res.ok) setImoveis(prev => prev.filter(im => im.id !== id));
     } catch (error) {
       alert("Erro ao excluir");
     }
   };
 
-  if (loading) return <div className="text-center py-20"><Loader2 className="animate-spin mx-auto" /></div>;
+  // FILTROS
+  const imoveisFiltrados = imoveis.filter(im => {
+    const matchTipo = filtroTipo === "Todos" || im.tipo === filtroTipo;
+    const matchStatus = 
+      filtroStatus === "Todos" ||
+      (filtroStatus === "Ativos" && im.ativo) ||
+      (filtroStatus === "Inativos" && !im.ativo) ||
+      (filtroStatus === "Vendidos/Alugados" && (im.status === "vendido" || im.status === "alugado"));
+    return matchTipo && matchStatus;
+  });
+
+  // ESTATÍSTICAS
+  const stats = {
+    total: imoveis.length,
+    ativos: imoveis.filter(i => i.ativo).length,
+    vendidos: imoveis.filter(i => i.status === "vendido").length,
+    alugados: imoveis.filter(i => i.status === "alugado").length,
+  };
+
+  const IconeTipo = (tipo: string) => {
+    const config = tiposConfig.find(t => t.value === tipo);
+    return config ? <config.icon size={20} /> : <Home size={20} />;
+  };
+
+  if (loading) return (
+    <div className="text-center py-20 flex flex-col items-center gap-4">
+      <Loader2 className="animate-spin text-green-700" size={40} />
+      <p className="text-gray-500 font-bold">Carregando painel...</p>
+    </div>
+  );
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">Meus Imóveis</h1>
-        <Link href="/admin/imoveis/novo" className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-green-700 transition-all"><Plus size={20} /> Novo</Link>
+    <div className="space-y-8">
+      
+      {/* HEADER + BOTÃO NOVO */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+            <div className="w-1 h-8 bg-green-600 rounded-full"></div>
+            Gestão de Imóveis
+          </h1>
+          <p className="text-gray-500 text-sm mt-1 ml-7">Gerencie todo o portfólio da imobiliária em um só lugar</p>
+        </div>
+        <Link 
+          href="/admin/imoveis/novo" 
+          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
+        >
+          <Plus size={20} strokeWidth={3} /> Novo Imóvel
+        </Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50 font-bold text-gray-500 uppercase text-[10px] tracking-widest">
-            <tr>
-              <th className="p-4">Img</th>
-              <th className="p-4">Título</th>
-              <th className="p-4">Valor</th>
-              <th className="p-4 text-center">Status</th>
-              <th className="p-4 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {imoveis.map((im) => (
-              <tr key={im.id} className="hover:bg-slate-50 transition-colors">
-                <td className="p-4">
-                  <div className="w-12 h-12 relative rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-                    <Image src={im.imagem_url} fill className="object-cover" alt="" />
-                  </div>
-                </td>
-                <td className="p-4">
-                  <span className="font-bold text-gray-800">{im.titulo}</span>
-                  <div className="text-[10px] text-gray-400 uppercase font-bold">{im.tipo} • {im.finalidade}</div>
-                </td>
-                <td className="p-4 font-bold text-green-700">R$ {Number(im.preco).toLocaleString('pt-BR')}</td>
-                <td className="p-4 text-center">
-                  <button onClick={() => toggleStatus(im)} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${im.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    <Power size={10} className="inline mr-1" /> {im.ativo ? "ATIVO" : "INATIVO"}
-                  </button>
-                </td>
-                <td className="p-4 text-right">
-                  <div className="flex justify-end gap-1">
-                    <Link href={`/admin/imoveis/editar/${im.id}`} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"><Edit size={18} /></Link>
-                    <button onClick={() => handleExcluir(im.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* ESTATÍSTICAS RÁPIDAS */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-2xl border border-blue-200">
+          <div className="flex items-center justify-between mb-2">
+            <Home className="text-blue-700" size={24} />
+            <TrendingUp className="text-blue-400" size={16} />
+          </div>
+          <p className="text-3xl font-black text-blue-900">{stats.total}</p>
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Total</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-2xl border border-green-200">
+          <div className="flex items-center justify-between mb-2">
+            <CheckCircle className="text-green-700" size={24} />
+            <Power className="text-green-400" size={16} />
+          </div>
+          <p className="text-3xl font-black text-green-900">{stats.ativos}</p>
+          <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Ativos</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-2xl border border-red-200">
+          <div className="flex items-center justify-between mb-2">
+            <XCircle className="text-red-700" size={24} />
+            <CheckCircle className="text-red-400" size={16} />
+          </div>
+          <p className="text-3xl font-black text-red-900">{stats.vendidos}</p>
+          <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Vendidos</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-5 rounded-2xl border border-orange-200">
+          <div className="flex items-center justify-between mb-2">
+            <CheckCircle className="text-orange-700" size={24} />
+            <Home className="text-orange-400" size={16} />
+          </div>
+          <p className="text-3xl font-black text-orange-900">{stats.alugados}</p>
+          <p className="text-xs font-bold text-orange-700 uppercase tracking-wider">Alugados</p>
+        </div>
       </div>
+
+      {/* FILTROS POR TIPO (CARDS VISUAIS) */}
+      <div>
+        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Filtrar por Tipo</p>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {tiposConfig.map((tipo) => {
+            const Icon = tipo.icon;
+            const count = tipo.value === "Todos" ? imoveis.length : imoveis.filter(i => i.tipo === tipo.value).length;
+            const isActive = filtroTipo === tipo.value;
+            
+            return (
+              <button
+                key={tipo.value}
+                onClick={() => setFiltroTipo(tipo.value)}
+                className={`relative overflow-hidden rounded-xl p-4 transition-all duration-300 group
+                  ${isActive 
+                    ? `bg-gradient-to-br ${tipo.color} text-white shadow-lg scale-105` 
+                    : 'bg-white border-2 border-gray-100 hover:border-gray-300 text-gray-600 hover:shadow-md'
+                  }`}
+              >
+                <div className="relative z-10">
+                  <Icon size={28} className="mb-2" />
+                  <p className="font-black text-lg">{count}</p>
+                  <p className="text-xs font-bold opacity-90">{tipo.label}</p>
+                </div>
+                {isActive && (
+                  <div className="absolute top-2 right-2">
+                    <CheckCircle size={16} className="text-white" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* FILTROS POR STATUS */}
+      <div className="flex gap-2">
+        {["Todos", "Ativos", "Inativos", "Vendidos/Alugados"].map(status => (
+          <button
+            key={status}
+            onClick={() => setFiltroStatus(status)}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all
+              ${filtroStatus === status 
+                ? "bg-gray-900 text-white shadow-md" 
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
+      {/* GRID DE IMÓVEIS */}
+      {imoveisFiltrados.length === 0 ? (
+        <div className="text-center py-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-200">
+          <Home className="mx-auto text-gray-300 mb-4" size={48} />
+          <h3 className="text-xl font-bold text-gray-600">Nenhum imóvel encontrado</h3>
+          <p className="text-gray-400 mt-2">Ajuste os filtros ou cadastre um novo imóvel</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {imoveisFiltrados.map((im) => (
+            <div 
+              key={im.id} 
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:border-green-200 transition-all duration-300 group"
+            >
+              {/* IMAGEM */}
+              <div className="relative h-48 bg-gray-100 overflow-hidden">
+                <Image src={im.imagem_url} fill className="object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                
+                {/* STATUS BADGE */}
+                <div className="absolute top-3 left-3 flex flex-col gap-2">
+                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-lg backdrop-blur-sm
+                    ${im.finalidade === "Venda" ? "bg-blue-600" : "bg-green-600"}`}>
+                    {im.finalidade}
+                  </span>
+                  {!im.ativo && (
+                    <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-600 text-white shadow-lg backdrop-blur-sm">
+                      Inativo
+                    </span>
+                  )}
+                  {im.status === "vendido" && (
+                    <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#0f2e20] text-white shadow-lg">
+                      Vendido
+                    </span>
+                  )}
+                  {im.status === "alugado" && (
+                    <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#1a5c35] text-white shadow-lg">
+                      Alugado
+                    </span>
+                  )}
+                </div>
+
+                {/* TIPO ICON */}
+                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-2 rounded-lg">
+                  {IconeTipo(im.tipo)}
+                </div>
+              </div>
+
+              {/* INFO */}
+              <div className="p-4">
+                <h3 className="font-bold text-gray-900 text-sm line-clamp-1 mb-1">{im.titulo}</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  {im.bairro}, {im.cidade}
+                </p>
+                <p className="text-lg font-black text-green-700 mb-4">
+                  R$ {Number(im.preco).toLocaleString('pt-BR')}
+                </p>
+
+                {/* AÇÕES */}
+                <div className="flex gap-2">
+                  <Link 
+                    href={`/admin/imoveis/editar/${im.id}`} 
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all"
+                  >
+                    <Edit size={14} /> Editar
+                  </Link>
+                  
+                  <button 
+                    onClick={() => toggleAtivo(im)} 
+                    className={`px-3 py-2 rounded-lg font-bold text-xs transition-all ${
+                      im.ativo 
+                        ? "bg-green-100 text-green-700 hover:bg-green-200" 
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}
+                    title={im.ativo ? "Desativar" : "Ativar"}
+                  >
+                    <Power size={14} />
+                  </button>
+
+                  <button 
+                    onClick={() => handleExcluir(im.id)} 
+                    className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-bold text-xs transition-all"
+                    title="Excluir"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
