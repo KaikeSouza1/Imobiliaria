@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     const banheiros = parseInt(body.banheiros) || 0;
     const vagas = parseInt(body.vagas) || 0;
     const status = body.status || "disponivel";
+    const destaque = body.destaque || false; // Adicionado
     const latitude = body.latitude || -26.2303;
     const longitude = body.longitude || -51.0904;
 
@@ -27,15 +28,15 @@ export async function POST(req: Request) {
       INSERT INTO imoveis (
         titulo, descricao, preco, tipo, finalidade, cidade, bairro, 
         endereco, area, quartos, banheiros, vagas, imagem_url, codigo, status,
-        latitude, longitude
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        latitude, longitude, destaque
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING id
     `;
 
     const values = [
       body.titulo, body.descricao, preco, body.tipo, body.finalidade, body.cidade, 
       body.bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo, status,
-      latitude, longitude
+      latitude, longitude, destaque
     ];
 
     const result = await query(sqlImovel, values);

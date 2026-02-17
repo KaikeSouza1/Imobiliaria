@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin } from "lucide-react";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star } from "lucide-react";
 import Link from "next/link";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
@@ -23,7 +23,7 @@ export default function EditarImovelPage() {
   
   const [formData, setFormData] = useState({
     titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
-    status: "disponivel",
+    status: "disponivel", destaque: false, // <-- Novo campo
     cidade: "", bairro: "", endereco: "", area: "",
     quartos: "0", banheiros: "0", vagas: "0", descricao: "",
     imagem_url: "", fotos_adicionais: [] as string[], ativo: true,
@@ -48,6 +48,7 @@ export default function EditarImovelPage() {
           banheiros: data.banheiros?.toString() || "0",
           vagas: data.vagas?.toString() || "0",
           status: data.status || "disponivel",
+          destaque: data.destaque || false, // <-- Carrega o campo
           latitude: Number(data.latitude) || -26.2303,
           longitude: Number(data.longitude) || -51.0904,
           fotos_adicionais: data.fotos_adicionais || []
@@ -161,6 +162,25 @@ export default function EditarImovelPage() {
           </div>
         </div>
 
+        {/* SEÇÃO DESTAQUE <-- NOVO AQUI */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <Star size={18} className="text-amber-500 fill-amber-500" /> Imóvel em Destaque na Home
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">Habilite para que este imóvel apareça nos Destaques da página inicial.</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={formData.destaque}
+              onChange={(e) => setFormData({...formData, destaque: e.target.checked})}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+          </label>
+        </div>
+
         {/* SEÇÃO STATUS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider">Status do Imóvel</h2>
@@ -190,20 +210,78 @@ export default function EditarImovelPage() {
           </div>
         </div>
 
-        {/* DADOS BÁSICOS */}
+        {/* DADOS BÁSICOS (TOTALMENTE RESTAURADOS) */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2"><label className="label-admin">Título</label><input name="titulo" required value={formData.titulo} onChange={handleChange} className="input-admin" /></div>
-          <div><label className="label-admin">Preço (R$)</label><input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="input-admin" /></div>
-          <div><label className="label-admin">Finalidade</label>
+          <div className="md:col-span-2">
+            <label className="label-admin">Título</label>
+            <input name="titulo" required value={formData.titulo} onChange={handleChange} className="input-admin" />
+          </div>
+          <div>
+            <label className="label-admin">Código / Referência</label>
+            <input name="codigo" value={formData.codigo} onChange={handleChange} className="input-admin" />
+          </div>
+          <div>
+            <label className="label-admin">Preço (R$)</label>
+            <input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="input-admin" />
+          </div>
+          <div>
+            <label className="label-admin">Finalidade</label>
             <select name="finalidade" value={formData.finalidade} onChange={handleChange} className="input-admin">
-              <option value="Venda">Venda</option><option value="Aluguel">Aluguel</option>
+              <option value="Venda">Venda</option>
+              <option value="Aluguel">Aluguel</option>
             </select>
           </div>
-          <div><label className="label-admin">Cidade</label><input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="input-admin" /><datalist id="cidades"><option value="Porto União" /><option value="União da Vitória" /></datalist></div>
-          <div><label className="label-admin">Bairro</label><input name="bairro" list="bairros" value={formData.bairro} onChange={handleChange} className="input-admin" /><datalist id="bairros"><option value="Centro" /><option value="São Cristóvão" /></datalist></div>
+          <div>
+            <label className="label-admin">Tipo de Imóvel</label>
+            <select name="tipo" value={formData.tipo} onChange={handleChange} className="input-admin">
+              <option value="Casa">Casa</option>
+              <option value="Apartamento">Apartamento</option>
+              <option value="Sobrado">Sobrado</option>
+              <option value="Terreno">Terreno</option>
+              <option value="Comercial">Comercial</option>
+            </select>
+          </div>
+          <div>
+            <label className="label-admin">Cidade</label>
+            <input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="input-admin" />
+            <datalist id="cidades"><option value="Porto União" /><option value="União da Vitória" /></datalist>
+          </div>
+          <div>
+            <label className="label-admin">Bairro</label>
+            <input name="bairro" list="bairros" value={formData.bairro} onChange={handleChange} className="input-admin" />
+            <datalist id="bairros"><option value="Centro" /><option value="São Cristóvão" /></datalist>
+          </div>
+          <div className="md:col-span-2">
+            <label className="label-admin">Endereço Completo</label>
+            <input name="endereco" value={formData.endereco} onChange={handleChange} className="input-admin" />
+          </div>
         </div>
 
-        {/* SEÇÃO MAPA (AQUI ESTAVA O ERRO) */}
+        {/* CARACTERÍSTICAS (RESTAURADO) */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label className="label-admin">Área (m²)</label>
+            <input name="area" type="number" value={formData.area} onChange={handleChange} className="input-admin" />
+          </div>
+          <div>
+            <label className="label-admin">Quartos</label>
+            <input name="quartos" type="number" value={formData.quartos} onChange={handleChange} className="input-admin" />
+          </div>
+          <div>
+            <label className="label-admin">Banheiros</label>
+            <input name="banheiros" type="number" value={formData.banheiros} onChange={handleChange} className="input-admin" />
+          </div>
+          <div>
+            <label className="label-admin">Vagas</label>
+            <input name="vagas" type="number" value={formData.vagas} onChange={handleChange} className="input-admin" />
+          </div>
+          <div className="col-span-2 md:col-span-4 mt-2">
+            <label className="label-admin">Descrição para o Site</label>
+            <textarea name="descricao" rows={5} value={formData.descricao} onChange={handleChange} className="input-admin resize-none" />
+          </div>
+        </div>
+
+        {/* SEÇÃO MAPA (COM BLINDAGEM DE ERRO) */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-2">
             <MapPin size={16} /> Localização no Mapa
@@ -225,7 +303,6 @@ export default function EditarImovelPage() {
               <label className="label-admin">Latitude</label>
               <input 
                 type="text" 
-                // Blindagem extra: convertendo para Number antes do toFixed
                 value={Number(formData.latitude).toFixed(6)} 
                 readOnly 
                 className="input-admin bg-gray-50 cursor-not-allowed" 

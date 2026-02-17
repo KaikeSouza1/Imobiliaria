@@ -19,13 +19,13 @@ export default function NovoImovelPage() {
   
   const [formData, setFormData] = useState({
     titulo: "", 
-    codigo: "", 
+    codigo: "", // Campo Código presente no estado
     preco: "", 
     tipo: "Casa", 
     finalidade: "Venda",
     status: "disponivel",
-    destaque: false,           // ← NOVO
-    cidade: "", 
+    destaque: true, // Padrão TRUE como você pediu
+    cidade: "Porto União", 
     bairro: "", 
     endereco: "", 
     area: "",
@@ -51,7 +51,7 @@ export default function NovoImovelPage() {
       return json.urls;
     } catch (error) {
       console.error(error);
-      alert("Erro ao enviar imagem para o Cloudinary.");
+      alert("Erro ao enviar imagem.");
       return null;
     } finally {
       setUploading(false);
@@ -87,6 +87,11 @@ export default function NovoImovelPage() {
     
     if (!formData.imagem_url) {
       alert("Por favor, selecione ao menos a Foto de Capa.");
+      return;
+    }
+
+    if (!formData.codigo) {
+      alert("Por favor, preencha o Código do imóvel.");
       return;
     }
 
@@ -135,110 +140,79 @@ export default function NovoImovelPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto pb-20">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin/imoveis" className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
+    <div className="max-w-5xl mx-auto pb-20 px-4">
+      <div className="flex items-center gap-4 mb-8 pt-10">
+        <Link href="/admin/imoveis" className="p-3 bg-white hover:bg-gray-100 rounded-2xl shadow-sm text-gray-500 transition-all border border-gray-100">
           <ArrowLeft size={24} />
         </Link>
-        <h1 className="text-2xl font-bold text-gray-800">Novo Imóvel</h1>
+        <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Novo Imóvel</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         
         {/* SEÇÃO 1: IMAGENS */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Imagens</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="col-span-1">
-              <label className="block text-xs font-bold text-gray-600 mb-2">CAPA (Principal)</label>
-              <div className="relative aspect-video bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group hover:border-green-500 transition-all">
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="col-span-1">
+             <label className="text-[10px] font-black uppercase text-gray-400 ml-2 mb-2 block">Capa Principal</label>
+             <div className="relative aspect-video bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-all cursor-pointer group overflow-hidden">
                 {formData.imagem_url ? (
-                  <>
-                    <Image src={formData.imagem_url} alt="Capa" fill className="object-cover" />
-                    <button type="button" onClick={() => setFormData(p => ({...p, imagem_url: ""}))} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X size={14} />
-                    </button>
-                  </>
+                   <>
+                     <Image src={formData.imagem_url} fill className="object-cover" alt="Capa" />
+                     <button type="button" onClick={() => setFormData(p => ({...p, imagem_url: ""}))} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full z-10"><X size={14} /></button>
+                   </>
                 ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
-                    {uploading ? <Loader2 className="animate-spin text-green-600" /> : <UploadCloud className="text-gray-400" size={30} />}
-                    <span className="text-[10px] font-bold text-gray-400 mt-2">UPLOAD CAPA</span>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleCapaChange} disabled={uploading} />
-                  </label>
+                   <div className="flex flex-col items-center">
+                      {uploading ? <Loader2 className="animate-spin text-green-600" /> : <UploadCloud className="text-gray-300 group-hover:text-green-600" size={30} />}
+                      <span className="text-[10px] font-bold text-gray-400 mt-2">UPLOAD CAPA</span>
+                   </div>
                 )}
-              </div>
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-gray-600 mb-2">GALERIA (Fotos Adicionais)</label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                <label className="aspect-square bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-green-50 hover:border-green-400 transition-all">
-                  <Plus className="text-green-600" size={24} />
-                  <input type="file" className="hidden" accept="image/*" multiple onChange={handleGaleriaChange} disabled={uploading} />
+                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleCapaChange} disabled={uploading} />
+             </div>
+          </div>
+          <div className="col-span-2">
+             <label className="text-[10px] font-black uppercase text-gray-400 ml-2 mb-2 block">Galeria de Fotos</label>
+             <div className="grid grid-cols-4 gap-3">
+                <label className="aspect-square bg-gray-50 border-2 border-dashed rounded-2xl flex items-center justify-center cursor-pointer hover:bg-green-50 transition-colors">
+                   <Plus className="text-green-600" />
+                   <input type="file" multiple className="hidden" accept="image/*" onChange={handleGaleriaChange} disabled={uploading} />
                 </label>
-
-                {formData.fotos_adicionais.map((url, index) => (
-                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
-                    <Image src={url} alt={`Galeria ${index}`} fill className="object-cover" />
-                    <button type="button" onClick={() => removeFoto(index)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X size={10} />
-                    </button>
+                {formData.fotos_adicionais.map((url, i) => (
+                  <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                     <Image src={url} fill className="object-cover" alt="Galeria" />
+                     <button type="button" onClick={() => removeFoto(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"><X size={10}/></button>
                   </div>
                 ))}
-
-                {uploading && (
-                  <div className="aspect-square flex items-center justify-center bg-gray-50 rounded-lg border border-gray-100">
-                    <Loader2 className="animate-spin text-gray-300" size={20} />
-                  </div>
-                )}
-              </div>
-            </div>
+             </div>
           </div>
         </div>
 
-        {/* SEÇÃO 2: DESTAQUE ← NOVO */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Destaque na Home</h2>
-          
-          <label className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all
-            ${formData.destaque
-              ? "border-amber-400 bg-amber-50"
-              : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
-            <input
-              type="checkbox"
-              checked={formData.destaque}
-              onChange={e => setFormData(p => ({ ...p, destaque: e.target.checked }))}
-              className="hidden"
-            />
-            {/* ÍCONE */}
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all
-              ${formData.destaque ? "bg-amber-400 text-amber-900" : "bg-gray-200 text-gray-400"}`}>
-              <Star size={22} fill={formData.destaque ? "currentColor" : "none"} />
+        {/* SEÇÃO 2: DESTAQUE (PADRÃO ATIVO) */}
+        <div className={`p-6 rounded-[2rem] border-2 transition-all shadow-sm flex items-center justify-between
+          ${formData.destaque ? "bg-amber-50 border-amber-400" : "bg-white border-gray-100"}`}>
+          <div className="flex items-center gap-5">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all 
+              ${formData.destaque ? "bg-amber-400 text-white shadow-lg shadow-amber-200" : "bg-gray-100 text-gray-400"}`}>
+              <Star size={28} fill={formData.destaque ? "currentColor" : "none"} />
             </div>
-            {/* TEXTO */}
-            <div className="flex-1">
-              <p className={`font-black text-sm ${formData.destaque ? "text-amber-800" : "text-gray-600"}`}>
-                {formData.destaque ? "⭐ Imóvel marcado como Destaque!" : "Marcar como Destaque"}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Aparece em card grande no topo da página inicial
-              </p>
+            <div>
+              <h3 className={`font-black uppercase text-sm tracking-widest ${formData.destaque ? "text-amber-900" : "text-gray-900"}`}>
+                {formData.destaque ? "Cadastrando como DESTAQUE" : "Cadastro Padrão"}
+              </h3>
+              <p className="text-xs text-gray-500 font-medium">Imóvel aparecerá automaticamente no topo da home.</p>
             </div>
-            {/* TOGGLE SWITCH */}
-            <div className={`w-12 h-6 rounded-full transition-all flex-shrink-0 relative
-              ${formData.destaque ? "bg-amber-400" : "bg-gray-200"}`}>
-              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all
-                ${formData.destaque ? "left-7" : "left-1"}`} />
-            </div>
-          </label>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setFormData({...formData, destaque: !formData.destaque})}
+            className={`w-16 h-8 rounded-full relative transition-all ${formData.destaque ? "bg-amber-500" : "bg-gray-200"}`}
+          >
+            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${formData.destaque ? "left-9" : "left-1"}`} />
+          </button>
         </div>
 
         {/* SEÇÃO 3: STATUS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Status do Imóvel</h2>
-          <p className="text-xs text-gray-400 mb-4">Defina o status atual. Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards.</p>
-          
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {statusOptions.map((opt) => (
               <label
@@ -263,129 +237,90 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 4: DADOS BÁSICOS */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="md:col-span-2">
-            <label className="label-admin">Título do Anúncio</label>
-            <input name="titulo" required value={formData.titulo} onChange={handleChange} className="input-admin" placeholder="Ex: Casa Moderna com Suíte" />
-          </div>
-          <div>
-            <label className="label-admin">Código / Referência</label>
-            <input name="codigo" value={formData.codigo} onChange={handleChange} className="input-admin" placeholder="Ex: CA001" />
-          </div>
-          <div>
-            <label className="label-admin">Preço (R$)</label>
-            <input name="preco" required type="number" step="0.01" value={formData.preco} onChange={handleChange} className="input-admin" placeholder="0.00" />
-          </div>
-          <div>
-            <label className="label-admin">Finalidade</label>
-            <select name="finalidade" value={formData.finalidade} onChange={handleChange} className="input-admin">
-              <option value="Venda">Venda</option>
-              <option value="Aluguel">Aluguel</option>
-            </select>
-          </div>
-          <div>
-            <label className="label-admin">Tipo de Imóvel</label>
-            <select name="tipo" value={formData.tipo} onChange={handleChange} className="input-admin">
-              <option value="Casa">Casa</option>
-              <option value="Apartamento">Apartamento</option>
-              <option value="Sobrado">Sobrado</option>
-              <option value="Terreno">Terreno</option>
-              <option value="Terreno Rural">Terreno Rural</option>
-              <option value="Comercial">Comercial</option>
-            </select>
-          </div>
-        </div>
+        {/* SEÇÃO 4: DADOS BÁSICOS (COM CÓDIGO) */}
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
+           <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Informações do Imóvel</h2>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             
+             {/* TÍTULO */}
+             <div className="md:col-span-2">
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Título do Anúncio</label>
+               <input name="titulo" required value={formData.titulo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="Ex: Casa Linda no Centro" />
+             </div>
 
-        {/* SEÇÃO 5: LOCALIZAÇÃO */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="label-admin">Cidade</label>
-            <input name="cidade" list="lista-cidades" value={formData.cidade} onChange={handleChange} className="input-admin" placeholder="Digite ou selecione..." />
-            <datalist id="lista-cidades">
-              <option value="Porto União" />
-              <option value="União da Vitória" />
-            </datalist>
-          </div>
-          <div>
-            <label className="label-admin">Bairro</label>
-            <input name="bairro" list="lista-bairros" value={formData.bairro} onChange={handleChange} className="input-admin" placeholder="Digite ou selecione..." />
-            <datalist id="lista-bairros">
-              <option value="Centro" />
-              <option value="São Cristóvão" />
-              <option value="Santa Rosa" />
-              <option value="São Pedro" />
-            </datalist>
-          </div>
-          <div className="md:col-span-2">
-            <label className="label-admin">Endereço Completo</label>
-            <input name="endereco" value={formData.endereco} onChange={handleChange} className="input-admin" placeholder="Rua, Número, Complemento..." />
-          </div>
+             {/* PREÇO E CÓDIGO (LADO A LADO) */}
+             <div>
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Preço (R$)</label>
+               <input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="0.00" />
+             </div>
+             
+             {/* AQUI ESTÁ O CAMPO CÓDIGO */}
+             <div>
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Código / Referência</label>
+               <input name="codigo" required value={formData.codigo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="Ex: REF-1234" />
+             </div>
+             
+             {/* TIPO E FINALIDADE */}
+             <div>
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Tipo de Imóvel</label>
+               <select name="tipo" value={formData.tipo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
+                 <option value="Casa">Casa</option>
+                 <option value="Apartamento">Apartamento</option>
+                 <option value="Sobrado">Sobrado</option>
+                 <option value="Terreno">Terreno</option>
+                 <option value="Terreno Rural">Terreno Rural</option>
+                 <option value="Comercial">Comercial</option>
+               </select>
+             </div>
+             <div>
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Finalidade</label>
+               <select name="finalidade" value={formData.finalidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
+                 <option value="Venda">Venda</option>
+                 <option value="Aluguel">Aluguel</option>
+               </select>
+             </div>
+             
+             {/* LOCALIZAÇÃO */}
+             <div>
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Cidade</label>
+               <input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
+               <datalist id="cidades"><option value="Porto União" /><option value="União da Vitória" /></datalist>
+             </div>
+             <div>
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Bairro</label>
+               <input name="bairro" value={formData.bairro} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
+             </div>
+             <div className="md:col-span-2">
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Endereço Completo</label>
+               <input name="endereco" value={formData.endereco} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
+             </div>
+             
+             {/* CARACTERÍSTICAS */}
+             <div className="grid grid-cols-4 gap-4 md:col-span-2">
+               <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Área (m²)</label><input name="area" type="number" value={formData.area} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
+               <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Quartos</label><input name="quartos" type="number" value={formData.quartos} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
+               <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Banheiros</label><input name="banheiros" type="number" value={formData.banheiros} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
+               <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Vagas</label><input name="vagas" type="number" value={formData.vagas} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
+             </div>
+             
+             {/* DESCRIÇÃO */}
+             <div className="md:col-span-2">
+               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Descrição Completa</label>
+               <textarea name="descricao" rows={5} value={formData.descricao} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-medium focus:ring-2 focus:ring-[#0f2e20]" placeholder="Descreva os detalhes do imóvel..." />
+             </div>
+           </div>
         </div>
 
         {/* SEÇÃO 6: MAPA */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-2">
-            <MapPin size={16} /> Localização no Mapa
-          </h2>
-          <p className="text-xs text-gray-400 mb-4">
-            Clique no mapa para marcar a localização exata do imóvel
-          </p>
-          
-          <MapPicker
-            lat={formData.latitude}
-            lng={formData.longitude}
-            onLocationChange={(lat, lng) => {
-              setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
-            }}
-          />
-          
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="label-admin">Latitude</label>
-              <input type="text" value={formData.latitude.toFixed(6)} readOnly className="input-admin bg-gray-50 cursor-not-allowed" />
-            </div>
-            <div>
-              <label className="label-admin">Longitude</label>
-              <input type="text" value={formData.longitude.toFixed(6)} readOnly className="input-admin bg-gray-50 cursor-not-allowed" />
-            </div>
-          </div>
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+           <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Localização no Mapa</h2>
+           <MapPicker lat={formData.latitude} lng={formData.longitude} onLocationChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))} />
         </div>
 
-        {/* SEÇÃO 7: CARACTERÍSTICAS */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <label className="label-admin">Área (m²)</label>
-            <input name="area" type="number" value={formData.area} onChange={handleChange} className="input-admin" placeholder="0" />
-          </div>
-          <div>
-            <label className="label-admin">Quartos</label>
-            <input name="quartos" type="number" value={formData.quartos} onChange={handleChange} className="input-admin" />
-          </div>
-          <div>
-            <label className="label-admin">Banheiros</label>
-            <input name="banheiros" type="number" value={formData.banheiros} onChange={handleChange} className="input-admin" />
-          </div>
-          <div>
-            <label className="label-admin">Vagas</label>
-            <input name="vagas" type="number" value={formData.vagas} onChange={handleChange} className="input-admin" />
-          </div>
-          <div className="col-span-2 md:col-span-4 mt-2">
-            <label className="label-admin">Descrição para o Site</label>
-            <textarea name="descricao" rows={5} value={formData.descricao} onChange={handleChange} className="input-admin resize-none" placeholder="Conte detalhes sobre o imóvel..." />
-          </div>
-        </div>
-
-        <div className="flex justify-end pt-4">
-          <button 
-            type="submit" 
-            disabled={loading || uploading}
-            className="w-full md:w-auto bg-[#0f2e20] hover:bg-green-900 text-white px-12 py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all disabled:opacity-50 active:scale-95"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-            {loading ? "SALVANDO..." : "SALVAR IMÓVEL"}
-          </button>
-        </div>
+        <button type="submit" disabled={loading || uploading} className="w-full bg-[#0f2e20] text-white font-black py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl hover:bg-black transition-all uppercase tracking-widest text-sm">
+          {loading ? <Loader2 className="animate-spin" /> : <Save size={20} />} Publicar Imóvel
+        </button>
       </form>
     </div>
   );

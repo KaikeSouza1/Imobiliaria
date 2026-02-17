@@ -39,60 +39,28 @@ export async function PUT(
     const banheiros = parseInt(body.banheiros) || 0;
     const vagas = parseInt(body.vagas) || 0;
     const status = body.status || "disponivel";
+    const destaque = body.destaque || false; // Adicionado
     const ativo = body.ativo !== undefined ? body.ativo : true;
     const latitude = body.latitude || -26.2303;
     const longitude = body.longitude || -51.0904;
 
-    try {
-      const sql = `
-        UPDATE imoveis SET 
-          titulo=$1, descricao=$2, preco=$3, tipo=$4, finalidade=$5, 
-          cidade=$6, bairro=$7, endereco=$8, area=$9, quartos=$10, 
-          banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15, 
-          status=$16, latitude=$17, longitude=$18
-        WHERE id = $19
-      `;
+    const sql = `
+      UPDATE imoveis SET 
+        titulo=$1, descricao=$2, preco=$3, tipo=$4, finalidade=$5, 
+        cidade=$6, bairro=$7, endereco=$8, area=$9, quartos=$10, 
+        banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15, 
+        status=$16, latitude=$17, longitude=$18, destaque=$19
+      WHERE id = $20
+    `;
 
-      await query(sql, [
-        body.titulo, body.descricao, preco, body.tipo, body.finalidade,
-        body.cidade, body.bairro, body.endereco, area, quartos,
-        banheiros, vagas, body.imagem_url, body.codigo, ativo, 
-        status, latitude, longitude, id
-      ]);
+    await query(sql, [
+      body.titulo, body.descricao, preco, body.tipo, body.finalidade,
+      body.cidade, body.bairro, body.endereco, area, quartos,
+      banheiros, vagas, body.imagem_url, body.codigo, ativo, 
+      status, latitude, longitude, destaque, id
+    ]);
 
-      return NextResponse.json({ message: "Atualizado!" });
-
-    } catch (innerError: any) {
-      const isColumnError =
-        innerError?.message?.includes("latitude") ||
-        innerError?.message?.includes("longitude") ||
-        innerError?.code === "42703";
-
-      if (isColumnError) {
-        console.warn("⚠️ Colunas latitude/longitude não existem. Salvando sem elas.");
-        
-        const sqlSemCoords = `
-          UPDATE imoveis SET 
-            titulo=$1, descricao=$2, preco=$3, tipo=$4, finalidade=$5, 
-            cidade=$6, bairro=$7, endereco=$8, area=$9, quartos=$10, 
-            banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15, status=$16
-          WHERE id = $17
-        `;
-
-        await query(sqlSemCoords, [
-          body.titulo, body.descricao, preco, body.tipo, body.finalidade,
-          body.cidade, body.bairro, body.endereco, area, quartos,
-          banheiros, vagas, body.imagem_url, body.codigo, ativo, status, id
-        ]);
-
-        return NextResponse.json({
-          message: "Atualizado (sem coordenadas)",
-          warning: "Execute: ALTER TABLE imoveis ADD COLUMN latitude DECIMAL(10,8), ADD COLUMN longitude DECIMAL(11,8);"
-        });
-      }
-
-      throw innerError;
-    }
+    return NextResponse.json({ message: "Atualizado!" });
 
   } catch (error: any) {
     console.error("❌ ERRO NO PUT:", error?.message || error);
