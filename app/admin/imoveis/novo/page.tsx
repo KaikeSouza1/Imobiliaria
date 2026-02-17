@@ -19,12 +19,12 @@ export default function NovoImovelPage() {
   
   const [formData, setFormData] = useState({
     titulo: "", 
-    codigo: "", // Campo Código presente no estado
+    codigo: "", 
     preco: "", 
     tipo: "Casa", 
     finalidade: "Venda",
     status: "disponivel",
-    destaque: true, // Padrão TRUE como você pediu
+    destaque: true, 
     cidade: "Porto União", 
     bairro: "", 
     endereco: "", 
@@ -255,7 +255,7 @@ export default function NovoImovelPage() {
                <input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="0.00" />
              </div>
              
-             {/* AQUI ESTÁ O CAMPO CÓDIGO */}
+             {/* CAMPO CÓDIGO */}
              <div>
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Código / Referência</label>
                <input name="codigo" required value={formData.codigo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="Ex: REF-1234" />
@@ -265,12 +265,12 @@ export default function NovoImovelPage() {
              <div>
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Tipo de Imóvel</label>
                <select name="tipo" value={formData.tipo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
-                 <option value="Casa">Casa</option>
                  <option value="Apartamento">Apartamento</option>
+                 <option value="Casa">Casa</option>
                  <option value="Sobrado">Sobrado</option>
+                 <option value="Comercial">Comercial</option>
                  <option value="Terreno">Terreno</option>
                  <option value="Terreno Rural">Terreno Rural</option>
-                 <option value="Comercial">Comercial</option>
                </select>
              </div>
              <div>

@@ -24,12 +24,23 @@ interface Imovel {
   ativo: boolean;
 }
 
+// Opções de Categorias para o Filtro Superior
+const categories = [
+  { label: "Todos", value: "" },
+  { label: "Casas", value: "Casa" },
+  { label: "Apartamentos", value: "Apartamento" },
+  { label: "Sobrados", value: "Sobrado" },
+  { label: "Terrenos", value: "Terreno" },
+  { label: "Rurais", value: "Terreno Rural" },
+  { label: "Comerciais", value: "Comercial" },
+];
+
 function AluguelContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
   // Captura Parâmetros
-  const tipoUrl = searchParams.get('tipo');
+  const tipoUrl = searchParams.get('tipo') || "";
   const cidadeUrl = searchParams.get('cidade');
   const bairroUrl = searchParams.get('bairro');
   const codigoUrl = searchParams.get('codigo');
@@ -45,7 +56,7 @@ function AluguelContent() {
           const data = await res.json();
           // Filtra apenas Aluguel/Locação
           const apenasAluguel = data.filter((item: Imovel) =>
-            item.ativo && (item.finalidade === "Aluguel" || item.finalidade === "Locação")
+            item.ativo && (item.finalidade === "Aluguel" || item.finalidade === "Locação" || item.finalidade === "Alugar")
           );
           setImoveis(apenasAluguel);
         }
@@ -61,24 +72,43 @@ function AluguelContent() {
   // Filtragem Rigorosa
   const imoveisFiltrados = imoveis.filter(imovel => {
     if (codigoUrl && imovel.codigo.toLowerCase() !== codigoUrl.toLowerCase()) return false;
-    if (tipoUrl && !imovel.tipo.toLowerCase().includes(tipoUrl.toLowerCase())) return false;
+    
+    if (tipoUrl) {
+       const tipoImovel = imovel.tipo ? imovel.tipo.toLowerCase() : "";
+       const tipoBusca = tipoUrl.toLowerCase();
+       if (!tipoImovel.includes(tipoBusca)) return false;
+    }
+
     if (cidadeUrl && imovel.cidade !== cidadeUrl) return false;
     if (bairroUrl && imovel.bairro !== bairroUrl) return false;
+    
     return true;
   });
+
+  const updateTypeFilter = (newType: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newType) {
+      params.set('tipo', newType);
+    } else {
+      params.delete('tipo');
+    }
+    router.push(`/imoveis/aluguel?${params.toString()}`);
+  };
 
   const limparFiltros = () => router.push("/imoveis/aluguel");
 
   const mapToCard = (imovel: Imovel) => ({
     ...imovel,
     preco: `${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(imovel.preco)}/mês`,
-    imagem: imovel.imagem_url || "/logo_nova.png"
+    imagem: imovel.imagem_url || "/logo_nova.png" // Garante a imagem correta
   });
 
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-20">
-        <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+        
+        {/* BARRA DE FILTROS SUPERIOR (RESUMO) */}
+        <div className="bg-white p-6 rounded-t-2xl shadow-sm border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-gray-600 font-medium text-sm">
             Encontramos <span className="font-bold text-gray-900 text-lg">{imoveisFiltrados.length}</span> imóveis para alugar
             {cidadeUrl && <span> em <span className="font-bold">{cidadeUrl}</span></span>}
@@ -91,6 +121,29 @@ function AluguelContent() {
             </button>
           )}
         </div>
+
+        {/* BARRA DE CATEGORIAS (ABAS) - OPÇÕES COMPLETAS */}
+        <div className="bg-white p-2 rounded-b-2xl shadow-xl border border-gray-100 overflow-x-auto">
+           <div className="flex items-center gap-2 min-w-max px-2">
+              {categories.map((cat) => {
+                const isActive = tipoUrl === cat.value || (cat.value === "" && !tipoUrl);
+                return (
+                  <button
+                    key={cat.label}
+                    onClick={() => updateTypeFilter(cat.value)}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap
+                      ${isActive 
+                        ? "bg-blue-700 text-white shadow-md transform scale-105" 
+                        : "bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                      }`}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+           </div>
+        </div>
+
       </div>
 
       <div className="max-w-7xl mx-auto px-4 mt-10">

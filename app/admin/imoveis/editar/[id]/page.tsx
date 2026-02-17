@@ -23,7 +23,7 @@ export default function EditarImovelPage() {
   
   const [formData, setFormData] = useState({
     titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
-    status: "disponivel", destaque: false, // <-- Novo campo
+    status: "disponivel", destaque: false, 
     cidade: "", bairro: "", endereco: "", area: "",
     quartos: "0", banheiros: "0", vagas: "0", descricao: "",
     imagem_url: "", fotos_adicionais: [] as string[], ativo: true,
@@ -48,7 +48,7 @@ export default function EditarImovelPage() {
           banheiros: data.banheiros?.toString() || "0",
           vagas: data.vagas?.toString() || "0",
           status: data.status || "disponivel",
-          destaque: data.destaque || false, // <-- Carrega o campo
+          destaque: data.destaque || false, 
           latitude: Number(data.latitude) || -26.2303,
           longitude: Number(data.longitude) || -51.0904,
           fotos_adicionais: data.fotos_adicionais || []
@@ -162,7 +162,7 @@ export default function EditarImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO DESTAQUE <-- NOVO AQUI */}
+        {/* SEÇÃO DESTAQUE */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -225,20 +225,21 @@ export default function EditarImovelPage() {
             <input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="input-admin" />
           </div>
           <div>
+            <label className="label-admin">Tipo de Imóvel</label>
+            <select name="tipo" value={formData.tipo} onChange={handleChange} className="input-admin">
+              <option value="Apartamento">Apartamento</option>
+              <option value="Casa">Casa</option>
+              <option value="Sobrado">Sobrado</option>
+              <option value="Comercial">Comercial</option>
+              <option value="Terreno">Terreno</option>
+              <option value="Terreno Rural">Terreno Rural</option>
+            </select>
+          </div>
+          <div>
             <label className="label-admin">Finalidade</label>
             <select name="finalidade" value={formData.finalidade} onChange={handleChange} className="input-admin">
               <option value="Venda">Venda</option>
               <option value="Aluguel">Aluguel</option>
-            </select>
-          </div>
-          <div>
-            <label className="label-admin">Tipo de Imóvel</label>
-            <select name="tipo" value={formData.tipo} onChange={handleChange} className="input-admin">
-              <option value="Casa">Casa</option>
-              <option value="Apartamento">Apartamento</option>
-              <option value="Sobrado">Sobrado</option>
-              <option value="Terreno">Terreno</option>
-              <option value="Comercial">Comercial</option>
             </select>
           </div>
           <div>

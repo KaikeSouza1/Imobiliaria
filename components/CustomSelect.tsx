@@ -48,7 +48,6 @@ export default function CustomSelect({ label, icon, value, onChange, options }: 
           <ChevronDown size={16} className={`transition-transform duration-300 ${isOpen ? "rotate-180 text-green-600" : "text-gray-400"}`} />
         </button>
 
-        {/* LISTA DE OPÇÕES - Ajustada para w-full */}
         {isOpen && (
           <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-2xl z-[100] border border-gray-100 py-2 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
             {options.map((opt) => (

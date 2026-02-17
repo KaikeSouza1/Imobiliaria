@@ -24,12 +24,21 @@ interface Imovel {
   ativo: boolean;
 }
 
+const categories = [
+  { label: "Todos", value: "" },
+  { label: "Casas", value: "Casa" },
+  { label: "Apartamentos", value: "Apartamento" },
+  { label: "Sobrados", value: "Sobrado" },
+  { label: "Terrenos", value: "Terreno" },
+  { label: "Rurais", value: "Terreno Rural" },
+  { label: "Comerciais", value: "Comercial" },
+];
+
 function VendaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Captura os parâmetros da URL
-  const tipoUrl = searchParams.get('tipo');
+  const tipoUrl = searchParams.get('tipo') || "";
   const cidadeUrl = searchParams.get('cidade');
   const bairroUrl = searchParams.get('bairro');
   const codigoUrl = searchParams.get('codigo');
@@ -43,7 +52,6 @@ function VendaContent() {
         const res = await fetch("/api/imoveis");
         if (res.ok) {
           const data = await res.json();
-          // Filtra apenas Venda e Ativos
           const apenasVenda = data.filter((item: Imovel) =>
             item.ativo && item.finalidade === "Venda"
           );
@@ -58,22 +66,30 @@ function VendaContent() {
     fetchImoveis();
   }, []);
 
-  // Lógica de Filtragem Rigorosa
   const imoveisFiltrados = imoveis.filter(imovel => {
-    // 1. Filtro por Código (Exato)
     if (codigoUrl && imovel.codigo.toLowerCase() !== codigoUrl.toLowerCase()) return false;
     
-    // 2. Filtro por Tipo (Parcial)
-    if (tipoUrl && !imovel.tipo.toLowerCase().includes(tipoUrl.toLowerCase())) return false;
-    
-    // 3. Filtro por Cidade (Exato)
+    if (tipoUrl) {
+       const tipoImovel = imovel.tipo ? imovel.tipo.toLowerCase() : "";
+       const tipoBusca = tipoUrl.toLowerCase();
+       if (!tipoImovel.includes(tipoBusca)) return false;
+    }
+
     if (cidadeUrl && imovel.cidade !== cidadeUrl) return false;
-    
-    // 4. Filtro por Bairro (Exato - Aqui estava o problema antes)
     if (bairroUrl && imovel.bairro !== bairroUrl) return false;
     
     return true;
   });
+
+  const updateTypeFilter = (newType: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newType) {
+      params.set('tipo', newType);
+    } else {
+      params.delete('tipo');
+    }
+    router.push(`/imoveis/venda?${params.toString()}`);
+  };
 
   const limparFiltros = () => router.push("/imoveis/venda");
 
@@ -86,9 +102,11 @@ function VendaContent() {
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-20">
-        <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+        
+        {/* BARRA DE RESUMO */}
+        <div className="bg-white p-6 rounded-t-2xl shadow-sm border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-gray-600 font-medium text-sm">
-            Encontramos <span className="font-bold text-gray-900 text-lg">{imoveisFiltrados.length}</span> imóveis
+            Encontramos <span className="font-bold text-gray-900 text-lg">{imoveisFiltrados.length}</span> imóveis à venda
             {cidadeUrl && <span> em <span className="font-bold">{cidadeUrl}</span></span>}
             {bairroUrl && <span> no bairro <span className="font-bold">{bairroUrl}</span></span>}
             {codigoUrl && <span> com código <span className="font-bold">{codigoUrl}</span></span>}
@@ -99,6 +117,29 @@ function VendaContent() {
             </button>
           )}
         </div>
+
+        {/* BARRA DE CATEGORIAS */}
+        <div className="bg-white p-2 rounded-b-2xl shadow-xl border border-gray-100 overflow-x-auto">
+           <div className="flex items-center gap-2 min-w-max px-2">
+              {categories.map((cat) => {
+                const isActive = tipoUrl === cat.value || (cat.value === "" && !tipoUrl);
+                return (
+                  <button
+                    key={cat.label}
+                    onClick={() => updateTypeFilter(cat.value)}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap
+                      ${isActive 
+                        ? "bg-green-700 text-white shadow-md transform scale-105" 
+                        : "bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                      }`}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+           </div>
+        </div>
+
       </div>
 
       <div className="max-w-7xl mx-auto px-4 mt-10">
@@ -120,10 +161,10 @@ function VendaContent() {
             </div>
             <h3 className="text-2xl font-black text-gray-800 mb-2">Nenhum imóvel encontrado</h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              Não encontramos imóveis para venda com esses filtros específicos. Tente buscar em outro bairro ou ver todos.
+              Não encontramos imóveis à venda com esses filtros. Tente buscar em outra região ou ver todos.
             </p>
-            <button onClick={limparFiltros} className="mt-8 bg-[#0f2e20] text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide hover:bg-green-800 transition-all shadow-lg">
-              Ver Todos os Imóveis
+            <button onClick={limparFiltros} className="mt-8 bg-green-700 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide hover:bg-green-800 transition-all shadow-lg">
+              Ver Todos à Venda
             </button>
           </div>
         )}
@@ -137,11 +178,11 @@ export default function VendaPage() {
     <main className="min-h-screen bg-slate-50 font-sans pb-20">
       <section className="relative h-[350px] bg-[#0f2e20] flex items-end justify-center pb-16">
         <div className="absolute inset-0 overflow-hidden">
-          <Image src="https://images.unsplash.com/photo-1600596542815-60c37611b5a6?auto=format&fit=crop&w=1920" alt="Fundo" fill className="object-cover opacity-20" />
+          <Image src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1920" alt="Fundo" fill className="object-cover opacity-20" />
         </div>
         <div className="relative z-10 text-center text-white px-4">
           <h1 className="text-4xl md:text-6xl font-black mb-2 uppercase tracking-tighter">Comprar Imóvel</h1>
-          <p className="text-green-200 font-medium tracking-wide uppercase text-sm">Invista no seu futuro e da sua família</p>
+          <p className="text-green-200 font-medium tracking-wide uppercase text-sm">Encontre as melhores oportunidades</p>
         </div>
       </section>
       <Suspense fallback={<div className="text-center py-20">Carregando...</div>}>

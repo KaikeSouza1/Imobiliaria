@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation"; // Importante para detectar a página
+import { usePathname } from "next/navigation"; 
 import { Menu, X, ChevronDown, Phone, Mail, Facebook, Instagram, FileText, MessageCircle } from "lucide-react";
 
 export default function Header() {
@@ -28,7 +28,6 @@ export default function Header() {
   const isCompact = scrolled || !isHome;
 
   // ESTILOS DINÂMICOS
-  // Se não for Home, o fundo é SEMPRE Verde Escuro sólido
   const headerBg = isCompact ? "bg-[#0f2e20] shadow-xl" : "bg-transparent";
   
   // Altura reduzida nas páginas internas ou no scroll
@@ -38,10 +37,20 @@ export default function Header() {
   const textClasses = "text-white";
   const hoverClasses = "hover:text-green-300";
 
+  // LISTA DE OPÇÕES ATUALIZADA
+  const propertyTypes = [
+    "Apartamento",
+    "Casa",
+    "Sobrado",
+    "Comercial",
+    "Terreno",
+    "Terreno Rural"
+  ];
+
   return (
     <div className="fixed top-0 z-50 w-full font-sans transition-all duration-500">
 
-      {/* === BARRA SUPERIOR (Fica slim nas páginas internas ou scroll) === */}
+      {/* === BARRA SUPERIOR === */}
       <div className={`bg-[#0f2e20] text-white text-[10px] md:text-xs transition-all duration-500 overflow-hidden ${isCompact ? 'py-1 opacity-95' : 'py-3'}`}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center px-4 gap-2">
           <div className="flex items-center gap-4 md:gap-8">
@@ -90,7 +99,7 @@ export default function Header() {
                 Quem Somos
               </Link>
 
-              {/* Dropdown VENDA */}
+              {/* Dropdown VENDA (Opções Adicionadas) */}
               <div
                 className="relative group flex items-center h-full"
                 onMouseEnter={() => setDropdownVenda(true)}
@@ -100,14 +109,22 @@ export default function Header() {
                   Venda <ChevronDown size={12} />
                 </button>
                 <div className={`absolute ${isCompact ? 'top-12' : 'top-16'} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownVenda ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
-                  <Link href="/imoveis/venda" className="block px-6 py-3 text-white hover:bg-green-700 text-[10px] font-bold uppercase border-b border-green-800">Ver Todos</Link>
-                  <Link href="/imoveis/venda?tipo=casa" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase">Casa</Link>
-                  <Link href="/imoveis/venda?tipo=apartamento" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase">Apartamento</Link>
-                  <Link href="/imoveis/venda?tipo=terreno" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase">Terreno</Link>
+                  <div className="py-2">
+                    <Link href="/imoveis/venda" className="block px-6 py-2 text-white hover:bg-green-700 text-[10px] font-bold uppercase border-b border-green-800 mb-2">Ver Todos</Link>
+                    {propertyTypes.map((tipo) => (
+                       <Link 
+                         key={tipo} 
+                         href={`/imoveis/venda?tipo=${tipo}`} 
+                         className="block px-6 py-2 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase"
+                       >
+                         {tipo}
+                       </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Dropdown LOCAÇÃO */}
+              {/* Dropdown LOCAÇÃO (Opções Adicionadas) */}
               <div
                 className="relative group flex items-center h-full"
                 onMouseEnter={() => setDropdownLocacao(true)}
@@ -117,9 +134,18 @@ export default function Header() {
                   Locação <ChevronDown size={12} />
                 </button>
                 <div className={`absolute ${isCompact ? 'top-12' : 'top-16'} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownLocacao ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
-                  <Link href="/imoveis/aluguel" className="block px-6 py-3 text-white hover:bg-green-700 text-[10px] font-bold uppercase border-b border-green-800">Ver Todos</Link>
-                  <Link href="/imoveis/aluguel?tipo=casa" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase">Casa</Link>
-                  <Link href="/imoveis/aluguel?tipo=apartamento" className="block px-6 py-3 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase">Apartamento</Link>
+                  <div className="py-2">
+                    <Link href="/imoveis/aluguel" className="block px-6 py-2 text-white hover:bg-green-700 text-[10px] font-bold uppercase border-b border-green-800 mb-2">Ver Todos</Link>
+                    {propertyTypes.map((tipo) => (
+                       <Link 
+                         key={tipo} 
+                         href={`/imoveis/aluguel?tipo=${tipo}`} 
+                         className="block px-6 py-2 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase"
+                       >
+                         {tipo}
+                       </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
 

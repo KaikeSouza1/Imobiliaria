@@ -4,8 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Image from "next/image"; 
 import Link from "next/link";
 import { useRouter } from "next/navigation"; 
-import { Search, MapPin, Home, Key, ArrowRight, CheckCircle2, Hash, LayoutGrid, Lock, Loader2, Star } from "lucide-react";
-import PropertyCard from "@/components/PropertyCard";
+import { Search, MapPin, Home, Key, ArrowRight, CheckCircle2, Hash, LayoutGrid, Lock, Loader2, Star, MoveRight } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect"; 
 import HomeContact from "@/components/HomeContact";
 import PropertyCarousel from "@/components/PropertyCarousel";
@@ -49,7 +48,6 @@ export default function Page() {
         const res = await fetch("/api/imoveis");
         if (res.ok) {
           const data = await res.json();
-          // Filtra apenas os ativos para exibir no site
           setImoveis(data.filter((item: Imovel) => item.ativo));
         }
       } catch (error) {
@@ -63,16 +61,13 @@ export default function Page() {
 
   // --- FILTROS DINÂMICOS ---
   
-  // Lista de cidades disponíveis
   const dynamicCities = useMemo(() => {
     const cities = Array.from(new Set(imoveis.map(i => i.cidade))).filter(Boolean).sort();
     return [{ label: "Todas as Cidades", value: "" }, ...cities.map(c => ({ label: c, value: c }))];
   }, [imoveis]);
 
-  // Lista de bairros (filtra baseado na cidade selecionada)
   const dynamicBoroughs = useMemo(() => {
     let source = imoveis;
-    // Se tiver cidade selecionada, mostra apenas bairros daquela cidade
     if (filters.cidade) {
       source = imoveis.filter(i => i.cidade === filters.cidade);
     }
@@ -97,24 +92,19 @@ export default function Page() {
 
   // --- BUSCA INTELIGENTE ---
   const handleSearch = () => {
-    // 1. Prioridade: Busca por Código (Redirecionamento Inteligente)
     if (filters.codigo) {
-      // Procura o imóvel na lista carregada
       const imovelEncontrado = imoveis.find(i => i.codigo.toLowerCase() === filters.codigo.toLowerCase());
       
       if (imovelEncontrado) {
-        // Se achou, verifica se é Venda ou Aluguel e manda pra página certa
         const isLocacao = imovelEncontrado.finalidade === "Aluguel" || imovelEncontrado.finalidade === "Locação";
         const rota = isLocacao ? "/imoveis/aluguel" : "/imoveis/venda";
         router.push(`${rota}?codigo=${filters.codigo}`);
       } else {
-        // Se não achou, avisa (ou manda para venda generico com aviso)
         alert("Imóvel com este código não encontrado.");
       }
       return;
     }
 
-    // 2. Busca por Filtros Normais
     const baseRoute = filters.finalidade === "Alugar" || filters.finalidade === "Aluguel" ? "/imoveis/aluguel" : "/imoveis/venda";
     const params = new URLSearchParams();
     if (filters.tipo) params.append("tipo", filters.tipo);
@@ -125,7 +115,6 @@ export default function Page() {
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    // Se mudar a cidade, limpa o bairro para evitar bairro de outra cidade selecionado
     if (key === "cidade") {
       setFilters(prev => ({ ...prev, cidade: value, bairro: "" }));
     } else {
@@ -162,8 +151,32 @@ export default function Page() {
               <div className="h-1 w-12 bg-green-500 rounded-full"></div>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <CustomSelect label="Finalidade" icon={<Key size={14}/>} value={filters.finalidade} onChange={(v) => handleFilterChange('finalidade', v)} options={[{ label: "Comprar", value: "Comprar" }, { label: "Alugar", value: "Alugar" }]} />
-              <CustomSelect label="Tipo" icon={<Home size={14}/>} value={filters.tipo} onChange={(v) => handleFilterChange('tipo', v)} options={[{ label: "Todos os Tipos", value: "" }, { label: "Casa", value: "Casa" }, { label: "Apartamento", value: "Apartamento" }, { label: "Terreno", value: "Terreno" }, { label: "Comercial", value: "Comercial" }]} />
+              
+              <CustomSelect 
+                label="Finalidade" 
+                icon={<Key size={14}/>} 
+                value={filters.finalidade} 
+                onChange={(v) => handleFilterChange('finalidade', v)} 
+                options={[{ label: "Comprar", value: "Comprar" }, { label: "Alugar", value: "Alugar" }]} 
+              />
+              
+              {/* ATUALIZADO: Lista de Tipos conforme solicitado */}
+              <CustomSelect 
+                label="Tipo" 
+                icon={<Home size={14}/>} 
+                value={filters.tipo} 
+                onChange={(v) => handleFilterChange('tipo', v)} 
+                options={[
+                  { label: "Todos os Tipos", value: "" }, 
+                  { label: "Apartamento", value: "Apartamento" }, 
+                  { label: "Casa", value: "Casa" }, 
+                  { label: "Sobrado", value: "Sobrado" }, 
+                  { label: "Comercial", value: "Comercial" },
+                  { label: "Terreno", value: "Terreno" },
+                  { label: "Terreno Rural", value: "Terreno Rural" }
+                ]} 
+              />
+
               <CustomSelect label="Cidade" icon={<MapPin size={14}/>} value={filters.cidade} onChange={(v) => handleFilterChange('cidade', v)} options={dynamicCities} />
               <CustomSelect label="Bairro" icon={<LayoutGrid size={14}/>} value={filters.bairro} onChange={(v) => handleFilterChange('bairro', v)} options={dynamicBoroughs} />
             </div>
@@ -182,7 +195,7 @@ export default function Page() {
 
       {/* --- SEÇÃO 1: DESTAQUES VENDA --- */}
       <section className="max-w-[1400px] mx-auto px-4 mt-24 mb-16">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-8 px-2">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-4 px-2">
           <div>
             <span className="text-green-600 font-black uppercase tracking-[0.2em] text-xs mb-2 block flex items-center gap-2">
               <Star size={14} className="fill-green-600" /> Oportunidades Exclusivas
@@ -194,6 +207,11 @@ export default function Page() {
           <Link href="/imoveis/venda" className="hidden md:flex items-center gap-2 bg-[#0f2e20] text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg">
             Ver Todos Venda <ArrowRight size={16} />
           </Link>
+        </div>
+
+        {/* Dica visual Mobile */}
+        <div className="md:hidden flex items-center justify-end gap-1 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2 pr-2 animate-pulse">
+          Deslize para ver mais <MoveRight size={12} />
         </div>
 
         {loading ? (
@@ -217,7 +235,7 @@ export default function Page() {
 
       {/* --- SEÇÃO 2: DESTAQUES LOCAÇÃO --- */}
       <section className="max-w-[1400px] mx-auto px-4 mt-16 mb-24">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-8 px-2">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-4 px-2">
           <div>
             <span className="text-blue-600 font-black uppercase tracking-[0.2em] text-xs mb-2 block flex items-center gap-2">
               <CheckCircle2 size={14} /> Prontos para Morar
@@ -229,6 +247,11 @@ export default function Page() {
           <Link href="/imoveis/aluguel" className="hidden md:flex items-center gap-2 bg-blue-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg">
             Ver Todos Locação <ArrowRight size={16} />
           </Link>
+        </div>
+
+        {/* Dica visual Mobile */}
+        <div className="md:hidden flex items-center justify-end gap-1 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2 pr-2 animate-pulse">
+          Deslize para ver mais <MoveRight size={12} />
         </div>
 
         {loading ? (
