@@ -144,10 +144,10 @@ export default function Page() {
         <div className="absolute inset-0 z-1 bg-black/60"></div>
         <div className="relative z-10 max-w-5xl mx-auto px-6 w-full text-center mt-10">
           <h1 className="text-4xl md:text-7xl font-black text-white mb-4 drop-shadow-2xl uppercase tracking-tighter italic">
-            Porto Iguaçu
+            Bem-Vindo À Imobiliária Porto Iguaçu
           </h1>
           <p className="text-lg md:text-2xl text-white/90 font-bold uppercase tracking-widest border-t border-white/20 pt-6">
-            Sua imobiliária de confiança
+             Na Imobiliária Porto Iguaçu, conectamos sonhos aos endereços certos. Com experiência no mercado imobiliário das gêmeas do Iguaçu, nossa equipe de especialistas está aqui para ajudá-lo a encontrar o lar perfeito ou o investimento ideal.
           </p>
         </div>
       </section>
