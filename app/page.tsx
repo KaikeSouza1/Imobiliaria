@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Image from "next/image"; 
 import Link from "next/link";
 import { useRouter } from "next/navigation"; 
-import { Search, MapPin, Home, Key, ArrowRight, CheckCircle2, Hash, LayoutGrid, Lock, Loader2 } from "lucide-react";
+import { Search, MapPin, Home, Key, ArrowRight, CheckCircle2, Hash, LayoutGrid, Lock, Loader2, Star } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
 import CustomSelect from "@/components/CustomSelect"; 
 import HomeContact from "@/components/HomeContact";
@@ -43,7 +43,6 @@ export default function Page() {
     codigo: ""
   });
 
-  // 1. Busca os imóveis da API
   useEffect(() => {
     async function fetchImoveis() {
       try {
@@ -61,7 +60,6 @@ export default function Page() {
     fetchImoveis();
   }, []);
 
-  // --- LÓGICA DINÂMICA DE CIDADES E BAIRROS ---
   const dynamicCities = useMemo(() => {
     const cities = imoveis.map(i => i.cidade).filter(Boolean);
     const uniqueCities = Array.from(new Set(cities)).sort();
@@ -72,7 +70,6 @@ export default function Page() {
   }, [imoveis]);
 
   const dynamicBoroughs = useMemo(() => {
-    // Filtra bairros da cidade selecionada (opcional, aqui pega todos)
     const boroughs = imoveis.map(i => i.bairro).filter(Boolean);
     const uniqueBoroughs = Array.from(new Set(boroughs)).sort();
     return [
@@ -81,12 +78,18 @@ export default function Page() {
     ];
   }, [imoveis]);
 
-  const destaquesVenda = imoveis.filter(i => i.finalidade === "Venda").slice(0, 3);
-  const destaquesAluguel = imoveis.filter(i => i.finalidade === "Aluguel" || i.finalidade === "Locação").slice(0, 3);
+  // ── LISTAS ────────────────────────────────────────────────────────────────
+  const disponiveis = imoveis.filter(i => !i.status || i.status === "disponivel");
 
-  const formatMoney = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
+  const vendaDestaque = disponiveis.filter(i => i.finalidade === "Venda" && i.destaque);
+  const vendaTodos    = disponiveis.filter(i => i.finalidade === "Venda" && !i.destaque);
+
+  const aluguelDestaque = disponiveis.filter(i => (i.finalidade === "Aluguel" || i.finalidade === "Locação") && i.destaque);
+  const aluguelTodos    = disponiveis.filter(i => (i.finalidade === "Aluguel" || i.finalidade === "Locação") && !i.destaque);
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   const handleSearch = () => {
     if (filters.codigo) {
@@ -114,13 +117,12 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-slate-50 font-sans overflow-x-hidden relative">
       
-      {/* === HERO SECTION === */}
+      {/* === HERO === */}
       <section className="relative h-[750px] w-full flex items-center justify-center overflow-hidden z-10">
         <div className="absolute inset-0 z-0">
-           <Image src="/banner.jpg" alt="Banner" fill className="object-cover" priority />
+          <Image src="/banner.jpg" alt="Banner" fill className="object-cover" priority />
         </div>
         <div className="absolute inset-0 z-1 bg-black/60"></div>
-        
         <div className="relative z-10 max-w-5xl mx-auto px-6 w-full text-center mt-20">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-2xl uppercase tracking-wide">
             Bem-Vindo À Imobiliária Porto Iguaçu
@@ -131,17 +133,14 @@ export default function Page() {
         </div>
       </section>
 
-      {/* === BARRA DE BUSCA (VERDE ESCURO SÓLIDO) === */}
+      {/* === BARRA DE BUSCA === */}
       <div className="relative -mt-32 z-30 px-4">
         <div className="max-w-6xl mx-auto bg-[#0f2e20] rounded-[2rem] shadow-2xl border border-green-800 relative font-bold overflow-visible">
-          
           <div className="p-8 pb-6">
             <h2 className="text-2xl font-black text-white flex items-center gap-3 mb-8 uppercase tracking-tight">
               ENCONTRE SEU IMÓVEL AQUI
               <div className="h-1.5 w-12 bg-white rounded-full hidden md:block"></div>
             </h2>
-            
-            {/* GRID DOS FILTROS */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
               <CustomSelect 
                 label="Finalidade" icon={<Key size={14} className="text-white"/>} 
@@ -165,8 +164,6 @@ export default function Page() {
               />
             </div>
           </div>
-          
-          {/* Parte Inferior */}
           <div className="bg-[#0a1f16]/50 border-t border-green-800/50 p-6 flex flex-col md:flex-row items-center justify-between gap-4 rounded-b-[2rem]">
             <div className="w-full md:w-auto flex items-center gap-3">
               <span className="text-xs font-black text-white uppercase hidden md:block tracking-wide">BUSCAR POR CÓDIGO:</span>
@@ -179,7 +176,6 @@ export default function Page() {
                 />
               </div>
             </div>
-            
             <button 
               onClick={handleSearch} 
               className="w-full md:w-auto bg-[#009c3b] hover:bg-white hover:text-[#009c3b] text-white rounded-xl font-black py-3 px-12 transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95 text-sm uppercase tracking-wider transform hover:-translate-y-1"
@@ -190,27 +186,42 @@ export default function Page() {
         </div>
       </div>
 
-      {/* === SEÇÃO: VENDA === */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          VENDA - DESTAQUES
+      ═══════════════════════════════════════════════════════════════════════ */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 mt-24 mb-16">
         <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
           <div>
-            <span className="text-green-700 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2"><CheckCircle2 size={16} /> Oportunidades Exclusivas</span>
-            <h2 className="text-4xl font-extrabold text-slate-900">Venda</h2>
+            <span className="text-green-700 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2">
+              <Star size={15} className="fill-amber-400 text-amber-400" /> Imóveis em Destaque
+            </span>
+            <h2 className="text-4xl font-extrabold text-slate-900">Destaques para Venda</h2>
           </div>
-          <Link href="/imoveis/venda" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-green-700 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">Ver todos à venda <ArrowRight size={16}/></Link>
+          <Link href="/imoveis/venda" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-green-700 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">
+            Ver todos à venda <ArrowRight size={16}/>
+          </Link>
         </div>
         
         {loading ? (
           <div className="text-center py-20 text-gray-400 flex flex-col items-center">
             <Loader2 className="animate-spin mb-2" size={30} /> Carregando...
           </div>
-        ) : destaquesVenda.length > 0 ? (
+        ) : vendaDestaque.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {destaquesVenda.map((imovel) => <PropertyCard key={imovel.id} property={mapToCard(imovel)} />)}
+            {vendaDestaque.map((imovel) => (
+              <div key={imovel.id} className="relative">
+                {/* TAG DESTAQUE */}
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md">
+                  <Star size={10} fill="currentColor" /> DESTAQUE
+                </div>
+                <PropertyCard property={mapToCard(imovel)} />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
-            <p className="text-gray-500 font-bold">Nenhum imóvel em destaque para venda.</p>
+            <p className="text-gray-500 font-bold">Nenhum imóvel marcado como destaque para venda.</p>
+            <p className="text-gray-400 text-sm mt-1">Marque imóveis como destaque no painel admin.</p>
           </div>
         )}
       </section>
@@ -219,35 +230,105 @@ export default function Page() {
         <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
       </div>
 
-      {/* === SEÇÃO: LOCAÇÃO === */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 mt-16 mb-20">
+      {/* ═══════════════════════════════════════════════════════════════════════
+          VENDA - TODOS
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {!loading && vendaTodos.length > 0 && (
+        <section className="relative z-10 max-w-7xl mx-auto px-4 mt-16 mb-16">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+            <div>
+              <span className="text-green-700 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2">
+                <CheckCircle2 size={16} /> Oportunidades Exclusivas
+              </span>
+              <h2 className="text-4xl font-extrabold text-slate-900">Todos os Imóveis para Venda</h2>
+            </div>
+            <Link href="/imoveis/venda" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-green-700 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">
+              Ver todos à venda <ArrowRight size={16}/>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {vendaTodos.map((imovel) => (
+              <PropertyCard key={imovel.id} property={mapToCard(imovel)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          LOCAÇÃO - DESTAQUES
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="relative z-10 max-w-7xl mx-auto px-4 mt-16 mb-16">
         <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
           <div>
-            <span className="text-blue-700 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2"><CheckCircle2 size={16} /> Prontos para morar ou abrir seu negócio</span>
-            <h2 className="text-4xl font-extrabold text-slate-900">Locação</h2>
+            <span className="text-blue-700 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2">
+              <Star size={15} className="fill-amber-400 text-amber-400" /> Imóveis em Destaque
+            </span>
+            <h2 className="text-4xl font-extrabold text-slate-900">Destaques para Locação</h2>
           </div>
-          <Link href="/imoveis/aluguel" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-blue-700 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">Ver todos para alugar <ArrowRight size={16}/></Link>
+          <Link href="/imoveis/aluguel" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-blue-700 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">
+            Ver todos para alugar <ArrowRight size={16}/>
+          </Link>
         </div>
-        
+
         {loading ? (
-           <div className="text-center py-20 text-gray-400 flex flex-col items-center">
-             <Loader2 className="animate-spin mb-2" size={30} /> Carregando...
-           </div>
-        ) : destaquesAluguel.length > 0 ? (
+          <div className="text-center py-20 text-gray-400 flex flex-col items-center">
+            <Loader2 className="animate-spin mb-2" size={30} /> Carregando...
+          </div>
+        ) : aluguelDestaque.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {destaquesAluguel.map((imovel) => <PropertyCard key={imovel.id} property={mapToCard(imovel)} />)}
+            {aluguelDestaque.map((imovel) => (
+              <div key={imovel.id} className="relative">
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md">
+                  <Star size={10} fill="currentColor" /> DESTAQUE
+                </div>
+                <PropertyCard property={mapToCard(imovel)} />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
-            <p className="text-gray-500 font-bold">Nenhum imóvel para locação disponível.</p>
+            <p className="text-gray-500 font-bold">Nenhum imóvel marcado como destaque para locação.</p>
+            <p className="text-gray-400 text-sm mt-1">Marque imóveis como destaque no painel admin.</p>
           </div>
         )}
       </section>
 
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          LOCAÇÃO - TODOS
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {!loading && aluguelTodos.length > 0 && (
+        <section className="relative z-10 max-w-7xl mx-auto px-4 mt-16 mb-20">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+            <div>
+              <span className="text-blue-700 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-2">
+                <CheckCircle2 size={16} /> Prontos para morar ou abrir seu negócio
+              </span>
+              <h2 className="text-4xl font-extrabold text-slate-900">Todos os Imóveis para Locação</h2>
+            </div>
+            <Link href="/imoveis/aluguel" className="hidden md:flex items-center gap-2 text-slate-700 font-bold hover:text-blue-700 transition-colors bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 hover:shadow-md">
+              Ver todos para alugar <ArrowRight size={16}/>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {aluguelTodos.map((imovel) => (
+              <PropertyCard key={imovel.id} property={mapToCard(imovel)} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* === CONTATO === */}
       <HomeContact />
 
-      {/* === RODAPÉ / ÁREA RESTRITA === */}
+      {/* === ÁREA RESTRITA === */}
       <div className="bg-[#0a1f16] pb-2 text-center relative z-20">
         <Link href="/login" className="inline-flex items-center gap-2 text-[10px] text-green-800 hover:text-green-500 uppercase font-bold tracking-widest transition-colors opacity-50 hover:opacity-100 px-4 py-2">
           <Lock size={10} /> Área Restrita

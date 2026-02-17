@@ -180,37 +180,76 @@ function ImovelDetalhesContent() {
 
       {/* GALERIA MOSAICO */}
       <section className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-2 h-[500px] rounded-3xl overflow-hidden relative">
-          
-          {/* Foto principal */}
-          <div className="md:col-span-2 md:row-span-2 relative cursor-pointer group" onClick={() => { setFotoAtiva(0); setModalAberto(true); }}>
-            <Image src={todasFotos[0]} alt="Principal" fill className="object-cover group-hover:brightness-90 transition-all" priority />
-          </div>
+        {(() => {
+          const total = todasFotos.length;
 
-          {[1, 2, 3, 4].map((idx) => (
-            <div
-              key={idx}
-              className="hidden md:block relative cursor-pointer group"
-              onClick={() => { setFotoAtiva(idx); setModalAberto(true); }}
-            >
-              <Image
-                src={todasFotos[idx] || todasFotos[0]}
-                alt={`Foto ${idx + 1}`}
-                fill
-                className="object-cover group-hover:brightness-90 transition-all"
-              />
-              {idx === 4 && todasFotos.length > 5 && (
-                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white pointer-events-none">
-                  <Camera size={24} className="mb-1" />
-                  <span className="font-bold">+{todasFotos.length - 5} fotos</span>
+          // Layout dinâmico baseado na quantidade de fotos
+          if (total === 1) {
+            return (
+              <div className="relative h-[500px] rounded-3xl overflow-hidden cursor-pointer" onClick={() => { setFotoAtiva(0); setModalAberto(true); }}>
+                <Image src={todasFotos[0]} alt="Principal" fill className="object-cover hover:brightness-90 transition-all" priority />
+              </div>
+            );
+          }
+
+          if (total === 2) {
+            return (
+              <div className="grid grid-cols-2 gap-2 h-[500px] rounded-3xl overflow-hidden">
+                {todasFotos.slice(0, 2).map((foto, i) => (
+                  <div key={i} className="relative cursor-pointer group" onClick={() => { setFotoAtiva(i); setModalAberto(true); }}>
+                    <Image src={foto} alt={`Foto ${i+1}`} fill className="object-cover group-hover:brightness-90 transition-all" priority={i === 0} />
+                  </div>
+                ))}
+              </div>
+            );
+          }
+
+          if (total === 3) {
+            return (
+              <div className="grid grid-cols-2 gap-2 h-[500px] rounded-3xl overflow-hidden">
+                <div className="relative cursor-pointer group row-span-2" onClick={() => { setFotoAtiva(0); setModalAberto(true); }}>
+                  <Image src={todasFotos[0]} alt="Principal" fill className="object-cover group-hover:brightness-90 transition-all" priority />
                 </div>
-              )}
-            </div>
-          ))}
+                {todasFotos.slice(1, 3).map((foto, i) => (
+                  <div key={i} className="relative cursor-pointer group" onClick={() => { setFotoAtiva(i+1); setModalAberto(true); }}>
+                    <Image src={foto} alt={`Foto ${i+2}`} fill className="object-cover group-hover:brightness-90 transition-all" />
+                  </div>
+                ))}
+              </div>
+            );
+          }
 
-          <button 
+          // 4+ fotos: layout mosaico completo
+          const extras = total - 5;
+          return (
+            <div className="grid grid-cols-4 grid-rows-2 gap-2 h-[500px] rounded-3xl overflow-hidden relative">
+              <div className="col-span-2 row-span-2 relative cursor-pointer group" onClick={() => { setFotoAtiva(0); setModalAberto(true); }}>
+                <Image src={todasFotos[0]} alt="Principal" fill className="object-cover group-hover:brightness-90 transition-all" priority />
+              </div>
+              {[1, 2, 3, 4].map((idx) => {
+                if (!todasFotos[idx]) return <div key={idx} className="bg-gray-100" />;
+                const isLast = idx === 4 && extras > 0;
+                return (
+                  <div key={idx} className="relative cursor-pointer group" onClick={() => { setFotoAtiva(idx); setModalAberto(true); }}>
+                    <Image src={todasFotos[idx]} alt={`Foto ${idx+1}`} fill className="object-cover group-hover:brightness-90 transition-all" />
+                    {isLast && (
+                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white pointer-events-none">
+                        <Camera size={24} className="mb-1" />
+                        <span className="font-bold">+{extras} fotos</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* Botão mobile */}
+        <div className="flex justify-end mt-2 md:hidden">
+          <button
             onClick={() => setModalAberto(true)}
-            className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg md:hidden"
+            className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg border border-gray-100"
           >
             <Camera size={16} /> {todasFotos.length} fotos
           </button>
@@ -272,6 +311,43 @@ function ImovelDetalhesContent() {
               </div>
             </>
           )}
+
+          {/* TABELA DE DETALHES */}
+          <div className="mb-8">
+            <h3 className="text-xl font-black text-gray-900 mb-4 uppercase tracking-tight">Detalhes</h3>
+            <div className="rounded-2xl border border-gray-100 overflow-hidden">
+              {[
+                { label: "ID do Imóvel",      value: imovel.codigo || `#${imovel.id}` },
+                { label: "Tipo de Imóvel",    value: imovel.tipo },
+                { label: "Finalidade",        value: imovel.finalidade },
+                { label: "Cidade",            value: imovel.cidade },
+                { label: "Bairro",            value: imovel.bairro },
+                ...(imovel.area > 0      ? [{ label: "Área Total",  value: `${imovel.area} m²` }]      : []),
+                ...(imovel.quartos > 0   ? [{ label: "Quartos",     value: String(imovel.quartos) }]   : []),
+                ...(imovel.banheiros > 0 ? [{ label: "Banheiros",   value: String(imovel.banheiros) }] : []),
+                ...(imovel.vagas > 0     ? [{ label: "Garagens",    value: String(imovel.vagas) }]     : []),
+                {
+                  label: "Preço",
+                  value: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(imovel.preco),
+                },
+                {
+                  label: "Status",
+                  value: imovel.status === "vendido"   ? "Vendido"
+                       : imovel.status === "alugado"   ? "Alugado"
+                       : imovel.status === "reservado" ? "Reservado"
+                       : "Disponível",
+                },
+              ].map((row, i) => (
+                <div
+                  key={i}
+                  className={`flex justify-between items-center px-5 py-3.5 text-sm ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                >
+                  <span className="font-bold text-gray-400">{row.label}</span>
+                  <span className="font-bold text-gray-900 text-right">{row.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* DIREITA: CONTATO FIXO */}

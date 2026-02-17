@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin } from "lucide-react";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star } from "lucide-react";
 import Link from "next/link";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
@@ -24,6 +24,7 @@ export default function NovoImovelPage() {
     tipo: "Casa", 
     finalidade: "Venda",
     status: "disponivel",
+    destaque: false,           // ← NOVO
     cidade: "", 
     bairro: "", 
     endereco: "", 
@@ -196,7 +197,44 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 2: STATUS */}
+        {/* SEÇÃO 2: DESTAQUE ← NOVO */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Destaque na Home</h2>
+          
+          <label className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all
+            ${formData.destaque
+              ? "border-amber-400 bg-amber-50"
+              : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
+            <input
+              type="checkbox"
+              checked={formData.destaque}
+              onChange={e => setFormData(p => ({ ...p, destaque: e.target.checked }))}
+              className="hidden"
+            />
+            {/* ÍCONE */}
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all
+              ${formData.destaque ? "bg-amber-400 text-amber-900" : "bg-gray-200 text-gray-400"}`}>
+              <Star size={22} fill={formData.destaque ? "currentColor" : "none"} />
+            </div>
+            {/* TEXTO */}
+            <div className="flex-1">
+              <p className={`font-black text-sm ${formData.destaque ? "text-amber-800" : "text-gray-600"}`}>
+                {formData.destaque ? "⭐ Imóvel marcado como Destaque!" : "Marcar como Destaque"}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Aparece em card grande no topo da página inicial
+              </p>
+            </div>
+            {/* TOGGLE SWITCH */}
+            <div className={`w-12 h-6 rounded-full transition-all flex-shrink-0 relative
+              ${formData.destaque ? "bg-amber-400" : "bg-gray-200"}`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all
+                ${formData.destaque ? "left-7" : "left-1"}`} />
+            </div>
+          </label>
+        </div>
+
+        {/* SEÇÃO 3: STATUS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Status do Imóvel</h2>
           <p className="text-xs text-gray-400 mb-4">Defina o status atual. Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards.</p>
@@ -225,7 +263,7 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 3: DADOS BÁSICOS */}
+        {/* SEÇÃO 4: DADOS BÁSICOS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
             <label className="label-admin">Título do Anúncio</label>
@@ -259,7 +297,7 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 4: LOCALIZAÇÃO */}
+        {/* SEÇÃO 5: LOCALIZAÇÃO */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="label-admin">Cidade</label>
@@ -285,7 +323,7 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 5: MAPA */}
+        {/* SEÇÃO 6: MAPA */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-2">
             <MapPin size={16} /> Localização no Mapa
@@ -305,26 +343,16 @@ export default function NovoImovelPage() {
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
               <label className="label-admin">Latitude</label>
-              <input 
-                type="text" 
-                value={formData.latitude.toFixed(6)} 
-                readOnly 
-                className="input-admin bg-gray-50 cursor-not-allowed" 
-              />
+              <input type="text" value={formData.latitude.toFixed(6)} readOnly className="input-admin bg-gray-50 cursor-not-allowed" />
             </div>
             <div>
               <label className="label-admin">Longitude</label>
-              <input 
-                type="text" 
-                value={formData.longitude.toFixed(6)} 
-                readOnly 
-                className="input-admin bg-gray-50 cursor-not-allowed" 
-              />
+              <input type="text" value={formData.longitude.toFixed(6)} readOnly className="input-admin bg-gray-50 cursor-not-allowed" />
             </div>
           </div>
         </div>
 
-        {/* SEÇÃO 6: CARACTERÍSTICAS */}
+        {/* SEÇÃO 7: CARACTERÍSTICAS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <label className="label-admin">Área (m²)</label>
