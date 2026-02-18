@@ -105,7 +105,6 @@ function AluguelContent() {
     fetchImoveis();
   }, []);
 
-  // Filtragem + ordenação
   const imoveisFiltrados = useMemo(() => {
     const filtrados = imoveis.filter((imovel) => {
       if (codigoUrl && imovel.codigo?.toLowerCase() !== codigoUrl.toLowerCase()) return false;
@@ -164,7 +163,7 @@ function AluguelContent() {
               >
                 <SlidersHorizontal size={15} />
                 <span className="hidden sm:inline">Ordenar:</span>
-                <span className="text-blue-700">{ordemAtual.label}</span>
+                <span className="text-green-700">{ordemAtual.label}</span>
               </button>
 
               {showOrdem && (
@@ -175,13 +174,13 @@ function AluguelContent() {
                       onClick={() => { setOrdem(opt.value); setShowOrdem(false); }}
                       className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-bold transition-colors text-left
                         ${ordem === opt.value
-                          ? "bg-blue-50 text-blue-700"
+                          ? "bg-green-50 text-green-700"
                           : "text-gray-600 hover:bg-gray-50"
                         }`}
                     >
                       <span className="text-gray-400">{opt.icon}</span>
                       {opt.label}
-                      {ordem === opt.value && <span className="ml-auto w-2 h-2 bg-blue-600 rounded-full"></span>}
+                      {ordem === opt.value && <span className="ml-auto w-2 h-2 bg-green-600 rounded-full"></span>}
                     </button>
                   ))}
                 </div>
@@ -214,7 +213,7 @@ function AluguelContent() {
                   onClick={() => updateTypeFilter(cat.value)}
                   className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap
                     ${isActive
-                      ? "bg-blue-700 text-white shadow-md scale-105"
+                      ? "bg-green-700 text-white shadow-md scale-105"
                       : "bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                     }`}
                 >
@@ -234,13 +233,13 @@ function AluguelContent() {
       <div className="max-w-7xl mx-auto px-4 mt-10">
         {loading ? (
           <div className="text-center py-20 flex flex-col items-center text-gray-400">
-            <Loader2 className="animate-spin mb-2" size={32} />
+            <Loader2 className="animate-spin mb-2 text-green-700" size={32} />
             <p>Carregando imóveis...</p>
           </div>
         ) : imoveisFiltrados.length > 0 ? (
           <>
             {ordem !== "recentes" && (
-              <div className="mb-4 flex items-center gap-2 text-xs font-bold text-blue-700 bg-blue-50 px-4 py-2 rounded-xl w-fit">
+              <div className="mb-4 flex items-center gap-2 text-xs font-bold text-green-700 bg-green-50 px-4 py-2 rounded-xl w-fit">
                 {ordemAtual.icon} Ordenado por: {ordemAtual.label}
               </div>
             )}
@@ -261,15 +260,13 @@ function AluguelContent() {
             </p>
             <button
               onClick={limparFiltros}
-              className="mt-8 bg-blue-700 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide hover:bg-blue-800 transition-all shadow-lg"
+              className="mt-8 bg-green-700 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide hover:bg-green-800 transition-all shadow-lg"
             >
               Ver Todos para Alugar
             </button>
           </div>
         )}
       </div>
-
-
     </>
   );
 }
@@ -291,7 +288,7 @@ export default function AluguelPage() {
           <p className="text-green-200 font-medium tracking-wide uppercase text-sm">Praticidade e conforto para você</p>
         </div>
       </section>
-      <Suspense fallback={<div className="text-center py-20"><Loader2 className="animate-spin mx-auto text-blue-700" size={32} /></div>}>
+      <Suspense fallback={<div className="text-center py-20"><Loader2 className="animate-spin mx-auto text-green-700" size={32} /></div>}>
         <AluguelContent />
       </Suspense>
     </main>

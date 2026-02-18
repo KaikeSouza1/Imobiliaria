@@ -68,7 +68,6 @@ export default function Page() {
     fetchImoveis();
   }, []);
 
-  // --- FILTROS DINÂMICOS ---
   const dynamicCities = useMemo(() => {
     const cities = Array.from(new Set(imoveis.map((i) => i.cidade))).filter(Boolean).sort();
     return [{ label: "Todas as Cidades", value: "" }, ...cities.map((c) => ({ label: c, value: c }))];
@@ -81,7 +80,6 @@ export default function Page() {
     return [{ label: "Todos os Bairros", value: "" }, ...boroughs.map((b) => ({ label: b, value: b }))];
   }, [imoveis, filters.cidade]);
 
-  // --- DESTAQUES COM SHUFFLE ALEATÓRIO ---
   const mapToCard = (imovel: Imovel) => ({
     ...imovel,
     preco: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(imovel.preco),
@@ -98,7 +96,6 @@ export default function Page() {
     return shuffleArray(lista).map(mapToCard);
   }, [imoveis]);
 
-  // --- BUSCA INTELIGENTE ---
   const handleSearch = () => {
     if (filters.codigo.trim()) {
       const found = imoveis.find(
@@ -115,12 +112,10 @@ export default function Page() {
 
     const isAluguel = filters.finalidade === "Alugar";
     const baseRoute = isAluguel ? "/imoveis/aluguel" : "/imoveis/venda";
-
     const params = new URLSearchParams();
     if (filters.tipo)   params.append("tipo", filters.tipo);
     if (filters.cidade) params.append("cidade", filters.cidade);
     if (filters.bairro) params.append("bairro", filters.bairro);
-
     const query = params.toString();
     router.push(query ? `${baseRoute}?${query}` : baseRoute);
   };
@@ -163,7 +158,6 @@ export default function Page() {
               <div className="h-1 w-12 bg-green-500 rounded-full"></div>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
               <CustomSelect
                 label="Finalidade"
                 icon={<Key size={14} />}
@@ -174,23 +168,21 @@ export default function Page() {
                   { label: "Alugar",  value: "Alugar"  },
                 ]}
               />
-
               <CustomSelect
                 label="Tipo"
                 icon={<Home size={14} />}
                 value={filters.tipo}
                 onChange={(v) => handleFilterChange("tipo", v)}
                 options={[
-                  { label: "Todos os Tipos",  value: "" },
-                  { label: "Apartamento",     value: "Apartamento" },
-                  { label: "Casa",            value: "Casa" },
-                  { label: "Sobrado",         value: "Sobrado" },
-                  { label: "Comercial",       value: "Comercial" },
-                  { label: "Terreno",         value: "Terreno" },
-                  { label: "Terreno Rural",   value: "Terreno Rural" },
+                  { label: "Todos os Tipos", value: "" },
+                  { label: "Apartamento",    value: "Apartamento" },
+                  { label: "Casa",           value: "Casa" },
+                  { label: "Sobrado",        value: "Sobrado" },
+                  { label: "Comercial",      value: "Comercial" },
+                  { label: "Terreno",        value: "Terreno" },
+                  { label: "Terreno Rural",  value: "Terreno Rural" },
                 ]}
               />
-
               <CustomSelect
                 label="Cidade"
                 icon={<MapPin size={14} />}
@@ -198,7 +190,6 @@ export default function Page() {
                 onChange={(v) => handleFilterChange("cidade", v)}
                 options={dynamicCities}
               />
-
               <CustomSelect
                 label="Bairro"
                 icon={<LayoutGrid size={14} />}
@@ -208,7 +199,6 @@ export default function Page() {
               />
             </div>
           </div>
-
           <div className="bg-black/20 p-6 flex flex-col md:flex-row items-center justify-between gap-6 border-t border-white/5">
             <div className="relative w-full md:w-80">
               <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500" />
@@ -276,11 +266,11 @@ export default function Page() {
         <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
       </div>
 
-      {/* DESTAQUES LOCAÇÃO */}
+      {/* DESTAQUES LOCAÇÃO — tudo verde agora */}
       <section className="max-w-[1400px] mx-auto px-4 mt-16 mb-24">
         <div className="flex flex-col md:flex-row justify-between items-end mb-4 px-2">
           <div>
-            <span className="text-blue-600 font-black uppercase tracking-[0.2em] text-xs mb-2 block flex items-center gap-2">
+            <span className="text-green-600 font-black uppercase tracking-[0.2em] text-xs mb-2 block flex items-center gap-2">
               <CheckCircle2 size={14} /> Prontos para morar ou montar seu negócio
             </span>
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 uppercase italic tracking-tighter">
@@ -289,7 +279,7 @@ export default function Page() {
           </div>
           <Link
             href="/imoveis/aluguel"
-            className="hidden md:flex items-center gap-2 bg-blue-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg"
+            className="hidden md:flex items-center gap-2 bg-[#0f2e20] text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg"
           >
             Ver Todos Locação <ArrowRight size={16} />
           </Link>
@@ -300,7 +290,7 @@ export default function Page() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-700" size={40} /></div>
+          <div className="flex justify-center py-20"><Loader2 className="animate-spin text-green-700" size={40} /></div>
         ) : destaquesLocacao.length > 0 ? (
           <PropertyCarousel items={destaquesLocacao} />
         ) : (
@@ -311,7 +301,7 @@ export default function Page() {
 
         <Link
           href="/imoveis/aluguel"
-          className="md:hidden mt-6 flex items-center justify-center gap-2 w-full bg-blue-700 text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest"
+          className="md:hidden mt-6 flex items-center justify-center gap-2 w-full bg-[#0f2e20] text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest"
         >
           Ver Todos Locação <ArrowRight size={16} />
         </Link>
