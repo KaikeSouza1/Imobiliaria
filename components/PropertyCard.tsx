@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { MapPin, BedDouble, Bath, Car, Maximize, ArrowRight, CheckCircle, XCircle } from "lucide-react";
 import { generateSlug } from "@/lib/slug";
 
@@ -24,6 +25,21 @@ interface PropertyProps {
   };
 }
 
+const FALLBACK = "/sem-foto.jpg";
+
+function ImgComFallback({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [imgSrc, setImgSrc] = useState(src && src.trim() !== "" ? src : FALLBACK);
+  return (
+    <Image
+      src={imgSrc}
+      alt={alt}
+      fill
+      className={className}
+      onError={() => setImgSrc(FALLBACK)}
+    />
+  );
+}
+
 export default function PropertyCard({ property }: PropertyProps) {
   const status = property.status || "disponivel";
 
@@ -42,7 +58,6 @@ export default function PropertyCard({ property }: PropertyProps) {
   const currentStatus = statusConfig[status] || statusConfig["disponivel"];
   const isSoldOrRented = status === "vendido" || status === "alugado" || status === "reservado";
 
-  // Gera URL amigável
   const slug = generateSlug({
     id: property.id,
     titulo: property.titulo,
@@ -58,10 +73,9 @@ export default function PropertyCard({ property }: PropertyProps) {
 
       {/* FOTO */}
       <Link href={href} className="relative block h-64 overflow-hidden">
-        <Image
+        <ImgComFallback
           src={property.imagem}
           alt={property.titulo}
-          fill
           className={`object-cover transition-transform duration-500 ${isSoldOrRented ? "grayscale-[20%]" : "group-hover:scale-110"}`}
         />
 
@@ -96,7 +110,7 @@ export default function PropertyCard({ property }: PropertyProps) {
         </div>
       </Link>
 
-      {/* CONTEÚDO COM DEGRADÊ */}
+      {/* CONTEÚDO */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #ffffff 0%, #a8d5b5 40%, #0f2e20 100%)" }} />
         <div className="relative z-10 p-6">

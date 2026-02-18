@@ -18,12 +18,27 @@ interface Imovel {
   status: string;
 }
 
+const FALLBACK = "/sem-foto.jpg";
+
+function ImgAdmin({ src, alt }: { src: string; alt: string }) {
+  const [imgSrc, setImgSrc] = useState(src && src.trim() !== "" ? src : FALLBACK);
+  return (
+    <Image
+      src={imgSrc}
+      fill
+      className="object-cover group-hover:scale-110 transition-transform duration-500"
+      alt={alt}
+      onError={() => setImgSrc(FALLBACK)}
+    />
+  );
+}
+
 const tiposConfig = [
-  { value: "Todos", label: "Todos", icon: Home, color: "from-gray-600 to-gray-800" },
-  { value: "Casa", label: "Casas", icon: Home, color: "from-blue-600 to-blue-800" },
-  { value: "Apartamento", label: "Apartamentos", icon: Building2, color: "from-purple-600 to-purple-800" },
-  { value: "Terreno", label: "Terrenos", icon: TreePine, color: "from-green-600 to-green-800" },
-  { value: "Comercial", label: "Comerciais", icon: Store, color: "from-orange-600 to-orange-800" },
+  { value: "Todos",      label: "Todos",       icon: Home,      color: "from-gray-600 to-gray-800" },
+  { value: "Casa",       label: "Casas",       icon: Home,      color: "from-blue-600 to-blue-800" },
+  { value: "Apartamento",label: "Apartamentos",icon: Building2, color: "from-purple-600 to-purple-800" },
+  { value: "Terreno",    label: "Terrenos",    icon: TreePine,  color: "from-green-600 to-green-800" },
+  { value: "Comercial",  label: "Comerciais",  icon: Store,     color: "from-orange-600 to-orange-800" },
 ];
 
 export default function AdminImoveisPage() {
@@ -45,7 +60,6 @@ export default function AdminImoveisPage() {
 
   useEffect(() => { fetchImoveis(); }, []);
 
-  // TOGGLE ATIVO/INATIVO
   const toggleAtivo = async (imovel: Imovel) => {
     try {
       const res = await fetch(`/api/imoveis/${imovel.id}`, {
@@ -54,26 +68,24 @@ export default function AdminImoveisPage() {
         body: JSON.stringify({ ...imovel, ativo: !imovel.ativo })
       });
       if (res.ok) fetchImoveis();
-    } catch (error) {
+    } catch {
       alert("Erro ao mudar status");
     }
   };
 
-  // DELETAR
   const handleExcluir = async (id: number) => {
     if (!confirm("Confirma exclusão permanente deste imóvel?")) return;
     try {
       const res = await fetch(`/api/imoveis/${id}`, { method: "DELETE" });
       if (res.ok) setImoveis(prev => prev.filter(im => im.id !== id));
-    } catch (error) {
+    } catch {
       alert("Erro ao excluir");
     }
   };
 
-  // FILTROS
   const imoveisFiltrados = imoveis.filter(im => {
     const matchTipo = filtroTipo === "Todos" || im.tipo === filtroTipo;
-    const matchStatus = 
+    const matchStatus =
       filtroStatus === "Todos" ||
       (filtroStatus === "Ativos" && im.ativo) ||
       (filtroStatus === "Inativos" && !im.ativo) ||
@@ -81,10 +93,9 @@ export default function AdminImoveisPage() {
     return matchTipo && matchStatus;
   });
 
-  // ESTATÍSTICAS
   const stats = {
-    total: imoveis.length,
-    ativos: imoveis.filter(i => i.ativo).length,
+    total:    imoveis.length,
+    ativos:   imoveis.filter(i => i.ativo).length,
     vendidos: imoveis.filter(i => i.status === "vendido").length,
     alugados: imoveis.filter(i => i.status === "alugado").length,
   };
@@ -103,8 +114,8 @@ export default function AdminImoveisPage() {
 
   return (
     <div className="space-y-8">
-      
-      {/* HEADER + BOTÃO NOVO */}
+
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
@@ -113,15 +124,15 @@ export default function AdminImoveisPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-1 ml-7">Gerencie todo o portfólio da imobiliária em um só lugar</p>
         </div>
-        <Link 
-          href="/admin/imoveis/novo" 
+        <Link
+          href="/admin/imoveis/novo"
           className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
         >
           <Plus size={20} strokeWidth={3} /> Novo Imóvel
         </Link>
       </div>
 
-      {/* ESTATÍSTICAS RÁPIDAS */}
+      {/* ESTATÍSTICAS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-2xl border border-blue-200">
           <div className="flex items-center justify-between mb-2">
@@ -131,7 +142,6 @@ export default function AdminImoveisPage() {
           <p className="text-3xl font-black text-blue-900">{stats.total}</p>
           <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Total</p>
         </div>
-
         <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-2xl border border-green-200">
           <div className="flex items-center justify-between mb-2">
             <CheckCircle className="text-green-700" size={24} />
@@ -140,7 +150,6 @@ export default function AdminImoveisPage() {
           <p className="text-3xl font-black text-green-900">{stats.ativos}</p>
           <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Ativos</p>
         </div>
-
         <div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-2xl border border-red-200">
           <div className="flex items-center justify-between mb-2">
             <XCircle className="text-red-700" size={24} />
@@ -149,7 +158,6 @@ export default function AdminImoveisPage() {
           <p className="text-3xl font-black text-red-900">{stats.vendidos}</p>
           <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Vendidos</p>
         </div>
-
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-5 rounded-2xl border border-orange-200">
           <div className="flex items-center justify-between mb-2">
             <CheckCircle className="text-orange-700" size={24} />
@@ -160,7 +168,7 @@ export default function AdminImoveisPage() {
         </div>
       </div>
 
-      {/* FILTROS POR TIPO (CARDS VISUAIS) */}
+      {/* FILTROS POR TIPO */}
       <div>
         <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Filtrar por Tipo</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -168,15 +176,14 @@ export default function AdminImoveisPage() {
             const Icon = tipo.icon;
             const count = tipo.value === "Todos" ? imoveis.length : imoveis.filter(i => i.tipo === tipo.value).length;
             const isActive = filtroTipo === tipo.value;
-            
             return (
               <button
                 key={tipo.value}
                 onClick={() => setFiltroTipo(tipo.value)}
                 className={`relative overflow-hidden rounded-xl p-4 transition-all duration-300 group
-                  ${isActive 
-                    ? `bg-gradient-to-br ${tipo.color} text-white shadow-lg scale-105` 
-                    : 'bg-white border-2 border-gray-100 hover:border-gray-300 text-gray-600 hover:shadow-md'
+                  ${isActive
+                    ? `bg-gradient-to-br ${tipo.color} text-white shadow-lg scale-105`
+                    : "bg-white border-2 border-gray-100 hover:border-gray-300 text-gray-600 hover:shadow-md"
                   }`}
               >
                 <div className="relative z-10">
@@ -196,14 +203,14 @@ export default function AdminImoveisPage() {
       </div>
 
       {/* FILTROS POR STATUS */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {["Todos", "Ativos", "Inativos", "Vendidos/Alugados"].map(status => (
           <button
             key={status}
             onClick={() => setFiltroStatus(status)}
             className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all
-              ${filtroStatus === status 
-                ? "bg-gray-900 text-white shadow-md" 
+              ${filtroStatus === status
+                ? "bg-gray-900 text-white shadow-md"
                 : "bg-gray-100 text-gray-500 hover:bg-gray-200"
               }`}
           >
@@ -222,22 +229,22 @@ export default function AdminImoveisPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {imoveisFiltrados.map((im) => (
-            <div 
-              key={im.id} 
+            <div
+              key={im.id}
               className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:border-green-200 transition-all duration-300 group"
             >
-              {/* IMAGEM */}
+              {/* IMAGEM COM FALLBACK */}
               <div className="relative h-48 bg-gray-100 overflow-hidden">
-                <Image src={im.imagem_url} fill className="object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                
-                {/* STATUS BADGE */}
+                <ImgAdmin src={im.imagem_url} alt={im.titulo} />
+
+                {/* BADGES */}
                 <div className="absolute top-3 left-3 flex flex-col gap-2">
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-lg backdrop-blur-sm
                     ${im.finalidade === "Venda" ? "bg-blue-600" : "bg-green-600"}`}>
                     {im.finalidade}
                   </span>
                   {!im.ativo && (
-                    <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-600 text-white shadow-lg backdrop-blur-sm">
+                    <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-600 text-white shadow-lg">
                       Inativo
                     </span>
                   )}
@@ -251,6 +258,11 @@ export default function AdminImoveisPage() {
                       Alugado
                     </span>
                   )}
+                  {(!im.imagem_url || im.imagem_url.trim() === "") && (
+                    <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-lg">
+                      Sem foto
+                    </span>
+                  )}
                 </div>
 
                 {/* TIPO ICON */}
@@ -262,36 +274,32 @@ export default function AdminImoveisPage() {
               {/* INFO */}
               <div className="p-4">
                 <h3 className="font-bold text-gray-900 text-sm line-clamp-1 mb-1">{im.titulo}</h3>
-                <p className="text-xs text-gray-500 mb-3">
-                  {im.bairro}, {im.cidade}
-                </p>
+                <p className="text-xs text-gray-500 mb-3">{im.bairro}, {im.cidade}</p>
                 <p className="text-lg font-black text-green-700 mb-4">
-                  R$ {Number(im.preco).toLocaleString('pt-BR')}
+                  R$ {Number(im.preco).toLocaleString("pt-BR")}
                 </p>
 
                 {/* AÇÕES */}
                 <div className="flex gap-2">
-                  <Link 
-                    href={`/admin/imoveis/editar/${im.id}`} 
+                  <Link
+                    href={`/admin/imoveis/editar/${im.id}`}
                     className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all"
                   >
                     <Edit size={14} /> Editar
                   </Link>
-                  
-                  <button 
-                    onClick={() => toggleAtivo(im)} 
+                  <button
+                    onClick={() => toggleAtivo(im)}
                     className={`px-3 py-2 rounded-lg font-bold text-xs transition-all ${
-                      im.ativo 
-                        ? "bg-green-100 text-green-700 hover:bg-green-200" 
+                      im.ativo
+                        ? "bg-green-100 text-green-700 hover:bg-green-200"
                         : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                     }`}
                     title={im.ativo ? "Desativar" : "Ativar"}
                   >
                     <Power size={14} />
                   </button>
-
-                  <button 
-                    onClick={() => handleExcluir(im.id)} 
+                  <button
+                    onClick={() => handleExcluir(im.id)}
                     className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-bold text-xs transition-all"
                     title="Excluir"
                   >
