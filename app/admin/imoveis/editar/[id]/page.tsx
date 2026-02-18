@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star } from "lucide-react";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star, Crown } from "lucide-react";
 import Link from "next/link";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
@@ -20,10 +20,10 @@ export default function EditarImovelPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
-    status: "disponivel", destaque: false, 
+    status: "disponivel", destaque: false,
     cidade: "", bairro: "", endereco: "", area: "",
     quartos: "0", banheiros: "0", vagas: "0", descricao: "",
     imagem_url: "", fotos_adicionais: [] as string[], ativo: true,
@@ -38,8 +38,6 @@ export default function EditarImovelPage() {
         const res = await fetch(`/api/imoveis/${id}`);
         if (!res.ok) throw new Error("Não encontrado");
         const data = await res.json();
-        
-        // Blindagem: Convertendo strings do banco para Numbers reais
         setFormData({
           ...data,
           preco: data.preco?.toString() || "0",
@@ -48,7 +46,7 @@ export default function EditarImovelPage() {
           banheiros: data.banheiros?.toString() || "0",
           vagas: data.vagas?.toString() || "0",
           status: data.status || "disponivel",
-          destaque: data.destaque || false, 
+          destaque: data.destaque || false,
           latitude: Number(data.latitude) || -26.2303,
           longitude: Number(data.longitude) || -51.0904,
           fotos_adicionais: data.fotos_adicionais || []
@@ -82,6 +80,19 @@ export default function EditarImovelPage() {
   };
 
   const handleChange = (e: any) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  // ── DEFINIR COMO CAPA: troca a foto clicada com a capa atual ──
+  const handleDefinirCapa = (urlClicada: string, indexNaGaleria: number) => {
+    const capaAtual = formData.imagem_url;
+    const novaGaleria = [...formData.fotos_adicionais];
+    // Coloca a capa antiga no lugar da foto clicada
+    novaGaleria[indexNaGaleria] = capaAtual;
+    setFormData(prev => ({
+      ...prev,
+      imagem_url: urlClicada,
+      fotos_adicionais: novaGaleria,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,36 +139,84 @@ export default function EditarImovelPage() {
       <form onSubmit={handleSubmit} className="space-y-8">
 
         {/* SEÇÃO FOTOS */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="col-span-1">
-            <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest">Capa Atual</label>
-            <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
-               <Image src={formData.imagem_url || "/logo.png"} fill className="object-cover" alt="Capa" />
-               <label className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
-                  <UploadCloud className="text-white" />
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Fotos do Imóvel</h2>
+          <p className="text-xs text-gray-400">
+            Clique em qualquer foto da galeria para <span className="font-bold text-amber-600">definir como capa</span>. A capa atual vai para a galeria automaticamente.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* CAPA ATUAL */}
+            <div className="col-span-1">
+              <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest flex items-center gap-1">
+                <Crown size={12} className="text-amber-500" /> Capa Atual
+              </label>
+              <div className="relative aspect-video rounded-lg overflow-hidden border-4 border-amber-400 shadow-lg">
+                <Image src={formData.imagem_url || "/logo.png"} fill className="object-cover" alt="Capa" />
+                {/* Ícone coroa */}
+                <div className="absolute top-2 left-2 bg-amber-400 text-white rounded-full p-1 shadow">
+                  <Crown size={14} />
+                </div>
+                {/* Botão de trocar capa por upload */}
+                <label className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                  <div className="flex flex-col items-center text-white gap-1">
+                    <UploadCloud size={22} />
+                    <span className="text-[10px] font-bold">Novo upload</span>
+                  </div>
                   <input type="file" className="hidden" onChange={async (e) => {
                     const urls = await uploadFiles(e.target.files);
-                    if (urls) setFormData(p => ({...p, imagem_url: urls[0]}));
+                    if (urls) setFormData(p => ({ ...p, imagem_url: urls[0] }));
                   }} />
-               </label>
+                </label>
+              </div>
             </div>
-          </div>
-          <div className="col-span-2">
-            <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest">Galeria</label>
-            <div className="grid grid-cols-4 gap-2">
-               <label className="aspect-square bg-gray-50 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-green-50 transition-colors">
+
+            {/* GALERIA */}
+            <div className="col-span-2">
+              <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest">
+                Galeria — clique para definir como capa
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {/* Botão adicionar novas fotos */}
+                <label className="aspect-square bg-gray-50 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-green-50 transition-colors">
                   <Plus className="text-green-600" />
                   <input type="file" multiple className="hidden" onChange={async (e) => {
                     const urls = await uploadFiles(e.target.files);
-                    if (urls) setFormData(p => ({...p, fotos_adicionais: [...p.fotos_adicionais, ...urls]}));
+                    if (urls) setFormData(p => ({ ...p, fotos_adicionais: [...p.fotos_adicionais, ...urls] }));
                   }} />
-               </label>
-               {formData.fotos_adicionais.map((url, i) => (
-                 <div key={i} className="relative aspect-square rounded-lg overflow-hidden border">
-                    <Image src={url} fill className="object-cover" alt="Galeria" />
-                    <button type="button" onClick={() => setFormData(p => ({...p, fotos_adicionais: p.fotos_adicionais.filter((_, idx) => idx !== i)}))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"><X size={10}/></button>
-                 </div>
-               ))}
+                </label>
+
+                {/* Miniaturas da galeria */}
+                {formData.fotos_adicionais.map((url, i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-amber-400 transition-all group cursor-pointer shadow-sm"
+                    onClick={() => handleDefinirCapa(url, i)}
+                    title="Clique para definir como capa"
+                  >
+                    <Image src={url} fill className="object-cover group-hover:brightness-75 transition-all" alt="Galeria" />
+
+                    {/* Overlay com ícone de coroa ao hover */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-amber-400 text-white rounded-full p-2 shadow-lg">
+                        <Crown size={16} />
+                      </div>
+                    </div>
+
+                    {/* Botão excluir */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFormData(p => ({ ...p, fotos_adicionais: p.fotos_adicionais.filter((_, idx) => idx !== i) }));
+                      }}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -171,10 +230,10 @@ export default function EditarImovelPage() {
             <p className="text-xs text-gray-500 mt-1">Habilite para que este imóvel apareça nos Destaques da página inicial.</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               checked={formData.destaque}
-              onChange={(e) => setFormData({...formData, destaque: e.target.checked})}
+              onChange={(e) => setFormData({ ...formData, destaque: e.target.checked })}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
@@ -185,7 +244,6 @@ export default function EditarImovelPage() {
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider">Status do Imóvel</h2>
           <p className="text-xs text-gray-400 mb-4">Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards do site.</p>
-          
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {statusOptions.map((opt) => (
               <label
@@ -196,21 +254,14 @@ export default function EditarImovelPage() {
                     : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"
                   }`}
               >
-                <input
-                  type="radio"
-                  name="status"
-                  value={opt.value}
-                  checked={formData.status === opt.value}
-                  onChange={handleChange}
-                  className="hidden"
-                />
+                <input type="radio" name="status" value={opt.value} checked={formData.status === opt.value} onChange={handleChange} className="hidden" />
                 {opt.label}
               </label>
             ))}
           </div>
         </div>
 
-        {/* DADOS BÁSICOS (TOTALMENTE RESTAURADOS) */}
+        {/* DADOS BÁSICOS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="label-admin">Título</label>
@@ -258,7 +309,7 @@ export default function EditarImovelPage() {
           </div>
         </div>
 
-        {/* CARACTERÍSTICAS (RESTAURADO) */}
+        {/* CARACTERÍSTICAS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <label className="label-admin">Área (m²)</label>
@@ -282,41 +333,25 @@ export default function EditarImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO MAPA (COM BLINDAGEM DE ERRO) */}
+        {/* MAPA */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-2">
             <MapPin size={16} /> Localização no Mapa
           </h2>
-          <p className="text-xs text-gray-400 mb-4">
-            Clique no mapa para atualizar a localização exata do imóvel
-          </p>
-          
+          <p className="text-xs text-gray-400 mb-4">Clique no mapa para atualizar a localização exata do imóvel</p>
           <MapPicker
             lat={formData.latitude}
             lng={formData.longitude}
-            onLocationChange={(lat, lng) => {
-              setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
-            }}
+            onLocationChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))}
           />
-          
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
               <label className="label-admin">Latitude</label>
-              <input 
-                type="text" 
-                value={Number(formData.latitude).toFixed(6)} 
-                readOnly 
-                className="input-admin bg-gray-50 cursor-not-allowed" 
-              />
+              <input type="text" value={Number(formData.latitude).toFixed(6)} readOnly className="input-admin bg-gray-50 cursor-not-allowed" />
             </div>
             <div>
               <label className="label-admin">Longitude</label>
-              <input 
-                type="text" 
-                value={Number(formData.longitude).toFixed(6)} 
-                readOnly 
-                className="input-admin bg-gray-50 cursor-not-allowed" 
-              />
+              <input type="text" value={Number(formData.longitude).toFixed(6)} readOnly className="input-admin bg-gray-50 cursor-not-allowed" />
             </div>
           </div>
         </div>
