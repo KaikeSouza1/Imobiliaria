@@ -40,6 +40,23 @@ function ImgComFallback({ src, alt, className }: { src: string; alt: string; cla
   );
 }
 
+function formatarLocalizacao(endereco: string, cidade: string): string {
+  if (!endereco || endereco.trim() === "") return cidade || "";
+  const cidadeNormalizada = cidade?.toLowerCase().trim() ?? "";
+  const enderecoNormalizado = endereco.toLowerCase().trim();
+  const cidadeJaEstaNoEndereco = cidadeNormalizada && enderecoNormalizado.includes(cidadeNormalizada);
+  if (cidadeJaEstaNoEndereco) return endereco.trim();
+  return cidade ? `${endereco.trim()}, ${cidade.trim()}` : endereco.trim();
+}
+
+function formatarPreco(preco: string): { texto: string; isConsultar: boolean } {
+  const numerico = parseFloat(preco.replace(/[^\d.,]/g, "").replace(",", "."));
+  if (!numerico || numerico === 0) {
+    return { texto: "Consultar valores", isConsultar: true };
+  }
+  return { texto: preco, isConsultar: false };
+}
+
 export default function PropertyCard({ property }: PropertyProps) {
   const status = property.status || "disponivel";
 
@@ -67,6 +84,9 @@ export default function PropertyCard({ property }: PropertyProps) {
     cidade: property.cidade,
   });
   const href = `/imovel/${slug}`;
+
+  const localizacao = formatarLocalizacao(property.endereco, property.cidade);
+  const { texto: precoTexto, isConsultar } = formatarPreco(property.preco);
 
   return (
     <div className="rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-green-900/20 transition-all duration-500 group border border-green-900/10">
@@ -104,9 +124,13 @@ export default function PropertyCard({ property }: PropertyProps) {
         {/* PREÇO */}
         <div className={`absolute bottom-4 right-4 backdrop-blur-sm px-4 py-2 rounded-2xl shadow-lg ${isSoldOrRented ? "bg-[#0f2e20]/80" : "bg-white/90"}`}>
           <p className={`text-[10px] font-bold uppercase tracking-tighter leading-none ${isSoldOrRented ? "text-green-300" : "text-gray-400"}`}>Valor</p>
-          <p className={`text-lg font-black ${isSoldOrRented ? "text-white/60 line-through" : "text-gray-900"}`}>
-            {property.preco}
-          </p>
+          {isSoldOrRented ? (
+            <p className="text-lg font-black text-white/60 line-through">{precoTexto}</p>
+          ) : isConsultar ? (
+            <p className="text-sm font-black text-[#0f2e20]">Consultar valores</p>
+          ) : (
+            <p className="text-lg font-black text-gray-900">{precoTexto}</p>
+          )}
         </div>
       </Link>
 
@@ -116,8 +140,8 @@ export default function PropertyCard({ property }: PropertyProps) {
         <div className="relative z-10 p-6">
 
           <div className="flex items-center gap-1 mb-2 text-[#0f2e20]">
-            <MapPin size={14} />
-            <span className="text-[10px] font-bold uppercase tracking-wide truncate">{property.bairro}, {property.cidade}</span>
+            <MapPin size={14} className="flex-shrink-0" />
+            <span className="text-[10px] font-bold uppercase tracking-wide truncate">{localizacao}</span>
           </div>
 
           <h3 className={`text-xl font-bold mb-4 line-clamp-1 transition-colors ${isSoldOrRented ? "text-green-900/60" : "text-gray-800 group-hover:text-[#0f2e20]"}`}>

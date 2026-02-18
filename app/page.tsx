@@ -29,6 +29,15 @@ interface Imovel {
   destaque: boolean;
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export default function Page() {
   const router = useRouter();
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
@@ -72,21 +81,25 @@ export default function Page() {
     return [{ label: "Todos os Bairros", value: "" }, ...boroughs.map((b) => ({ label: b, value: b }))];
   }, [imoveis, filters.cidade]);
 
-  // --- DESTAQUES ---
+  // --- DESTAQUES COM SHUFFLE ALEATÓRIO ---
   const mapToCard = (imovel: Imovel) => ({
     ...imovel,
     preco: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(imovel.preco),
     imagem: imovel.imagem_url || "/logo_nova.png",
   });
 
-  const destaquesVenda = imoveis.filter((i) => i.finalidade === "Venda" && i.destaque).map(mapToCard);
-  const destaquesLocacao = imoveis
-    .filter((i) => (i.finalidade === "Aluguel" || i.finalidade === "Locação") && i.destaque)
-    .map(mapToCard);
+  const destaquesVenda = useMemo(() => {
+    const lista = imoveis.filter((i) => i.finalidade === "Venda" && i.destaque);
+    return shuffleArray(lista).map(mapToCard);
+  }, [imoveis]);
 
-  // --- BUSCA INTELIGENTE (CORRIGIDA) ---
+  const destaquesLocacao = useMemo(() => {
+    const lista = imoveis.filter((i) => (i.finalidade === "Aluguel" || i.finalidade === "Locação") && i.destaque);
+    return shuffleArray(lista).map(mapToCard);
+  }, [imoveis]);
+
+  // --- BUSCA INTELIGENTE ---
   const handleSearch = () => {
-    // Busca por código: procura em todos os imóveis
     if (filters.codigo.trim()) {
       const found = imoveis.find(
         (i) => i.codigo?.toLowerCase() === filters.codigo.toLowerCase().trim()
@@ -100,12 +113,10 @@ export default function Page() {
       return;
     }
 
-    // Define rota baseada na finalidade selecionada
     const isAluguel = filters.finalidade === "Alugar";
     const baseRoute = isAluguel ? "/imoveis/aluguel" : "/imoveis/venda";
 
     const params = new URLSearchParams();
-    // CORREÇÃO: só adiciona tipo se tiver valor e passa o valor exato (com espaço, etc.)
     if (filters.tipo)   params.append("tipo", filters.tipo);
     if (filters.cidade) params.append("cidade", filters.cidade);
     if (filters.bairro) params.append("bairro", filters.bairro);
@@ -164,7 +175,6 @@ export default function Page() {
                 ]}
               />
 
-              {/* CORREÇÃO: valor exato igual ao banco */}
               <CustomSelect
                 label="Tipo"
                 icon={<Home size={14} />}
@@ -177,7 +187,7 @@ export default function Page() {
                   { label: "Sobrado",         value: "Sobrado" },
                   { label: "Comercial",       value: "Comercial" },
                   { label: "Terreno",         value: "Terreno" },
-                  { label: "Terreno Rural",   value: "Terreno Rural" }, // ← valor exato do banco
+                  { label: "Terreno Rural",   value: "Terreno Rural" },
                 ]}
               />
 
