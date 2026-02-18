@@ -238,7 +238,7 @@ export default function Page() {
         <div className="flex flex-col md:flex-row justify-between items-end mb-4 px-2">
           <div>
             <span className="text-blue-600 font-black uppercase tracking-[0.2em] text-xs mb-2 block flex items-center gap-2">
-              <CheckCircle2 size={14} /> Prontos para Morar
+              <CheckCircle2 size={14} /> Prontos para morar ou montar seu negócio
             </span>
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 uppercase italic tracking-tighter">
               Destaques para Locação
