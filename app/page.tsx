@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Image from "next/image"; 
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 import { Search, MapPin, Home, Key, ArrowRight, CheckCircle2, Hash, LayoutGrid, Lock, Loader2, Star, MoveRight } from "lucide-react";
-import CustomSelect from "@/components/CustomSelect"; 
+import CustomSelect from "@/components/CustomSelect";
 import HomeContact from "@/components/HomeContact";
 import PropertyCarousel from "@/components/PropertyCarousel";
 
@@ -39,7 +39,7 @@ export default function Page() {
     tipo: "",
     cidade: "",
     bairro: "",
-    codigo: ""
+    codigo: "",
   });
 
   useEffect(() => {
@@ -60,84 +60,85 @@ export default function Page() {
   }, []);
 
   // --- FILTROS DINÂMICOS ---
-  
   const dynamicCities = useMemo(() => {
-    const cities = Array.from(new Set(imoveis.map(i => i.cidade))).filter(Boolean).sort();
-    return [{ label: "Todas as Cidades", value: "" }, ...cities.map(c => ({ label: c, value: c }))];
+    const cities = Array.from(new Set(imoveis.map((i) => i.cidade))).filter(Boolean).sort();
+    return [{ label: "Todas as Cidades", value: "" }, ...cities.map((c) => ({ label: c, value: c }))];
   }, [imoveis]);
 
   const dynamicBoroughs = useMemo(() => {
     let source = imoveis;
-    if (filters.cidade) {
-      source = imoveis.filter(i => i.cidade === filters.cidade);
-    }
-    const boroughs = Array.from(new Set(source.map(i => i.bairro))).filter(Boolean).sort();
-    return [{ label: "Todos os Bairros", value: "" }, ...boroughs.map(b => ({ label: b, value: b }))];
+    if (filters.cidade) source = imoveis.filter((i) => i.cidade === filters.cidade);
+    const boroughs = Array.from(new Set(source.map((i) => i.bairro))).filter(Boolean).sort();
+    return [{ label: "Todos os Bairros", value: "" }, ...boroughs.map((b) => ({ label: b, value: b }))];
   }, [imoveis, filters.cidade]);
 
-  // --- SEPARAÇÃO DE DESTAQUES ---
+  // --- DESTAQUES ---
   const mapToCard = (imovel: Imovel) => ({
     ...imovel,
-    preco: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(imovel.preco),
-    imagem: imovel.imagem_url || "/logo_nova.png"
+    preco: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(imovel.preco),
+    imagem: imovel.imagem_url || "/logo_nova.png",
   });
 
-  const destaquesVenda = imoveis
-    .filter(i => i.finalidade === "Venda" && i.destaque)
-    .map(mapToCard);
-
+  const destaquesVenda = imoveis.filter((i) => i.finalidade === "Venda" && i.destaque).map(mapToCard);
   const destaquesLocacao = imoveis
-    .filter(i => (i.finalidade === "Aluguel" || i.finalidade === "Locação") && i.destaque)
+    .filter((i) => (i.finalidade === "Aluguel" || i.finalidade === "Locação") && i.destaque)
     .map(mapToCard);
 
-  // --- BUSCA INTELIGENTE ---
+  // --- BUSCA INTELIGENTE (CORRIGIDA) ---
   const handleSearch = () => {
-    if (filters.codigo) {
-      const imovelEncontrado = imoveis.find(i => i.codigo.toLowerCase() === filters.codigo.toLowerCase());
-      
-      if (imovelEncontrado) {
-        const isLocacao = imovelEncontrado.finalidade === "Aluguel" || imovelEncontrado.finalidade === "Locação";
-        const rota = isLocacao ? "/imoveis/aluguel" : "/imoveis/venda";
-        router.push(`${rota}?codigo=${filters.codigo}`);
+    // Busca por código: procura em todos os imóveis
+    if (filters.codigo.trim()) {
+      const found = imoveis.find(
+        (i) => i.codigo?.toLowerCase() === filters.codigo.toLowerCase().trim()
+      );
+      if (found) {
+        const isLocacao = found.finalidade === "Aluguel" || found.finalidade === "Locação";
+        router.push(`${isLocacao ? "/imoveis/aluguel" : "/imoveis/venda"}?codigo=${filters.codigo.trim()}`);
       } else {
         alert("Imóvel com este código não encontrado.");
       }
       return;
     }
 
-    const baseRoute = filters.finalidade === "Alugar" || filters.finalidade === "Aluguel" ? "/imoveis/aluguel" : "/imoveis/venda";
+    // Define rota baseada na finalidade selecionada
+    const isAluguel = filters.finalidade === "Alugar";
+    const baseRoute = isAluguel ? "/imoveis/aluguel" : "/imoveis/venda";
+
     const params = new URLSearchParams();
-    if (filters.tipo) params.append("tipo", filters.tipo);
+    // CORREÇÃO: só adiciona tipo se tiver valor e passa o valor exato (com espaço, etc.)
+    if (filters.tipo)   params.append("tipo", filters.tipo);
     if (filters.cidade) params.append("cidade", filters.cidade);
     if (filters.bairro) params.append("bairro", filters.bairro);
-    
-    router.push(`${baseRoute}?${params.toString()}`);
+
+    const query = params.toString();
+    router.push(query ? `${baseRoute}?${query}` : baseRoute);
   };
 
   const handleFilterChange = (key: string, value: string) => {
     if (key === "cidade") {
-      setFilters(prev => ({ ...prev, cidade: value, bairro: "" }));
+      setFilters((prev) => ({ ...prev, cidade: value, bairro: "" }));
     } else {
-      setFilters(prev => ({ ...prev, [key]: value }));
+      setFilters((prev) => ({ ...prev, [key]: value }));
     }
   };
 
   return (
     <main className="min-h-screen bg-slate-50 font-sans overflow-x-hidden relative">
-      
-      {/* HERO SECTION */}
+
+      {/* HERO */}
       <section className="relative h-[750px] w-full flex items-center justify-center overflow-hidden z-10">
         <div className="absolute inset-0 z-0">
-           <Image src="/banner.jpg" alt="Banner" fill className="object-cover" priority />
+          <Image src="/banner.jpg" alt="Banner" fill className="object-cover" priority />
         </div>
         <div className="absolute inset-0 z-1 bg-black/60"></div>
-        
         <div className="relative z-10 max-w-5xl mx-auto px-6 w-full text-center mt-20">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-2xl uppercase tracking-wide">
             Bem-Vindo À Imobiliária Porto Iguaçu
           </h1>
           <p className="text-lg md:text-xl text-white/90 max-w-4xl mx-auto leading-relaxed drop-shadow-md font-medium">
-            Na Imobiliária Porto Iguaçu, conectamos sonhos aos endereços certos. Com experiência no mercado imobiliário das gêmeas do Iguaçu, nossa equipe de especialistas está aqui para ajudá-lo a encontrar o lar perfeito ou o investimento ideal.
+            Na Imobiliária Porto Iguaçu, conectamos sonhos aos endereços certos. Com experiência no
+            mercado imobiliário das gêmeas do Iguaçu, nossa equipe de especialistas está aqui para
+            ajudá-lo a encontrar o lar perfeito ou o investimento ideal.
           </p>
         </div>
       </section>
@@ -151,49 +152,76 @@ export default function Page() {
               <div className="h-1 w-12 bg-green-500 rounded-full"></div>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              
-              <CustomSelect 
-                label="Finalidade" 
-                icon={<Key size={14}/>} 
-                value={filters.finalidade} 
-                onChange={(v) => handleFilterChange('finalidade', v)} 
-                options={[{ label: "Comprar", value: "Comprar" }, { label: "Alugar", value: "Alugar" }]} 
-              />
-              
-              {/* ATUALIZADO: Lista de Tipos conforme solicitado */}
-              <CustomSelect 
-                label="Tipo" 
-                icon={<Home size={14}/>} 
-                value={filters.tipo} 
-                onChange={(v) => handleFilterChange('tipo', v)} 
+
+              <CustomSelect
+                label="Finalidade"
+                icon={<Key size={14} />}
+                value={filters.finalidade}
+                onChange={(v) => handleFilterChange("finalidade", v)}
                 options={[
-                  { label: "Todos os Tipos", value: "" }, 
-                  { label: "Apartamento", value: "Apartamento" }, 
-                  { label: "Casa", value: "Casa" }, 
-                  { label: "Sobrado", value: "Sobrado" }, 
-                  { label: "Comercial", value: "Comercial" },
-                  { label: "Terreno", value: "Terreno" },
-                  { label: "Terreno Rural", value: "Terreno Rural" }
-                ]} 
+                  { label: "Comprar", value: "Comprar" },
+                  { label: "Alugar",  value: "Alugar"  },
+                ]}
               />
 
-              <CustomSelect label="Cidade" icon={<MapPin size={14}/>} value={filters.cidade} onChange={(v) => handleFilterChange('cidade', v)} options={dynamicCities} />
-              <CustomSelect label="Bairro" icon={<LayoutGrid size={14}/>} value={filters.bairro} onChange={(v) => handleFilterChange('bairro', v)} options={dynamicBoroughs} />
+              {/* CORREÇÃO: valor exato igual ao banco */}
+              <CustomSelect
+                label="Tipo"
+                icon={<Home size={14} />}
+                value={filters.tipo}
+                onChange={(v) => handleFilterChange("tipo", v)}
+                options={[
+                  { label: "Todos os Tipos",  value: "" },
+                  { label: "Apartamento",     value: "Apartamento" },
+                  { label: "Casa",            value: "Casa" },
+                  { label: "Sobrado",         value: "Sobrado" },
+                  { label: "Comercial",       value: "Comercial" },
+                  { label: "Terreno",         value: "Terreno" },
+                  { label: "Terreno Rural",   value: "Terreno Rural" }, // ← valor exato do banco
+                ]}
+              />
+
+              <CustomSelect
+                label="Cidade"
+                icon={<MapPin size={14} />}
+                value={filters.cidade}
+                onChange={(v) => handleFilterChange("cidade", v)}
+                options={dynamicCities}
+              />
+
+              <CustomSelect
+                label="Bairro"
+                icon={<LayoutGrid size={14} />}
+                value={filters.bairro}
+                onChange={(v) => handleFilterChange("bairro", v)}
+                options={dynamicBoroughs}
+              />
             </div>
           </div>
+
           <div className="bg-black/20 p-6 flex flex-col md:flex-row items-center justify-between gap-6 border-t border-white/5">
             <div className="relative w-full md:w-80">
               <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500" />
-              <input type="text" placeholder="Código do imóvel..." className="w-full bg-white/10 border border-white/10 text-white text-sm font-bold rounded-xl pl-10 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-white/30" value={filters.codigo} onChange={(e) => handleFilterChange('codigo', e.target.value)} />
+              <input
+                type="text"
+                placeholder="Código do imóvel..."
+                className="w-full bg-white/10 border border-white/10 text-white text-sm font-bold rounded-xl pl-10 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-white/30"
+                value={filters.codigo}
+                onChange={(e) => handleFilterChange("codigo", e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
             </div>
-            <button onClick={handleSearch} className="w-full md:w-auto bg-green-600 hover:bg-green-500 text-white rounded-xl font-black py-4 px-16 transition-all flex items-center justify-center gap-3 shadow-xl uppercase tracking-widest text-sm">
+            <button
+              onClick={handleSearch}
+              className="w-full md:w-auto bg-green-600 hover:bg-green-500 text-white rounded-xl font-black py-4 px-16 transition-all flex items-center justify-center gap-3 shadow-xl uppercase tracking-widest text-sm"
+            >
               <Search size={20} strokeWidth={3} /> Buscar
             </button>
           </div>
         </div>
       </div>
 
-      {/* --- SEÇÃO 1: DESTAQUES VENDA --- */}
+      {/* DESTAQUES VENDA */}
       <section className="max-w-[1400px] mx-auto px-4 mt-24 mb-16">
         <div className="flex flex-col md:flex-row justify-between items-end mb-4 px-2">
           <div>
@@ -204,12 +232,14 @@ export default function Page() {
               Destaques para Venda
             </h2>
           </div>
-          <Link href="/imoveis/venda" className="hidden md:flex items-center gap-2 bg-[#0f2e20] text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg">
+          <Link
+            href="/imoveis/venda"
+            className="hidden md:flex items-center gap-2 bg-[#0f2e20] text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg"
+          >
             Ver Todos Venda <ArrowRight size={16} />
           </Link>
         </div>
 
-        {/* Dica visual Mobile */}
         <div className="md:hidden flex items-center justify-end gap-1 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2 pr-2 animate-pulse">
           Deslize para ver mais <MoveRight size={12} />
         </div>
@@ -224,8 +254,11 @@ export default function Page() {
           </div>
         )}
 
-        <Link href="/imoveis/venda" className="md:hidden mt-6 flex items-center justify-center gap-2 w-full bg-[#0f2e20] text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest">
-            Ver Todos Venda <ArrowRight size={16} />
+        <Link
+          href="/imoveis/venda"
+          className="md:hidden mt-6 flex items-center justify-center gap-2 w-full bg-[#0f2e20] text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest"
+        >
+          Ver Todos Venda <ArrowRight size={16} />
         </Link>
       </section>
 
@@ -233,7 +266,7 @@ export default function Page() {
         <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
       </div>
 
-      {/* --- SEÇÃO 2: DESTAQUES LOCAÇÃO --- */}
+      {/* DESTAQUES LOCAÇÃO */}
       <section className="max-w-[1400px] mx-auto px-4 mt-16 mb-24">
         <div className="flex flex-col md:flex-row justify-between items-end mb-4 px-2">
           <div>
@@ -244,12 +277,14 @@ export default function Page() {
               Destaques para Locação
             </h2>
           </div>
-          <Link href="/imoveis/aluguel" className="hidden md:flex items-center gap-2 bg-blue-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg">
+          <Link
+            href="/imoveis/aluguel"
+            className="hidden md:flex items-center gap-2 bg-blue-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg"
+          >
             Ver Todos Locação <ArrowRight size={16} />
           </Link>
         </div>
 
-        {/* Dica visual Mobile */}
         <div className="md:hidden flex items-center justify-end gap-1 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2 pr-2 animate-pulse">
           Deslize para ver mais <MoveRight size={12} />
         </div>
@@ -264,19 +299,24 @@ export default function Page() {
           </div>
         )}
 
-        <Link href="/imoveis/aluguel" className="md:hidden mt-6 flex items-center justify-center gap-2 w-full bg-blue-700 text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest">
-            Ver Todos Locação <ArrowRight size={16} />
+        <Link
+          href="/imoveis/aluguel"
+          className="md:hidden mt-6 flex items-center justify-center gap-2 w-full bg-blue-700 text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest"
+        >
+          Ver Todos Locação <ArrowRight size={16} />
         </Link>
       </section>
 
       <HomeContact />
 
       <div className="bg-[#0a1f16] py-4 text-center relative z-20">
-        <Link href="/login" className="text-[10px] text-green-800 hover:text-green-500 uppercase font-black tracking-[0.4em] transition-all opacity-40 hover:opacity-100 flex items-center justify-center gap-2">
+        <Link
+          href="/login"
+          className="text-[10px] text-green-800 hover:text-green-500 uppercase font-black tracking-[0.4em] transition-all opacity-40 hover:opacity-100 flex items-center justify-center gap-2"
+        >
           <Lock size={12} /> Área Restrita
         </Link>
       </div>
-
     </main>
   );
 }
