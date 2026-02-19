@@ -86,15 +86,22 @@ export default function Page() {
     imagem: imovel.imagem_url || "/logo_nova.png",
   });
 
-  const destaquesVenda = useMemo(() => {
-    const lista = imoveis.filter((i) => i.finalidade === "Venda" && i.destaque);
-    return shuffleArray(lista).map(mapToCard);
+  // Filtrar apenas imóveis disponíveis (não vendidos, não alugados, não reservados) para os destaques
+  const imoveisDisponiveis = useMemo(() => {
+    return imoveis.filter((i) => i.status === "disponivel" || !i.status);
   }, [imoveis]);
 
-  const destaquesLocacao = useMemo(() => {
-    const lista = imoveis.filter((i) => (i.finalidade === "Aluguel" || i.finalidade === "Locação") && i.destaque);
+  const destaquesVenda = useMemo(() => {
+    const lista = imoveisDisponiveis.filter((i) => i.finalidade === "Venda" && i.destaque);
     return shuffleArray(lista).map(mapToCard);
-  }, [imoveis]);
+  }, [imoveisDisponiveis]);
+
+  const destaquesLocacao = useMemo(() => {
+    const lista = imoveisDisponiveis.filter(
+      (i) => (i.finalidade === "Aluguel" || i.finalidade === "Locação") && i.destaque
+    );
+    return shuffleArray(lista).map(mapToCard);
+  }, [imoveisDisponiveis]);
 
   const handleSearch = () => {
     if (filters.codigo.trim()) {
@@ -179,6 +186,7 @@ export default function Page() {
                   { label: "Barracão",       value: "Barracão" },
                   { label: "Casa",           value: "Casa" },
                   { label: "Comercial",      value: "Comercial" },
+                  { label: "Kitnet",         value: "Kitnet" },
                   { label: "Sobrado",        value: "Sobrado" },
                   { label: "Terreno Rural",  value: "Terreno Rural" },
                   { label: "Terreno Urbano", value: "Terreno Urbano" },
@@ -251,7 +259,7 @@ export default function Page() {
           <PropertyCarousel items={destaquesVenda} />
         ) : (
           <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
-            <p className="text-gray-400 font-bold uppercase tracking-widest">Nenhum destaque de venda cadastrado</p>
+            <p className="text-gray-400 font-bold uppercase tracking-widest">Nenhum destaque de venda disponível</p>
           </div>
         )}
 
@@ -296,7 +304,7 @@ export default function Page() {
           <PropertyCarousel items={destaquesLocacao} />
         ) : (
           <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
-            <p className="text-gray-400 font-bold uppercase tracking-widest">Nenhum destaque de locação cadastrado</p>
+            <p className="text-gray-400 font-bold uppercase tracking-widest">Nenhum destaque de locação disponível</p>
           </div>
         )}
 

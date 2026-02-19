@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Edit, Trash2, Plus, Power, Loader2, Home, Building2, TreePine, Store, CheckCircle, XCircle, TrendingUp, Search, X, SlidersHorizontal, Warehouse } from "lucide-react";
+import { Edit, Trash2, Plus, Power, Loader2, Home, Building2, TreePine, Store, CheckCircle, XCircle, TrendingUp, Search, X, SlidersHorizontal, Warehouse, DoorOpen } from "lucide-react";
 
 interface Imovel {
   id: number;
@@ -41,6 +41,7 @@ const tiposConfig = [
   { value: "Barracão",      label: "Barracões",     icon: Warehouse, color: "from-yellow-600 to-yellow-800" },
   { value: "Casa",          label: "Casas",         icon: Home,      color: "from-blue-600 to-blue-800" },
   { value: "Comercial",     label: "Comerciais",    icon: Store,     color: "from-orange-600 to-orange-800" },
+  { value: "Kitnet",        label: "Kitnets",       icon: DoorOpen,  color: "from-pink-600 to-pink-800" },
   { value: "Sobrado",       label: "Sobrados",      icon: Building2, color: "from-indigo-600 to-indigo-800" },
   { value: "Terreno Rural", label: "T. Rurais",     icon: TreePine,  color: "from-green-600 to-green-800" },
   { value: "Terreno Urbano",label: "T. Urbanos",    icon: TreePine,  color: "from-teal-600 to-teal-800" },

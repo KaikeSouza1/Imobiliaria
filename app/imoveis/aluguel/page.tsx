@@ -26,14 +26,15 @@ interface Imovel {
 }
 
 const categories = [
-  { label: "Todos",       value: "" },
+  { label: "Todos",        value: "" },
   { label: "Apartamentos", value: "Apartamento" },
-  { label: "Barracões",   value: "Barracão" },
-  { label: "Casas",       value: "Casa" },
-  { label: "Comerciais",  value: "Comercial" },
-  { label: "Sobrados",    value: "Sobrado" },
-  { label: "T. Rurais",   value: "Terreno Rural" },
-  { label: "T. Urbanos",  value: "Terreno Urbano" },
+  { label: "Barracões",    value: "Barracão" },
+  { label: "Casas",        value: "Casa" },
+  { label: "Comerciais",   value: "Comercial" },
+  { label: "Kitnets",      value: "Kitnet" },
+  { label: "Sobrados",     value: "Sobrado" },
+  { label: "T. Rurais",    value: "Terreno Rural" },
+  { label: "T. Urbanos",   value: "Terreno Urbano" },
 ];
 
 type OrdemTipo = "recentes" | "menor_preco" | "maior_preco" | "menor_area" | "maior_area";
