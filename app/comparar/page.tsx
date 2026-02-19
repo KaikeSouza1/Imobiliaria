@@ -469,7 +469,7 @@ export default function ComparadorPage() {
                     <RotateCcw size={14} /> Nova comparação
                   </button>
                   <p className="text-xs text-gray-400 font-medium">
-                    Clique nos imóveis para ver todos os detalhes
+                    Clique nos imóveis para ver todos os detalhes.
                   </p>
                 </div>
               </div>
