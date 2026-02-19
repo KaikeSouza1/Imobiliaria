@@ -62,6 +62,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: BASE_URL,
   },
+  icons: {
+    icon: "/logo_nova.png",
+    shortcut: "/logo_nova.png",
+    apple: "/logo_nova.png",
+  },
 };
 
 const schemaOrg = {
