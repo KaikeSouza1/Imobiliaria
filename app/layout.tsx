@@ -3,6 +3,7 @@ import { Montserrat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Header";
 import Footer from "@/components/Footer";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
 
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" });
 
@@ -39,14 +40,7 @@ export const metadata: Metadata = {
     title: "Imobiliária Porto Iguaçu – Venda e Aluguel de Imóveis",
     description:
       "Encontre casas, apartamentos, terrenos e imóveis comerciais nas gêmeas do Iguaçu. CRECI-PR J09362.",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Imobiliária Porto Iguaçu",
-      },
-    ],
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Imobiliária Porto Iguaçu" }],
   },
   robots: {
     index: true,
@@ -59,9 +53,7 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: {
-    canonical: BASE_URL,
-  },
+  alternates: { canonical: BASE_URL },
   icons: {
     icon: "/logo_nova.png",
     shortcut: "/logo_nova.png",
@@ -78,8 +70,7 @@ const schemaOrg = {
       name: "Imobiliária Porto Iguaçu",
       url: BASE_URL,
       logo: { "@type": "ImageObject", url: `${BASE_URL}/logo_nova.png` },
-      description:
-        "Imobiliária referência no mercado das gêmeas do Iguaçu. Venda e aluguel de casas, apartamentos, sobrados, terrenos e imóveis comerciais.",
+      description: "Imobiliária referência no mercado das gêmeas do Iguaçu. Venda e aluguel de casas, apartamentos, sobrados, terrenos e imóveis comerciais.",
       telephone: "+55-42-99975-5493",
       address: {
         "@type": "PostalAddress",
@@ -114,10 +105,7 @@ const schemaOrg = {
       publisher: { "@id": `${BASE_URL}/#organization` },
       potentialAction: {
         "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: `${BASE_URL}/imoveis/venda?tipo={search_term_string}`,
-        },
+        target: { "@type": "EntryPoint", urlTemplate: `${BASE_URL}/imoveis/venda?tipo={search_term_string}` },
         "query-input": "required name=search_term_string",
       },
     },
@@ -137,6 +125,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         {children}
         <Footer />
+        <WhatsAppFloat />
       </body>
     </html>
   );

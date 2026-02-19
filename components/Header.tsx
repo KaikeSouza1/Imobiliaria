@@ -3,55 +3,39 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation"; 
-import { Menu, X, ChevronDown, Phone, Mail, Facebook, Instagram, FileText, MessageCircle } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, X, ChevronDown, Phone, Mail, Facebook, Instagram, FileText, MessageCircle, GitCompare } from "lucide-react";
 
 export default function Header() {
   const [menuAberto, setMenuAberto] = useState(false);
   const [dropdownVenda, setDropdownVenda] = useState(false);
   const [dropdownLocacao, setDropdownLocacao] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  
+
   const pathname = usePathname();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // CONFIGURAÇÃO DE PÁGINA
   const isHome = pathname === "/";
-  // O Header fica "Compacto" se scrollar OU se não for a Home
   const isCompact = scrolled || !isHome;
 
-  // ESTILOS DINÂMICOS
   const headerBg = isCompact ? "bg-[#0f2e20] shadow-xl" : "bg-transparent";
-  
-  // Altura reduzida nas páginas internas ou no scroll
-  const headerHeight = isCompact ? "h-16" : "h-24"; 
+  const headerHeight = isCompact ? "h-16" : "h-24";
   const logoSize = isCompact ? "w-32 h-16" : "w-48 h-24";
-  
   const textClasses = "text-white";
   const hoverClasses = "hover:text-green-300";
 
-  // LISTA DE OPÇÕES ATUALIZADA
-  const propertyTypes = [
-    "Apartamento",
-    "Casa",
-    "Sobrado",
-    "Comercial",
-    "Terreno",
-    "Terreno Rural"
-  ];
+  const propertyTypes = ["Apartamento", "Casa", "Sobrado", "Comercial", "Terreno", "Terreno Rural"];
 
   return (
     <div className="fixed top-0 z-50 w-full font-sans transition-all duration-500">
 
-      {/* === BARRA SUPERIOR === */}
-      <div className={`bg-[#0f2e20] text-white text-[10px] md:text-xs transition-all duration-500 overflow-hidden ${isCompact ? 'py-1 opacity-95' : 'py-3'}`}>
+      {/* === BARRA SUPERIOR (telefone, email, redes) === */}
+      <div className={`bg-[#0f2e20] text-white text-[10px] md:text-xs transition-all duration-500 overflow-hidden ${isCompact ? "py-1 opacity-95" : "py-3"}`}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center px-4 gap-2">
           <div className="flex items-center gap-4 md:gap-8">
             <a href="tel:42999755493" className="flex items-center gap-2 hover:text-green-200 transition-colors">
@@ -65,9 +49,12 @@ export default function Header() {
             <a href="mailto:contato@imobiliariaportoiguacu.com.br" className="flex items-center gap-2 hover:text-green-200 transition-colors">
               <Mail size={14} /> contato@imobiliariaportoiguacu.com.br
             </a>
+            <Link href="/comparar" className="flex items-center gap-1.5 hover:text-green-200 transition-colors border-l border-green-800 pl-8">
+              <GitCompare size={14} /> Comparar imóveis
+            </Link>
             <div className="flex items-center gap-4 border-l border-green-800 pl-8">
-              <a href="#" target="_blank" className="hover:text-green-200 transition-colors"><Facebook size={18} /></a>
-              <a href="https://www.instagram.com/imobiliariaportoiguacu/" target="_blank" className="hover:text-green-200 transition-colors"><Instagram size={18} /></a>
+              <a href="https://www.facebook.com/profile.php?id=61560745614772" target="_blank" className="hover:text-green-200 transition-colors"><Facebook size={18} /></a>
+              <a href="https://www.instagram.com/imobportoiguacu/" target="_blank" className="hover:text-green-200 transition-colors"><Instagram size={18} /></a>
             </div>
           </div>
         </div>
@@ -78,7 +65,7 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`flex justify-between items-center transition-all duration-500 ${headerHeight}`}>
 
-            {/* LOGO DINÂMICA */}
+            {/* LOGO */}
             <Link href="/" className={`flex-shrink-0 relative transition-all duration-500 ${logoSize}`}>
               <Image
                 src="/logo_nova.png"
@@ -99,7 +86,7 @@ export default function Header() {
                 Quem Somos
               </Link>
 
-              {/* Dropdown VENDA (Opções Adicionadas) */}
+              {/* Dropdown VENDA */}
               <div
                 className="relative group flex items-center h-full"
                 onMouseEnter={() => setDropdownVenda(true)}
@@ -108,23 +95,19 @@ export default function Header() {
                 <button className={`flex items-center gap-1 ${textClasses} ${hoverClasses} font-bold text-[10px] lg:text-xs uppercase tracking-widest`}>
                   Venda <ChevronDown size={12} />
                 </button>
-                <div className={`absolute ${isCompact ? 'top-12' : 'top-16'} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownVenda ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
+                <div className={`absolute ${isCompact ? "top-12" : "top-16"} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownVenda ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}>
                   <div className="py-2">
                     <Link href="/imoveis/venda" className="block px-6 py-2 text-white hover:bg-green-700 text-[10px] font-bold uppercase border-b border-green-800 mb-2">Ver Todos</Link>
                     {propertyTypes.map((tipo) => (
-                       <Link 
-                         key={tipo} 
-                         href={`/imoveis/venda?tipo=${tipo}`} 
-                         className="block px-6 py-2 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase"
-                       >
-                         {tipo}
-                       </Link>
+                      <Link key={tipo} href={`/imoveis/venda?tipo=${tipo}`} className="block px-6 py-2 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase">
+                        {tipo}
+                      </Link>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Dropdown LOCAÇÃO (Opções Adicionadas) */}
+              {/* Dropdown LOCAÇÃO */}
               <div
                 className="relative group flex items-center h-full"
                 onMouseEnter={() => setDropdownLocacao(true)}
@@ -133,17 +116,13 @@ export default function Header() {
                 <button className={`flex items-center gap-1 ${textClasses} ${hoverClasses} font-bold text-[10px] lg:text-xs uppercase tracking-widest`}>
                   Locação <ChevronDown size={12} />
                 </button>
-                <div className={`absolute ${isCompact ? 'top-12' : 'top-16'} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownLocacao ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
+                <div className={`absolute ${isCompact ? "top-12" : "top-16"} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownLocacao ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}>
                   <div className="py-2">
                     <Link href="/imoveis/aluguel" className="block px-6 py-2 text-white hover:bg-green-700 text-[10px] font-bold uppercase border-b border-green-800 mb-2">Ver Todos</Link>
                     {propertyTypes.map((tipo) => (
-                       <Link 
-                         key={tipo} 
-                         href={`/imoveis/aluguel?tipo=${tipo}`} 
-                         className="block px-6 py-2 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase"
-                       >
-                         {tipo}
-                       </Link>
+                      <Link key={tipo} href={`/imoveis/aluguel?tipo=${tipo}`} className="block px-6 py-2 text-green-100 hover:bg-green-700 text-[10px] font-bold uppercase">
+                        {tipo}
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -158,12 +137,12 @@ export default function Header() {
               </Link>
             </nav>
 
-            {/* BOTÃO WHATSAPP COMPACTO */}
+            {/* BOTÃO WHATSAPP */}
             <div className="hidden md:block pl-4">
               <Link
                 href="https://api.whatsapp.com/send?phone=5542999755493"
                 target="_blank"
-                className={`flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white rounded-xl font-black uppercase transition-all shadow-lg border border-green-500 ${isCompact ? 'px-4 py-2 text-[10px]' : 'px-6 py-3 text-xs'}`}
+                className={`flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white rounded-xl font-black uppercase transition-all shadow-lg border border-green-500 ${isCompact ? "px-4 py-2 text-[10px]" : "px-6 py-3 text-xs"}`}
               >
                 <MessageCircle size={isCompact ? 16 : 18} /> WhatsApp
               </Link>
@@ -189,6 +168,16 @@ export default function Header() {
             <Link href="/imoveis/venda" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Venda</Link>
             <Link href="/imoveis/aluguel" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Locação</Link>
             <Link href="/contato" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Contato</Link>
+
+            {/* Comparador no mobile */}
+            <Link
+              href="/comparar"
+              onClick={() => setMenuAberto(false)}
+              className="flex items-center gap-2 px-4 py-3 font-bold text-green-300 hover:bg-green-800 rounded-lg uppercase text-sm border border-green-700"
+            >
+              <GitCompare size={16} /> Comparar Imóveis
+            </Link>
+
             <Link href="https://api.whatsapp.com/send?phone=5542999755493" target="_blank" className="block px-4 py-3 font-bold text-white bg-green-600 rounded-lg uppercase text-sm text-center mt-4">WhatsApp</Link>
           </div>
         </div>
