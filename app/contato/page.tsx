@@ -5,7 +5,18 @@ import Link from "next/link";
 import { Instagram, Mail, Phone, Award, Star, ChevronRight } from "lucide-react";
 import HomeContact from "@/components/HomeContact";
 
-const corretores = [
+const corretores: {
+  nome: string;
+  foto: string;
+  creci: string | null;
+  cnai?: string;
+  email: string;
+  instagram: string | null;
+  instagramHandle: string | null;
+  telefone: string | null;
+  destaque: boolean;
+  cargo: string;
+}[] = [
   {
     nome: "André Luis Schutze",
     foto: "/foto andre.jpeg",
@@ -54,6 +65,7 @@ const corretores = [
     nome: "Claudiney W. Otto Junior",
     foto: "/foto claudinei.jpg",
     creci: "37016",
+    cnai: "45505",
     email: "juniorotto04@gmail.com",
     instagram: "https://www.instagram.com/claudineyotto_junior_corretor?igsh=aXJhYWQ0a2dvNHUw",
     instagramHandle: "@claudineyotto_junior_corretor",
@@ -124,7 +136,7 @@ export default function ContatoPage() {
                 <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-1">{andre.nome}</h2>
                 <div className="flex items-center gap-2 mt-2">
                   <Award size={14} className="text-yellow-400" />
-                  <span className="text-yellow-400 font-bold text-sm">CRECI-PR {andre.creci}</span>
+                  <span className="text-yellow-400 font-bold text-sm">CRECI-PR {andre.creci} · CNAI 40365</span>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -190,7 +202,7 @@ export default function ContatoPage() {
                 />
                 {c.creci && (
                   <div className="absolute top-3 left-3 bg-[#0f2e20] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-md flex items-center gap-1">
-                    <Award size={10} /> CRECI {c.creci}
+                    <Award size={10} /> CRECI {c.creci}{c.cnai ? ` · CNAI ${c.cnai}` : ""}
                   </div>
                 )}
                 <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg">
