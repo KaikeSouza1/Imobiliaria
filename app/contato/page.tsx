@@ -5,22 +5,27 @@ import Link from "next/link";
 import { Instagram, Mail, Phone, Award, Star, ChevronRight } from "lucide-react";
 import HomeContact from "@/components/HomeContact";
 
-const corretores: {
+interface Corretor {
   nome: string;
   foto: string;
   creci: string | null;
   cnai?: string;
+  whatsapp: string;
   email: string;
   instagram: string | null;
   instagramHandle: string | null;
   telefone: string | null;
   destaque: boolean;
   cargo: string;
-}[] = [
+}
+
+const corretores: Corretor[] = [
   {
     nome: "André Luis Schutze",
     foto: "/foto andre.jpeg",
     creci: "42206",
+    cnai: "40365",
+    whatsapp: "5542999755493",
     email: "Schutze.andre.luis@hotmail.com",
     instagram: "https://www.instagram.com/andrelschutze?igsh=MWw5aGdicGNteG03bg%3D%3D&utm_source=qr",
     instagramHandle: "@andrelschutze",
@@ -32,6 +37,7 @@ const corretores: {
     nome: "Jessica Winter",
     foto: "/foto jessica.jpeg",
     creci: "41305",
+    whatsapp: "5542998505438",
     email: "jessicawinter.imoveis@hotmail.com",
     instagram: "https://www.instagram.com/jessicawinter.imoveis?igsh=MWNsd3phYTZ1eXE4eQ%3D%3D&utm_source=qr",
     instagramHandle: "@jessicawinter.imoveis",
@@ -43,6 +49,7 @@ const corretores: {
     nome: "Anna Karol",
     foto: "/foto anna.jpeg",
     creci: "52528",
+    whatsapp: "5542883646963",
     email: "Karolmaistz@gmail.com",
     instagram: "https://www.instagram.com/karol_maistz?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
     instagramHandle: "@karol_maistz",
@@ -54,6 +61,7 @@ const corretores: {
     nome: "Luane Orlandi",
     foto: "/foto luane.jpeg",
     creci: "52076-F",
+    whatsapp: "5542915554021",
     email: "corretoraluaneorlandi@gmail.com",
     instagram: "https://www.instagram.com/corretora_luane_orlandi_?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
     instagramHandle: "@corretora_luane_orlandi_",
@@ -66,6 +74,7 @@ const corretores: {
     foto: "/foto claudinei.jpg",
     creci: "37016",
     cnai: "45505",
+    whatsapp: "5542984156013",
     email: "juniorotto04@gmail.com",
     instagram: "https://www.instagram.com/claudineyotto_junior_corretor?igsh=aXJhYWQ0a2dvNHUw",
     instagramHandle: "@claudineyotto_junior_corretor",
@@ -94,10 +103,7 @@ export default function ContatoPage() {
         </div>
         <div
           className="absolute inset-0 opacity-5"
-          style={{
-            backgroundImage: "radial-gradient(circle, #4ade80 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-          }}
+          style={{ backgroundImage: "radial-gradient(circle, #4ade80 1px, transparent 1px)", backgroundSize: "32px 32px" }}
         />
         <div className="relative z-10 text-center text-white px-4">
           <p className="text-green-400 font-black uppercase tracking-[0.3em] text-xs mb-3">Nossa Equipe</p>
@@ -111,32 +117,22 @@ export default function ContatoPage() {
         <div className="bg-[#0f2e20] rounded-[2rem] overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row">
             <div className="relative md:w-72 h-72 md:h-auto flex-shrink-0">
-              <Image
-                src={andre.foto}
-                alt={andre.nome}
-                fill
-                className="object-cover object-top"
-              />
-              <div
-                className="absolute inset-0"
-                style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(15,46,32,0.55) 100%)" }}
-              />
-              <div
-                className="absolute inset-0 hidden md:block"
-                style={{ background: "linear-gradient(to right, transparent 60%, rgba(15,46,32,0.95) 100%)" }}
-              />
+              <Image src={andre.foto} alt={andre.nome} fill className="object-cover object-top" />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(15,46,32,0.55) 100%)" }} />
+              <div className="absolute inset-0 hidden md:block" style={{ background: "linear-gradient(to right, transparent 60%, rgba(15,46,32,0.95) 100%)" }} />
               <div className="absolute top-4 left-4 bg-yellow-400 text-[#0f2e20] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
                 <Star size={10} className="fill-[#0f2e20]" /> Diretor
               </div>
             </div>
-
             <div className="flex-1 p-8 md:p-10 flex flex-col justify-center">
               <div className="mb-6">
                 <p className="text-green-400 font-black uppercase tracking-[0.25em] text-[10px] mb-2">{andre.cargo}</p>
                 <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-1">{andre.nome}</h2>
                 <div className="flex items-center gap-2 mt-2">
                   <Award size={14} className="text-yellow-400" />
-                  <span className="text-yellow-400 font-bold text-sm">CRECI-PR {andre.creci} · CNAI 40365</span>
+                  <span className="text-yellow-400 font-bold text-sm">
+                    CRECI-PR {andre.creci} · CNAI {andre.cnai}
+                  </span>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -157,7 +153,7 @@ export default function ContatoPage() {
                   </Link>
                 )}
                 <Link
-                  href="https://api.whatsapp.com/send?phone=5542999755493&text=Ol%C3%A1!%20Gostaria%20de%20mais%20informa%C3%A7%C3%B5es."
+                  href={`https://api.whatsapp.com/send?phone=${andre.whatsapp}&text=Ol%C3%A1!%20Gostaria%20de%20mais%20informa%C3%A7%C3%B5es.`}
                   target="_blank"
                   className="sm:col-span-2 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white rounded-xl px-6 py-3.5 font-black text-sm uppercase tracking-widest transition-all shadow-lg"
                 >
@@ -186,7 +182,6 @@ export default function ContatoPage() {
               key={c.nome}
               className="bg-white rounded-2xl overflow-hidden shadow-md border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
             >
-              {/* Foto com degradê igual ao PropertyCard */}
               <div className="relative h-64 overflow-hidden">
                 <Image
                   src={c.foto}
@@ -196,9 +191,7 @@ export default function ContatoPage() {
                 />
                 <div
                   className="absolute inset-0"
-                  style={{
-                    background: "linear-gradient(to bottom, transparent 35%, rgba(10,20,15,0.75) 70%, rgba(10,20,15,0.95) 100%)",
-                  }}
+                  style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(10,20,15,0.75) 70%, rgba(10,20,15,0.95) 100%)" }}
                 />
                 {c.creci && (
                   <div className="absolute top-3 left-3 bg-[#0f2e20] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-md flex items-center gap-1">
@@ -210,8 +203,6 @@ export default function ContatoPage() {
                   <p className="text-sm font-black text-gray-900 leading-tight">{c.nome}</p>
                 </div>
               </div>
-
-              {/* Info */}
               <div className="p-5 space-y-2">
                 {c.telefone && (
                   <Link href={`tel:${c.telefone.replace(/\D/g, "")}`} className="flex items-center gap-2 text-gray-600 hover:text-green-700 transition-colors text-sm font-medium">
@@ -232,7 +223,7 @@ export default function ContatoPage() {
                   </Link>
                 )}
                 <Link
-                  href={`https://api.whatsapp.com/send?phone=5542999755493&text=Ol%C3%A1!%20Gostaria%20de%20falar%20com%20${encodeURIComponent(c.nome)}.`}
+                  href={`https://api.whatsapp.com/send?phone=${c.whatsapp}&text=Ol%C3%A1%20${encodeURIComponent(c.nome)}!%20Gostaria%20de%20mais%20informa%C3%A7%C3%B5es.`}
                   target="_blank"
                   className="mt-2 flex items-center justify-center gap-2 w-full bg-[#0f2e20] hover:bg-green-700 text-white text-xs font-black uppercase tracking-widest rounded-xl py-3 transition-all"
                 >
