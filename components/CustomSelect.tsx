@@ -31,7 +31,33 @@ export default function CustomSelect({ label, icon, value, onChange, options }: 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Calcula posição absoluta na tela para escapar de qualquer overflow:hidden pai
+  // Recalcula posição ao scroll ou resize para manter fixo na tela
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updatePosition = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDropdownStyle({
+          position: "fixed",
+          top: rect.bottom + 8,
+          left: rect.left,
+          width: rect.width,
+          zIndex: 9999,
+        });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isOpen]);
+
   const handleOpen = () => {
     if (!isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();

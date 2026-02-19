@@ -28,7 +28,7 @@ interface Imovel {
   status: string;
 }
 
-const TIPOS = ["Todos", "Casa", "Apartamento", "Sobrado", "Terreno", "Terreno Rural", "Comercial"];
+const TIPOS = ["Todos", "Apartamento", "Barracão", "Casa", "Comercial", "Sobrado", "Terreno Rural", "Terreno Urbano"];
 
 function formatPreco(preco: number, finalidade: string) {
   if (preco === 0) return "Consultar";
@@ -45,7 +45,6 @@ export default function ComparadorPage() {
   const [selecionados, setSelecionados] = useState<Imovel[]>([]);
   const [modalAberto, setModalAberto]   = useState(false);
 
-  // Filtros
   const [finalidade, setFinalidade] = useState<"Venda" | "Aluguel">("Venda");
   const [tipo, setTipo]             = useState("Todos");
   const [cidade, setCidade]         = useState("");
@@ -66,7 +65,6 @@ export default function ComparadorPage() {
     load();
   }, []);
 
-  // Reset selecionados ao trocar finalidade
   useEffect(() => { setSelecionados([]); }, [finalidade]);
 
   const cidades = useMemo(() => {
@@ -105,7 +103,6 @@ export default function ComparadorPage() {
 
   const isSelecionado = (id: number) => !!selecionados.find((s) => s.id === id);
 
-  // ---- TABELA COMPARATIVA ----
   const linhas: { label: string; fn: (i: Imovel) => string | number; melhorFn?: "maior" | "menor" }[] = [
     { label: "Código",    fn: (i) => i.codigo || "—" },
     { label: "Tipo",      fn: (i) => i.tipo },
@@ -124,7 +121,7 @@ export default function ComparadorPage() {
     if (vals.every((v) => v === 0)) return null;
     const target = linha.melhorFn === "maior" ? Math.max(...vals) : Math.min(...vals.filter((v) => v > 0));
     const idx = vals.indexOf(target);
-    return vals.filter((v) => v === target).length > 1 ? null : idx; // empate não destaca
+    return vals.filter((v) => v === target).length > 1 ? null : idx;
   }
 
   return (
@@ -154,10 +151,9 @@ export default function ComparadorPage() {
 
       <div className="max-w-7xl mx-auto px-4 -mt-4">
 
-        {/* ---- FILTROS ---- */}
+        {/* FILTROS */}
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 mb-8">
 
-          {/* TOGGLE VENDA / ALUGUEL */}
           <div className="flex justify-center mb-6">
             <div className="bg-gray-100 p-1 rounded-2xl flex gap-1">
               {(["Venda", "Aluguel"] as const).map((f) => (
@@ -176,7 +172,6 @@ export default function ComparadorPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Busca */}
             <div className="relative">
               <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -188,7 +183,6 @@ export default function ComparadorPage() {
               />
             </div>
 
-            {/* Tipo */}
             <div className="relative">
               <SlidersHorizontal size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <select
@@ -201,7 +195,6 @@ export default function ComparadorPage() {
               <ChevronDown size={15} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
 
-            {/* Cidade */}
             <div className="relative">
               <MapPin size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <select
@@ -216,7 +209,6 @@ export default function ComparadorPage() {
             </div>
           </div>
 
-          {/* Info resultados */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
             <p className="text-sm text-gray-500">
               <span className="font-black text-gray-900">{imoveisFiltrados.length}</span> imóveis encontrados
@@ -232,7 +224,7 @@ export default function ComparadorPage() {
           </div>
         </div>
 
-        {/* ---- SELECIONADOS (barra flutuante topo) ---- */}
+        {/* SELECIONADOS */}
         {selecionados.length > 0 && (
           <div className="sticky top-4 z-30 mb-6">
             <div className="bg-[#0f2e20] rounded-2xl px-5 py-4 shadow-2xl border border-green-900 flex flex-col md:flex-row items-center gap-4">
@@ -282,7 +274,7 @@ export default function ComparadorPage() {
           </div>
         )}
 
-        {/* ---- GRID DE IMÓVEIS ---- */}
+        {/* GRID DE IMÓVEIS */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="animate-spin text-green-700" size={36} />
@@ -308,20 +300,17 @@ export default function ComparadorPage() {
                       ? "border-gray-100 opacity-40 cursor-not-allowed"
                       : "border-gray-100 hover:border-green-300 hover:shadow-lg"}`}
                 >
-                  {/* Checkbox de seleção */}
                   <div className={`absolute top-3 right-3 z-10 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all
                     ${sel ? "bg-green-500 border-green-500" : "bg-white/90 border-gray-300 group-hover:border-green-400"}`}>
                     {sel && <Check size={14} className="text-white" strokeWidth={3} />}
                   </div>
 
-                  {/* Badge selecionado */}
                   {sel && (
                     <div className="absolute top-3 left-3 z-10 bg-green-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg flex items-center gap-1">
                       <Check size={9} /> Selecionado
                     </div>
                   )}
 
-                  {/* Foto */}
                   <div className="relative h-48 overflow-hidden">
                     <Image
                       src={imovel.imagem_url || FALLBACK}
@@ -337,7 +326,6 @@ export default function ComparadorPage() {
                     </div>
                   </div>
 
-                  {/* Info */}
                   <div className="p-4">
                     <p className="font-black text-gray-900 text-sm leading-snug line-clamp-2 mb-2">{imovel.titulo}</p>
                     <p className="text-xs text-gray-400 font-medium flex items-center gap-1 mb-3">
@@ -364,14 +352,13 @@ export default function ComparadorPage() {
         )}
       </div>
 
-      {/* ===================== MODAL DE COMPARAÇÃO ===================== */}
+      {/* MODAL DE COMPARAÇÃO */}
       {modalAberto && selecionados.length >= 2 && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-6 overflow-auto">
           <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => setModalAberto(false)} />
 
           <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-5xl z-10 overflow-hidden">
 
-            {/* Header */}
             <div className="bg-[#0f2e20] px-8 py-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
@@ -393,7 +380,6 @@ export default function ComparadorPage() {
             <div className="overflow-auto max-h-[80vh]">
               <div className="p-6 md:p-8">
 
-                {/* Fotos + info principal */}
                 <div className={`grid gap-4 mb-8 ${selecionados.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
                   {selecionados.map((imovel, idx) => (
                     <div key={imovel.id} className="rounded-2xl overflow-hidden border border-gray-100 shadow-md relative">
@@ -428,9 +414,7 @@ export default function ComparadorPage() {
                   ))}
                 </div>
 
-                {/* Tabela comparativa */}
                 <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                  {/* Header da tabela */}
                   <div className={`grid bg-gray-50 border-b border-gray-200 ${selecionados.length === 2 ? "grid-cols-3" : "grid-cols-4"}`}>
                     <div className="px-5 py-3">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Característica</p>
@@ -442,7 +426,6 @@ export default function ComparadorPage() {
                     ))}
                   </div>
 
-                  {/* Linhas */}
                   {linhas.map((linha, rowIdx) => {
                     const melhorIdx = getMelhorIdx(linha);
                     return (
@@ -478,7 +461,6 @@ export default function ComparadorPage() {
                   })}
                 </div>
 
-                {/* Ações finais */}
                 <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
                   <button
                     onClick={() => { setSelecionados([]); setModalAberto(false); }}

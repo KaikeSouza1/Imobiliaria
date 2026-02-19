@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Edit, Trash2, Plus, Power, Loader2, Home, Building2, TreePine, Store, CheckCircle, XCircle, TrendingUp, Search, X, SlidersHorizontal } from "lucide-react";
+import { Edit, Trash2, Plus, Power, Loader2, Home, Building2, TreePine, Store, CheckCircle, XCircle, TrendingUp, Search, X, SlidersHorizontal, Warehouse } from "lucide-react";
 
 interface Imovel {
   id: number;
@@ -36,18 +36,20 @@ function ImgAdmin({ src, alt }: { src: string; alt: string }) {
 }
 
 const tiposConfig = [
-  { value: "Todos",       label: "Todos",        icon: Home,      color: "from-gray-600 to-gray-800" },
-  { value: "Casa",        label: "Casas",        icon: Home,      color: "from-blue-600 to-blue-800" },
-  { value: "Apartamento", label: "Apartamentos", icon: Building2, color: "from-purple-600 to-purple-800" },
-  { value: "Terreno",     label: "Terrenos",     icon: TreePine,  color: "from-green-600 to-green-800" },
-  { value: "Comercial",   label: "Comerciais",   icon: Store,     color: "from-orange-600 to-orange-800" },
+  { value: "Todos",         label: "Todos",         icon: Home,      color: "from-gray-600 to-gray-800" },
+  { value: "Apartamento",   label: "Apartamentos",  icon: Building2, color: "from-purple-600 to-purple-800" },
+  { value: "Barracão",      label: "Barracões",     icon: Warehouse, color: "from-yellow-600 to-yellow-800" },
+  { value: "Casa",          label: "Casas",         icon: Home,      color: "from-blue-600 to-blue-800" },
+  { value: "Comercial",     label: "Comerciais",    icon: Store,     color: "from-orange-600 to-orange-800" },
+  { value: "Sobrado",       label: "Sobrados",      icon: Building2, color: "from-indigo-600 to-indigo-800" },
+  { value: "Terreno Rural", label: "T. Rurais",     icon: TreePine,  color: "from-green-600 to-green-800" },
+  { value: "Terreno Urbano",label: "T. Urbanos",    icon: TreePine,  color: "from-teal-600 to-teal-800" },
 ];
 
 export default function AdminImoveisPage() {
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ── FILTROS ──
   const [busca, setBusca] = useState("");
   const [filtroCodigo, setFiltroCodigo] = useState("");
   const [filtroCidade, setFiltroCidade] = useState("");
@@ -91,31 +93,23 @@ export default function AdminImoveisPage() {
     }
   };
 
-  // ── CIDADES DINÂMICAS ──
   const cidades = useMemo(() => {
     const set = Array.from(new Set(imoveis.map(i => i.cidade).filter(Boolean))).sort();
     return ["Todas", ...set];
   }, [imoveis]);
 
-  // ── FILTRAGEM COMBINADA ──
   const imoveisFiltrados = useMemo(() => {
     return imoveis.filter(im => {
-      // Busca geral (título)
       if (busca && !im.titulo?.toLowerCase().includes(busca.toLowerCase())) return false;
-      // Código
       if (filtroCodigo && !im.codigo?.toLowerCase().includes(filtroCodigo.toLowerCase())) return false;
-      // Cidade/Bairro
       if (filtroCidade && filtroCidade !== "Todas") {
         const term = filtroCidade.toLowerCase();
         const inCidade = im.cidade?.toLowerCase().includes(term);
         const inBairro = im.bairro?.toLowerCase().includes(term);
         if (!inCidade && !inBairro) return false;
       }
-      // Tipo
       if (filtroTipo !== "Todos" && im.tipo !== filtroTipo) return false;
-      // Finalidade
       if (filtroFinalidade !== "Todos" && im.finalidade !== filtroFinalidade) return false;
-      // Status
       if (filtroStatus === "Ativos" && !im.ativo) return false;
       if (filtroStatus === "Inativos" && im.ativo) return false;
       if (filtroStatus === "Vendidos" && im.status !== "vendido") return false;
@@ -216,10 +210,9 @@ export default function AdminImoveisPage() {
         </div>
       </div>
 
-      {/* ── PAINEL DE BUSCA E FILTROS ── */}
+      {/* PAINEL DE BUSCA E FILTROS */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         
-        {/* HEADER DO PAINEL */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-700 font-black text-sm uppercase tracking-wider">
             <SlidersHorizontal size={16} className="text-green-600" />
@@ -244,7 +237,6 @@ export default function AdminImoveisPage() {
 
           {/* LINHA 1: BUSCA POR TÍTULO + CÓDIGO */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* TÍTULO */}
             <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Buscar por Título</label>
               <div className="relative">
@@ -264,7 +256,6 @@ export default function AdminImoveisPage() {
               </div>
             </div>
 
-            {/* CÓDIGO */}
             <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Buscar por Código</label>
               <div className="relative">
@@ -285,9 +276,8 @@ export default function AdminImoveisPage() {
             </div>
           </div>
 
-          {/* LINHA 2: CIDADE + TIPO */}
+          {/* LINHA 2: CIDADE + FINALIDADE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* CIDADE */}
             <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Cidade / Bairro</label>
               <div className="flex gap-2 flex-wrap">
@@ -307,7 +297,6 @@ export default function AdminImoveisPage() {
               </div>
             </div>
 
-            {/* FINALIDADE */}
             <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Finalidade</label>
               <div className="flex gap-2">
@@ -389,7 +378,6 @@ export default function AdminImoveisPage() {
           </div>
         </div>
 
-        {/* RODAPÉ COM CONTAGEM */}
         <div className="px-6 py-3 bg-gray-50 border-t border-gray-100">
           <p className="text-xs font-bold text-gray-500">
             Exibindo <span className="text-gray-900 font-black">{imoveisFiltrados.length}</span> de <span className="text-gray-900 font-black">{imoveis.length}</span> imóveis
@@ -450,7 +438,6 @@ export default function AdminImoveisPage() {
               </div>
 
               <div className="p-4">
-                {/* Código */}
                 {im.codigo && (
                   <p className="text-[10px] font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-md inline-block mb-1">
                     #{im.codigo}

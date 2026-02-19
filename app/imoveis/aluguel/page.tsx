@@ -26,13 +26,14 @@ interface Imovel {
 }
 
 const categories = [
-  { label: "Todos", value: "" },
-  { label: "Casas", value: "Casa" },
+  { label: "Todos",       value: "" },
   { label: "Apartamentos", value: "Apartamento" },
-  { label: "Sobrados", value: "Sobrado" },
-  { label: "Terrenos", value: "Terreno" },
-  { label: "Rurais", value: "Terreno Rural" },
-  { label: "Comerciais", value: "Comercial" },
+  { label: "Barracões",   value: "Barracão" },
+  { label: "Casas",       value: "Casa" },
+  { label: "Comerciais",  value: "Comercial" },
+  { label: "Sobrados",    value: "Sobrado" },
+  { label: "T. Rurais",   value: "Terreno Rural" },
+  { label: "T. Urbanos",  value: "Terreno Urbano" },
 ];
 
 type OrdemTipo = "recentes" | "menor_preco" | "maior_preco" | "menor_area" | "maior_area";
@@ -155,7 +156,6 @@ function AluguelContent() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* ORDENAÇÃO */}
             <div className="relative" ref={ordemRef}>
               <button
                 onClick={() => setShowOrdem(!showOrdem)}
@@ -187,7 +187,6 @@ function AluguelContent() {
               )}
             </div>
 
-            {/* LIMPAR FILTROS */}
             {(temFiltros || ordem !== "recentes") && (
               <button
                 onClick={limparFiltros}

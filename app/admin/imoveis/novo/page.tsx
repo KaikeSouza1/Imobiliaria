@@ -186,7 +186,7 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 2: DESTAQUE (PADRÃO ATIVO) */}
+        {/* SEÇÃO 2: DESTAQUE */}
         <div className={`p-6 rounded-[2rem] border-2 transition-all shadow-sm flex items-center justify-between
           ${formData.destaque ? "bg-amber-50 border-amber-400" : "bg-white border-gray-100"}`}>
           <div className="flex items-center gap-5">
@@ -237,42 +237,40 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 4: DADOS BÁSICOS (COM CÓDIGO) */}
+        {/* SEÇÃO 4: DADOS BÁSICOS */}
         <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
            <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Informações do Imóvel</h2>
            
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              
-             {/* TÍTULO */}
              <div className="md:col-span-2">
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Título do Anúncio</label>
                <input name="titulo" required value={formData.titulo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="Ex: Casa Linda no Centro" />
              </div>
 
-             {/* PREÇO E CÓDIGO (LADO A LADO) */}
              <div>
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Preço (R$)</label>
                <input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="0.00" />
              </div>
              
-             {/* CAMPO CÓDIGO */}
              <div>
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Código / Referência</label>
                <input name="codigo" required value={formData.codigo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="Ex: REF-1234" />
              </div>
              
-             {/* TIPO E FINALIDADE */}
              <div>
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Tipo de Imóvel</label>
                <select name="tipo" value={formData.tipo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
                  <option value="Apartamento">Apartamento</option>
+                 <option value="Barracão">Barracão</option>
                  <option value="Casa">Casa</option>
-                 <option value="Sobrado">Sobrado</option>
                  <option value="Comercial">Comercial</option>
-                 <option value="Terreno">Terreno</option>
+                 <option value="Sobrado">Sobrado</option>
                  <option value="Terreno Rural">Terreno Rural</option>
+                 <option value="Terreno Urbano">Terreno Urbano</option>
                </select>
              </div>
+
              <div>
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Finalidade</label>
                <select name="finalidade" value={formData.finalidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
@@ -281,7 +279,6 @@ export default function NovoImovelPage() {
                </select>
              </div>
              
-             {/* LOCALIZAÇÃO */}
              <div>
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Cidade</label>
                <input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
@@ -296,7 +293,6 @@ export default function NovoImovelPage() {
                <input name="endereco" value={formData.endereco} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
              </div>
              
-             {/* CARACTERÍSTICAS */}
              <div className="grid grid-cols-4 gap-4 md:col-span-2">
                <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Área (m²)</label><input name="area" type="number" value={formData.area} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
                <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Quartos</label><input name="quartos" type="number" value={formData.quartos} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
@@ -304,7 +300,6 @@ export default function NovoImovelPage() {
                <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Vagas</label><input name="vagas" type="number" value={formData.vagas} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
              </div>
              
-             {/* DESCRIÇÃO */}
              <div className="md:col-span-2">
                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Descrição Completa</label>
                <textarea name="descricao" rows={5} value={formData.descricao} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-medium focus:ring-2 focus:ring-[#0f2e20]" placeholder="Descreva os detalhes do imóvel..." />
@@ -312,7 +307,7 @@ export default function NovoImovelPage() {
            </div>
         </div>
 
-        {/* SEÇÃO 6: MAPA */}
+        {/* SEÇÃO 5: MAPA */}
         <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
            <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Localização no Mapa</h2>
            <MapPicker lat={formData.latitude} lng={formData.longitude} onLocationChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))} />

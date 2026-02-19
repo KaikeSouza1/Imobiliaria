@@ -176,11 +176,12 @@ export default function Page() {
                 options={[
                   { label: "Todos os Tipos", value: "" },
                   { label: "Apartamento",    value: "Apartamento" },
+                  { label: "Barracão",       value: "Barracão" },
                   { label: "Casa",           value: "Casa" },
-                  { label: "Sobrado",        value: "Sobrado" },
                   { label: "Comercial",      value: "Comercial" },
-                  { label: "Terreno",        value: "Terreno" },
+                  { label: "Sobrado",        value: "Sobrado" },
                   { label: "Terreno Rural",  value: "Terreno Rural" },
+                  { label: "Terreno Urbano", value: "Terreno Urbano" },
                 ]}
               />
               <CustomSelect
@@ -266,7 +267,7 @@ export default function Page() {
         <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
       </div>
 
-      {/* DESTAQUES LOCAÇÃO — tudo verde agora */}
+      {/* DESTAQUES LOCAÇÃO */}
       <section className="max-w-[1400px] mx-auto px-4 mt-16 mb-24">
         <div className="flex flex-col md:flex-row justify-between items-end mb-4 px-2">
           <div>

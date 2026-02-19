@@ -81,11 +81,9 @@ export default function EditarImovelPage() {
 
   const handleChange = (e: any) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // ── DEFINIR COMO CAPA: troca a foto clicada com a capa atual ──
   const handleDefinirCapa = (urlClicada: string, indexNaGaleria: number) => {
     const capaAtual = formData.imagem_url;
     const novaGaleria = [...formData.fotos_adicionais];
-    // Coloca a capa antiga no lugar da foto clicada
     novaGaleria[indexNaGaleria] = capaAtual;
     setFormData(prev => ({
       ...prev,
@@ -146,18 +144,15 @@ export default function EditarImovelPage() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* CAPA ATUAL */}
             <div className="col-span-1">
               <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest flex items-center gap-1">
                 <Crown size={12} className="text-amber-500" /> Capa Atual
               </label>
               <div className="relative aspect-video rounded-lg overflow-hidden border-4 border-amber-400 shadow-lg">
                 <Image src={formData.imagem_url || "/logo.png"} fill className="object-cover" alt="Capa" />
-                {/* Ícone coroa */}
                 <div className="absolute top-2 left-2 bg-amber-400 text-white rounded-full p-1 shadow">
                   <Crown size={14} />
                 </div>
-                {/* Botão de trocar capa por upload */}
                 <label className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
                   <div className="flex flex-col items-center text-white gap-1">
                     <UploadCloud size={22} />
@@ -171,13 +166,11 @@ export default function EditarImovelPage() {
               </div>
             </div>
 
-            {/* GALERIA */}
             <div className="col-span-2">
               <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest">
                 Galeria — clique para definir como capa
               </label>
               <div className="grid grid-cols-4 gap-2">
-                {/* Botão adicionar novas fotos */}
                 <label className="aspect-square bg-gray-50 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-green-50 transition-colors">
                   <Plus className="text-green-600" />
                   <input type="file" multiple className="hidden" onChange={async (e) => {
@@ -186,7 +179,6 @@ export default function EditarImovelPage() {
                   }} />
                 </label>
 
-                {/* Miniaturas da galeria */}
                 {formData.fotos_adicionais.map((url, i) => (
                   <div
                     key={i}
@@ -195,15 +187,11 @@ export default function EditarImovelPage() {
                     title="Clique para definir como capa"
                   >
                     <Image src={url} fill className="object-cover group-hover:brightness-75 transition-all" alt="Galeria" />
-
-                    {/* Overlay com ícone de coroa ao hover */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="bg-amber-400 text-white rounded-full p-2 shadow-lg">
                         <Crown size={16} />
                       </div>
                     </div>
-
-                    {/* Botão excluir */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -279,11 +267,12 @@ export default function EditarImovelPage() {
             <label className="label-admin">Tipo de Imóvel</label>
             <select name="tipo" value={formData.tipo} onChange={handleChange} className="input-admin">
               <option value="Apartamento">Apartamento</option>
+              <option value="Barracão">Barracão</option>
               <option value="Casa">Casa</option>
-              <option value="Sobrado">Sobrado</option>
               <option value="Comercial">Comercial</option>
-              <option value="Terreno">Terreno</option>
+              <option value="Sobrado">Sobrado</option>
               <option value="Terreno Rural">Terreno Rural</option>
+              <option value="Terreno Urbano">Terreno Urbano</option>
             </select>
           </div>
           <div>

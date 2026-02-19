@@ -26,13 +26,14 @@ interface Imovel {
 }
 
 const categories = [
-  { label: "Todos", value: "" },
-  { label: "Casas", value: "Casa" },
+  { label: "Todos",       value: "" },
   { label: "Apartamentos", value: "Apartamento" },
-  { label: "Sobrados", value: "Sobrado" },
-  { label: "Terrenos", value: "Terreno" },
-  { label: "Rurais", value: "Terreno Rural" },
-  { label: "Comerciais", value: "Comercial" },
+  { label: "Barracões",   value: "Barracão" },
+  { label: "Casas",       value: "Casa" },
+  { label: "Comerciais",  value: "Comercial" },
+  { label: "Sobrados",    value: "Sobrado" },
+  { label: "T. Rurais",   value: "Terreno Rural" },
+  { label: "T. Urbanos",  value: "Terreno Urbano" },
 ];
 
 type OrdemTipo = "recentes" | "menor_preco" | "maior_preco" | "menor_area" | "maior_area";
@@ -52,7 +53,7 @@ function ordenarImoveis(lista: Imovel[], ordem: OrdemTipo): Imovel[] {
     case "maior_preco": return copia.sort((a, b) => b.preco - a.preco);
     case "menor_area":  return copia.sort((a, b) => a.area - b.area);
     case "maior_area":  return copia.sort((a, b) => b.area - a.area);
-    default:            return copia; // recentes = ordem do banco (DESC)
+    default:            return copia;
   }
 }
 
@@ -98,7 +99,6 @@ function VendaContent() {
     fetchImoveis();
   }, []);
 
-  // Filtragem
   const imoveisFiltrados = useMemo(() => {
     const filtrados = imoveis.filter((imovel) => {
       if (codigoUrl && imovel.codigo?.toLowerCase() !== codigoUrl.toLowerCase()) return false;
@@ -149,7 +149,6 @@ function VendaContent() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* ORDENAÇÃO */}
             <div className="relative" ref={ordemRef}>
               <button
                 onClick={() => setShowOrdem(!showOrdem)}
@@ -181,7 +180,6 @@ function VendaContent() {
               )}
             </div>
 
-            {/* LIMPAR FILTROS */}
             {(temFiltros || ordem !== "recentes") && (
               <button
                 onClick={limparFiltros}
@@ -232,7 +230,6 @@ function VendaContent() {
           </div>
         ) : imoveisFiltrados.length > 0 ? (
           <>
-            {/* INFO DE ORDENAÇÃO ATIVA */}
             {ordem !== "recentes" && (
               <div className="mb-4 flex items-center gap-2 text-xs font-bold text-green-700 bg-green-50 px-4 py-2 rounded-xl w-fit">
                 {ordemAtual.icon} Ordenado por: {ordemAtual.label}
@@ -262,8 +259,6 @@ function VendaContent() {
           </div>
         )}
       </div>
-
-
     </>
   );
 }

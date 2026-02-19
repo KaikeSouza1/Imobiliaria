@@ -29,7 +29,15 @@ export default function Header() {
   const textClasses = "text-white";
   const hoverClasses = "hover:text-green-300";
 
-  const propertyTypes = ["Apartamento", "Casa", "Sobrado", "Comercial", "Terreno", "Terreno Rural"];
+  const propertyTypes = [
+    "Apartamento",
+    "Barracão",
+    "Casa",
+    "Comercial",
+    "Sobrado",
+    "Terreno Rural",
+    "Terreno Urbano",
+  ];
 
   return (
     <div className="fixed top-0 z-50 w-full font-sans transition-all duration-500">
@@ -95,7 +103,7 @@ export default function Header() {
                 <button className={`flex items-center gap-1 ${textClasses} ${hoverClasses} font-bold text-[10px] lg:text-xs uppercase tracking-widest`}>
                   Venda <ChevronDown size={12} />
                 </button>
-                <div className={`absolute ${isCompact ? "top-12" : "top-16"} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownVenda ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}>
+                <div className={`absolute ${isCompact ? "top-12" : "top-16"} left-0 w-52 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownVenda ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}>
                   <div className="py-2">
                     <Link href="/imoveis/venda" className="block px-6 py-2 text-white hover:bg-green-700 text-[10px] font-bold uppercase border-b border-green-800 mb-2">Ver Todos</Link>
                     {propertyTypes.map((tipo) => (
@@ -116,7 +124,7 @@ export default function Header() {
                 <button className={`flex items-center gap-1 ${textClasses} ${hoverClasses} font-bold text-[10px] lg:text-xs uppercase tracking-widest`}>
                   Locação <ChevronDown size={12} />
                 </button>
-                <div className={`absolute ${isCompact ? "top-12" : "top-16"} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownLocacao ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}>
+                <div className={`absolute ${isCompact ? "top-12" : "top-16"} left-0 w-52 bg-[#0f2e20] shadow-2xl rounded-b-xl overflow-hidden transition-all duration-300 ${dropdownLocacao ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}>
                   <div className="py-2">
                     <Link href="/imoveis/aluguel" className="block px-6 py-2 text-white hover:bg-green-700 text-[10px] font-bold uppercase border-b border-green-800 mb-2">Ver Todos</Link>
                     {propertyTypes.map((tipo) => (
@@ -136,17 +144,6 @@ export default function Header() {
                 Contato
               </Link>
             </nav>
-
-            {/* BOTÃO WHATSAPP */}
-            <div className="hidden md:block pl-4">
-              <Link
-                href="https://api.whatsapp.com/send?phone=5542999755493"
-                target="_blank"
-                className={`flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white rounded-xl font-black uppercase transition-all shadow-lg border border-green-500 ${isCompact ? "px-4 py-2 text-[10px]" : "px-6 py-3 text-xs"}`}
-              >
-                <MessageCircle size={isCompact ? 16 : 18} /> WhatsApp
-              </Link>
-            </div>
 
             {/* BOTÃO MOBILE */}
             <button
