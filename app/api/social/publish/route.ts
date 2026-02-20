@@ -7,41 +7,46 @@ const PAGE_ID = process.env.META_PAGE_ID!;
 const IG_ACCOUNT_ID = process.env.META_INSTAGRAM_ACCOUNT_ID!;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
 
-// Busca fotos do imóvel via Supabase REST API (sem pacote externo)
-async function buscarFotos(imovel: any): Promise<string[]> {
-  const fotos: string[] = [];
-
-  if (imovel.fotoCapa) fotos.push(imovel.fotoCapa);
-
-  if (!imovel.id || imovel.id === "novo") return fotos;
-
+// Busca fotos via Supabase REST
+async function buscarFotos(imovelId: string): Promise<string[]> {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) return fotos;
-
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/imovel_fotos?imovel_id=eq.${imovel.id}&select=url&order=id.asc`,
-      {
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
-      }
-    );
-
-    if (res.ok) {
-      const data = await res.json();
-      data.forEach((f: any) => {
-        if (f.url && !fotos.includes(f.url)) fotos.push(f.url);
-      });
+    if (!supabaseUrl || !supabaseKey) {
+      console.log("Supabase URL ou Key não encontradas");
+      return [];
     }
+
+    // Garante que é número inteiro
+    const idInt = parseInt(imovelId);
+    if (isNaN(idInt)) {
+      console.log("ID inválido:", imovelId);
+      return [];
+    }
+
+    const url = `${supabaseUrl}/rest/v1/imovel_fotos?imovel_id=eq.${idInt}&select=url&order=id.asc`;
+    console.log("Buscando fotos em:", url);
+
+    const res = await fetch(url, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const text = await res.text();
+    console.log("Resposta fotos:", text);
+
+    if (!res.ok) return [];
+
+    const data = JSON.parse(text);
+    return Array.isArray(data) ? data.map((f: any) => f.url).filter(Boolean) : [];
   } catch (e) {
     console.error("Erro ao buscar fotos:", e);
+    return [];
   }
-
-  return fotos;
 }
 
 function formatarMensagem(imovel: any): string {
@@ -49,8 +54,6 @@ function formatarMensagem(imovel: any): string {
   const preco = imovel.preco
     ? `R$ ${Number(imovel.preco).toLocaleString("pt-BR")}`
     : "Consulte";
-
-  const linkImovel = `${SITE_URL}/imoveis/${imovel.id}`;
 
   const linhas = [
     `${finalidade} — ${imovel.tipo}`,
@@ -70,18 +73,27 @@ function formatarMensagem(imovel: any): string {
   }
 
   linhas.push(``);
-  linhas.push(`🔗 ${linkImovel}`);
-  linhas.push(``);
   linhas.push(`#imoveis #ImobiliariaPortoIguacu #PortoUniao #${(imovel.tipo || "imovel").replace(/\s/g, "")} #imobiliaria`);
 
   return linhas.join("\n");
+}
+
+function formatarMensagemFacebook(imovel: any): string {
+  // Facebook renderiza URLs como links clicáveis automaticamente
+  const linkImovel = `${SITE_URL}/imoveis/${imovel.id}`;
+  return `${formatarMensagem(imovel)}\n\n👉 Veja mais detalhes: ${linkImovel}`;
+}
+
+function formatarMensagemInstagram(imovel: any): string {
+  // Instagram não clica em links na legenda — orienta para o link na bio
+  return `${formatarMensagem(imovel)}\n\n👉 Link completo na bio do perfil!`;
 }
 
 // ============================================================
 // FACEBOOK
 // ============================================================
 async function publishFacebook(imovel: any, fotos: string[]) {
-  const mensagem = formatarMensagem(imovel);
+  const mensagem = formatarMensagemFacebook(imovel);
 
   if (fotos.length <= 1) {
     const res = await fetch(
@@ -101,33 +113,28 @@ async function publishFacebook(imovel: any, fotos: string[]) {
     return data;
   }
 
-  // Múltiplas fotos — sobe cada uma sem publicar
+  // Múltiplas fotos — sobe sem publicar e depois cria o post
   const fotoIds: string[] = [];
   for (const url of fotos.slice(0, 10)) {
-    const r = await fetch(
-      `https://graph.facebook.com/v22.0/${PAGE_ID}/photos`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, published: false, access_token: PAGE_TOKEN }),
-      }
-    );
+    const r = await fetch(`https://graph.facebook.com/v22.0/${PAGE_ID}/photos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, published: false, access_token: PAGE_TOKEN }),
+    });
     const d = await r.json();
+    console.log("Facebook foto upload:", JSON.stringify(d));
     if (d.id) fotoIds.push(d.id);
   }
 
-  const postRes = await fetch(
-    `https://graph.facebook.com/v22.0/${PAGE_ID}/feed`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: mensagem,
-        attached_media: fotoIds.map((id) => ({ media_fbid: id })),
-        access_token: PAGE_TOKEN,
-      }),
-    }
-  );
+  const postRes = await fetch(`https://graph.facebook.com/v22.0/${PAGE_ID}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: mensagem,
+      attached_media: fotoIds.map((id) => ({ media_fbid: id })),
+      access_token: PAGE_TOKEN,
+    }),
+  });
   const postData = await postRes.json();
   if (postData.error) throw new Error(`Facebook: ${postData.error.message}`);
   return postData;
@@ -137,11 +144,10 @@ async function publishFacebook(imovel: any, fotos: string[]) {
 // INSTAGRAM
 // ============================================================
 async function publishInstagram(imovel: any, fotos: string[]) {
-  const mensagem = formatarMensagem(imovel);
+  const mensagem = formatarMensagemInstagram(imovel);
   const fotosParaUsar = fotos.slice(0, 10);
 
   if (fotosParaUsar.length <= 1) {
-    // Post simples
     const containerRes = await fetch(
       `https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`,
       {
@@ -176,24 +182,22 @@ async function publishInstagram(imovel: any, fotos: string[]) {
   // Carrossel
   const itemIds: string[] = [];
   for (const url of fotosParaUsar) {
-    const r = await fetch(
-      `https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_url: url,
-          is_carousel_item: true,
-          access_token: PAGE_TOKEN,
-        }),
-      }
-    );
+    const r = await fetch(`https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image_url: url,
+        is_carousel_item: true,
+        access_token: PAGE_TOKEN,
+      }),
+    });
     const d = await r.json();
+    console.log("IG item:", JSON.stringify(d));
     if (d.id) itemIds.push(d.id);
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1500));
   }
 
-  if (itemIds.length === 0) throw new Error("Instagram: nenhum item de carrossel criado");
+  if (itemIds.length === 0) throw new Error("Instagram: nenhum item criado");
 
   await new Promise((r) => setTimeout(r, 5000));
 
@@ -211,6 +215,7 @@ async function publishInstagram(imovel: any, fotos: string[]) {
     }
   );
   const carrossel = await carrosselRes.json();
+  console.log("IG carrossel:", JSON.stringify(carrossel));
   if (carrossel.error) throw new Error(`Instagram carrossel: ${carrossel.error.message}`);
 
   await new Promise((r) => setTimeout(r, 3000));
@@ -239,19 +244,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ sucesso: false, erro: "Imóvel sem foto de capa" }, { status: 400 });
     }
 
-    const fotos = await buscarFotos(imovel);
-    console.log(`Fotos para publicar: ${fotos.length}`);
+    // Busca fotos adicionais no banco
+    const fotosGaleria = await buscarFotos(String(imovel.id));
+    console.log("Fotos galeria:", fotosGaleria);
+
+    // Monta array: capa primeiro, depois galeria sem duplicatas
+    const todasFotos = [imovel.fotoCapa, ...fotosGaleria.filter((f) => f !== imovel.fotoCapa)];
+    console.log(`Total fotos: ${todasFotos.length}`);
 
     const resultados: any = {};
     const erros: any = {};
 
     if (publicarFacebook) {
-      try { resultados.facebook = await publishFacebook(imovel, fotos); }
+      try { resultados.facebook = await publishFacebook(imovel, todasFotos); }
       catch (e: any) { erros.facebook = e.message; }
     }
 
     if (publicarInstagram) {
-      try { resultados.instagram = await publishInstagram(imovel, fotos); }
+      try { resultados.instagram = await publishInstagram(imovel, todasFotos); }
       catch (e: any) { erros.instagram = e.message; }
     }
 
