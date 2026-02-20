@@ -4,15 +4,112 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star, Crown } from "lucide-react";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star, Crown, Share2, Facebook, Instagram } from "lucide-react";
 import Link from "next/link";
-import { PublicarRedes } from "@/components/PublicarRedes";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
   ssr: false,
   loading: () => <div className="h-[400px] bg-gray-100 rounded-xl animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-gray-400" /></div>
 });
 
+// ============================================================
+// COMPONENTE PUBLICAR REDES — INLINE (sem import externo)
+// ============================================================
+function PublicarRedes({ imovel }: { imovel: any }) {
+  const [facebook, setFacebook] = useState(true);
+  const [instagram, setInstagram] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [resultado, setResultado] = useState<"sucesso" | "erro" | null>(null);
+  const [mensagemErro, setMensagemErro] = useState("");
+
+  async function publicar() {
+    if (!imovel.fotoCapa) {
+      setResultado("erro");
+      setMensagemErro("Imóvel sem foto de capa.");
+      return;
+    }
+    setLoading(true);
+    setResultado(null);
+    try {
+      const res = await fetch("/api/social/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imovel, publicarFacebook: facebook, publicarInstagram: instagram }),
+      });
+      const data = await res.json();
+      if (data.sucesso || data.parcial) {
+        setResultado("sucesso");
+      } else {
+        setResultado("erro");
+        setMensagemErro(data.erro || JSON.stringify(data.erros) || "Erro desconhecido");
+      }
+    } catch {
+      setResultado("erro");
+      setMensagemErro("Erro de conexão.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mt-6 border-t border-gray-100 pt-6">
+      <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2 mb-4">
+        <Share2 size={16} className="text-blue-500" />
+        Publicar nas Redes Sociais
+      </h3>
+
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        {/* Checkboxes */}
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <div
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${facebook ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}
+              onClick={() => setFacebook(!facebook)}
+            >
+              {facebook && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+            </div>
+            <Facebook size={16} className="text-blue-600" />
+            <span className="text-sm font-medium text-gray-700">Facebook</span>
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <div
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${instagram ? "bg-pink-600 border-pink-600" : "border-gray-300"}`}
+              onClick={() => setInstagram(!instagram)}
+            >
+              {instagram && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+            </div>
+            <Instagram size={16} className="text-pink-600" />
+            <span className="text-sm font-medium text-gray-700">Instagram</span>
+          </label>
+        </div>
+
+        {/* Botão */}
+        <button
+          type="button"
+          onClick={publicar}
+          disabled={loading || (!facebook && !instagram)}
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-pink-600 hover:opacity-90 text-white px-5 py-2.5 rounded-xl font-bold text-sm disabled:opacity-40 transition"
+        >
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Share2 size={15} />}
+          {loading ? "Publicando..." : "Publicar agora"}
+        </button>
+
+        {/* Resultado */}
+        {resultado === "sucesso" && (
+          <span className="text-green-600 text-sm font-bold">✅ Publicado com sucesso!</span>
+        )}
+        {resultado === "erro" && (
+          <span className="text-red-600 text-sm font-bold">❌ {mensagemErro}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PÁGINA PRINCIPAL
+// ============================================================
 export default function EditarImovelPage() {
   const router = useRouter();
   const params = useParams();
@@ -86,11 +183,7 @@ export default function EditarImovelPage() {
     const capaAtual = formData.imagem_url;
     const novaGaleria = [...formData.fotos_adicionais];
     novaGaleria[indexNaGaleria] = capaAtual;
-    setFormData(prev => ({
-      ...prev,
-      imagem_url: urlClicada,
-      fotos_adicionais: novaGaleria,
-    }));
+    setFormData(prev => ({ ...prev, imagem_url: urlClicada, fotos_adicionais: novaGaleria }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -121,7 +214,6 @@ export default function EditarImovelPage() {
     { value: "reservado",  label: "🟡 Reservado",  color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
   ];
 
-  // Objeto formatado para o componente PublicarRedes
   const imovelParaPublicar = {
     id: String(id),
     titulo: formData.titulo,
@@ -147,19 +239,9 @@ export default function EditarImovelPage() {
 
   return (
     <div className="max-w-5xl mx-auto pb-20">
-
-      {/* HEADER com botão PublicarRedes no canto direito */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/imoveis" className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
-            <ArrowLeft size={24} />
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-800">Editar Imóvel #{id}</h1>
-        </div>
-        {/* Só exibe o botão se já tiver foto de capa cadastrada */}
-        {formData.imagem_url && (
-          <PublicarRedes imovel={imovelParaPublicar} />
-        )}
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/admin/imoveis" className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><ArrowLeft size={24} /></Link>
+        <h1 className="text-2xl font-bold text-gray-800">Editar Imóvel #{id}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -170,7 +252,6 @@ export default function EditarImovelPage() {
           <p className="text-xs text-gray-400">
             Clique em qualquer foto da galeria para <span className="font-bold text-amber-600">definir como capa</span>. A capa atual vai para a galeria automaticamente.
           </p>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="col-span-1">
               <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest flex items-center gap-1">
@@ -178,9 +259,7 @@ export default function EditarImovelPage() {
               </label>
               <div className="relative aspect-video rounded-lg overflow-hidden border-4 border-amber-400 shadow-lg">
                 <Image src={formData.imagem_url || "/logo.png"} fill className="object-cover" alt="Capa" />
-                <div className="absolute top-2 left-2 bg-amber-400 text-white rounded-full p-1 shadow">
-                  <Crown size={14} />
-                </div>
+                <div className="absolute top-2 left-2 bg-amber-400 text-white rounded-full p-1 shadow"><Crown size={14} /></div>
                 <label className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
                   <div className="flex flex-col items-center text-white gap-1">
                     <UploadCloud size={22} />
@@ -193,7 +272,6 @@ export default function EditarImovelPage() {
                 </label>
               </div>
             </div>
-
             <div className="col-span-2">
               <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest">
                 Galeria — clique para definir como capa
@@ -206,28 +284,15 @@ export default function EditarImovelPage() {
                     if (urls) setFormData(p => ({ ...p, fotos_adicionais: [...p.fotos_adicionais, ...urls] }));
                   }} />
                 </label>
-
                 {formData.fotos_adicionais.map((url, i) => (
-                  <div
-                    key={i}
-                    className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-amber-400 transition-all group cursor-pointer shadow-sm"
-                    onClick={() => handleDefinirCapa(url, i)}
-                    title="Clique para definir como capa"
-                  >
+                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-amber-400 transition-all group cursor-pointer shadow-sm"
+                    onClick={() => handleDefinirCapa(url, i)} title="Clique para definir como capa">
                     <Image src={url} fill className="object-cover group-hover:brightness-75 transition-all" alt="Galeria" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="bg-amber-400 text-white rounded-full p-2 shadow-lg">
-                        <Crown size={16} />
-                      </div>
+                      <div className="bg-amber-400 text-white rounded-full p-2 shadow-lg"><Crown size={16} /></div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFormData(p => ({ ...p, fotos_adicionais: p.fotos_adicionais.filter((_, idx) => idx !== i) }));
-                      }}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                    >
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setFormData(p => ({ ...p, fotos_adicionais: p.fotos_adicionais.filter((_, idx) => idx !== i) })); }}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <X size={10} />
                     </button>
                   </div>
@@ -237,23 +302,24 @@ export default function EditarImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO DESTAQUE */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-              <Star size={18} className="text-amber-500 fill-amber-500" /> Imóvel em Destaque na Home
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">Habilite para que este imóvel apareça nos Destaques da página inicial.</p>
+        {/* SEÇÃO DESTAQUE + PUBLICAR NAS REDES */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          {/* Toggle destaque */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <Star size={18} className="text-amber-500 fill-amber-500" /> Imóvel em Destaque na Home
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">Habilite para que este imóvel apareça nos Destaques da página inicial.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={formData.destaque} onChange={(e) => setFormData({ ...formData, destaque: e.target.checked })} className="sr-only peer" />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+            </label>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.destaque}
-              onChange={(e) => setFormData({ ...formData, destaque: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-          </label>
+
+          {/* PUBLICAR NAS REDES — logo abaixo do destaque */}
+          <PublicarRedes imovel={imovelParaPublicar} />
         </div>
 
         {/* SEÇÃO STATUS */}
@@ -262,14 +328,8 @@ export default function EditarImovelPage() {
           <p className="text-xs text-gray-400 mb-4">Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards do site.</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {statusOptions.map((opt) => (
-              <label
-                key={opt.value}
-                className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer font-bold text-sm transition-all
-                  ${formData.status === opt.value
-                    ? opt.color + " border-current shadow-md scale-[1.02]"
-                    : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"
-                  }`}
-              >
+              <label key={opt.value} className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer font-bold text-sm transition-all
+                  ${formData.status === opt.value ? opt.color + " border-current shadow-md scale-[1.02]" : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"}`}>
                 <input type="radio" name="status" value={opt.value} checked={formData.status === opt.value} onChange={handleChange} className="hidden" />
                 {opt.label}
               </label>
@@ -357,11 +417,8 @@ export default function EditarImovelPage() {
             <MapPin size={16} /> Localização no Mapa
           </h2>
           <p className="text-xs text-gray-400 mb-4">Clique no mapa para atualizar a localização exata do imóvel</p>
-          <MapPicker
-            lat={formData.latitude}
-            lng={formData.longitude}
-            onLocationChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))}
-          />
+          <MapPicker lat={formData.latitude} lng={formData.longitude}
+            onLocationChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))} />
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
               <label className="label-admin">Latitude</label>
@@ -380,4 +437,4 @@ export default function EditarImovelPage() {
       </form>
     </div>
   );
-} //teste
+}
