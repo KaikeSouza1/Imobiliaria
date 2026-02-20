@@ -6,6 +6,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star, Crown } from "lucide-react";
 import Link from "next/link";
+import { PublicarRedes } from "@/components/PublicarRedes";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
   ssr: false,
@@ -120,6 +121,23 @@ export default function EditarImovelPage() {
     { value: "reservado",  label: "🟡 Reservado",  color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
   ];
 
+  // Objeto formatado para o componente PublicarRedes
+  const imovelParaPublicar = {
+    id: String(id),
+    titulo: formData.titulo,
+    tipo: formData.tipo,
+    finalidade: formData.finalidade,
+    preco: Number(formData.preco),
+    area: Number(formData.area),
+    quartos: Number(formData.quartos),
+    banheiros: Number(formData.banheiros),
+    vagas: Number(formData.vagas),
+    bairro: formData.bairro,
+    cidade: formData.cidade,
+    descricao: formData.descricao,
+    fotoCapa: formData.imagem_url,
+  };
+
   if (loading) return (
     <div className="p-20 text-center flex flex-col items-center gap-4">
       <Loader2 className="animate-spin text-green-700" size={40} />
@@ -129,9 +147,19 @@ export default function EditarImovelPage() {
 
   return (
     <div className="max-w-5xl mx-auto pb-20">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin/imoveis" className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><ArrowLeft size={24} /></Link>
-        <h1 className="text-2xl font-bold text-gray-800">Editar Imóvel #{id}</h1>
+
+      {/* HEADER com botão PublicarRedes no canto direito */}
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/imoveis" className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+            <ArrowLeft size={24} />
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-800">Editar Imóvel #{id}</h1>
+        </div>
+        {/* Só exibe o botão se já tiver foto de capa cadastrada */}
+        {formData.imagem_url && (
+          <PublicarRedes imovel={imovelParaPublicar} />
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
