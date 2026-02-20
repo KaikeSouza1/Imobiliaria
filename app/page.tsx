@@ -186,6 +186,7 @@ export default function Page() {
                   { label: "Barracão",       value: "Barracão" },
                   { label: "Casa",           value: "Casa" },
                   { label: "Comercial",      value: "Comercial" },
+                  { label: "Imóvel Rural",   value: "Imóvel Rural" },
                   { label: "Kitnet",         value: "Kitnet" },
                   { label: "Sobrado",        value: "Sobrado" },
                   { label: "Terreno Rural",  value: "Terreno Rural" },
