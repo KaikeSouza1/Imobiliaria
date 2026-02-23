@@ -1,117 +1,112 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star, Crown } from "lucide-react";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, Star, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { PublicarRedes } from "@/components/PublicarRedes";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
   ssr: false,
-  loading: () => (
-    <div className="h-[400px] bg-gray-100 rounded-xl animate-pulse flex items-center justify-center">
-      <Loader2 className="animate-spin text-gray-400" />
-    </div>
-  ),
+  loading: () => <div className="h-[400px] bg-gray-100 rounded-xl animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-gray-400" /></div>
 });
 
-export default function EditarImovelPage() {
+// ============================================================
+// PÁGINA PRINCIPAL
+// ============================================================
+export default function NovoImovelPage() {
   const router = useRouter();
-  const params = useParams();
-  const id = params.id;
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [imovelCriado, setImovelCriado] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
-    status: "disponivel", destaque: false,
-    cidade: "", bairro: "", endereco: "", area: "",
+    status: "disponivel", destaque: true, cidade: "Porto União",
+    bairro: "", endereco: "", area: "",
     quartos: "0", banheiros: "0", vagas: "0", descricao: "",
-    imagem_url: "", fotos_adicionais: [] as string[], ativo: true,
-    latitude: -26.2303,
-    longitude: -51.0904,
+    imagem_url: "", fotos_adicionais: [] as string[],
+    latitude: -26.2303, longitude: -51.0904
   });
-
-  useEffect(() => {
-    async function loadImovel() {
-      if (!id) return;
-      try {
-        const res = await fetch(`/api/imoveis/${id}`);
-        if (!res.ok) throw new Error("Não encontrado");
-        const data = await res.json();
-        setFormData({
-          ...data,
-          preco: data.preco?.toString() || "0",
-          area: data.area?.toString() || "0",
-          quartos: data.quartos?.toString() || "0",
-          banheiros: data.banheiros?.toString() || "0",
-          vagas: data.vagas?.toString() || "0",
-          status: data.status || "disponivel",
-          destaque: data.destaque || false,
-          latitude: Number(data.latitude) || -26.2303,
-          longitude: Number(data.longitude) || -51.0904,
-          fotos_adicionais: data.fotos_adicionais || [],
-        });
-      } catch (error) {
-        console.error(error);
-        alert("Erro ao carregar dados do imóvel.");
-        router.push("/admin/imoveis");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadImovel();
-  }, [id, router]);
 
   const uploadFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return null;
     setUploading(true);
     const data = new FormData();
-    Array.from(files).forEach((file) => data.append("file", file));
+    Array.from(files).forEach(file => data.append("file", file));
     try {
       const res = await fetch("/api/upload", { method: "POST", body: data });
       const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro no upload");
       return json.urls;
-    } catch {
-      alert("Erro no upload.");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao enviar imagem.");
       return null;
     } finally {
       setUploading(false);
     }
   };
 
-  const handleChange = (e: any) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleCapaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const urls = await uploadFiles(e.target.files);
+    if (urls && urls.length > 0) setFormData(prev => ({ ...prev, imagem_url: urls[0] }));
+  };
 
-  const handleDefinirCapa = (urlClicada: string, indexNaGaleria: number) => {
-    const capaAtual = formData.imagem_url;
-    const novaGaleria = [...formData.fotos_adicionais];
-    novaGaleria[indexNaGaleria] = capaAtual;
-    setFormData((prev) => ({ ...prev, imagem_url: urlClicada, fotos_adicionais: novaGaleria }));
+  const handleGaleriaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const urls = await uploadFiles(e.target.files);
+    if (urls) setFormData(prev => ({ ...prev, fotos_adicionais: [...prev.fotos_adicionais, ...urls] }));
+  };
+
+  const removeFoto = (index: number) => {
+    setFormData(prev => ({ ...prev, fotos_adicionais: prev.fotos_adicionais.filter((_, i) => i !== index) }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    if (!formData.imagem_url) { alert("Por favor, selecione ao menos a Foto de Capa."); return; }
+    if (!formData.codigo) { alert("Por favor, preencha o Código do imóvel."); return; }
+    setLoading(true);
+    const dadosParaEnviar = {
+      ...formData,
+      preco: parseFloat(formData.preco) || 0,
+      area: parseInt(formData.area) || 0,
+      quartos: parseInt(formData.quartos) || 0,
+      banheiros: parseInt(formData.banheiros) || 0,
+      vagas: parseInt(formData.vagas) || 0,
+    };
     try {
-      const res = await fetch(`/api/imoveis/${id}`, {
-        method: "PUT",
+      const res = await fetch("/api/imoveis", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dadosParaEnviar),
       });
       if (res.ok) {
-        alert("Imóvel atualizado com sucesso!");
-        router.push("/admin/imoveis");
+        const imovelSalvo = await res.json();
+        setImovelCriado({
+          id: String(imovelSalvo.id || imovelSalvo[0]?.id || "novo"),
+          titulo: formData.titulo, tipo: formData.tipo, finalidade: formData.finalidade,
+          preco: parseFloat(formData.preco) || 0, area: parseInt(formData.area) || 0,
+          quartos: parseInt(formData.quartos) || 0, banheiros: parseInt(formData.banheiros) || 0,
+          vagas: parseInt(formData.vagas) || 0, bairro: formData.bairro, cidade: formData.cidade,
+          descricao: formData.descricao, fotoCapa: formData.imagem_url,
+        });
+      } else {
+        const errorData = await res.json();
+        alert("Erro ao salvar: " + (errorData.error || "Tente novamente"));
       }
-    } catch {
-      alert("Erro ao salvar alterações.");
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão com o servidor.");
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const statusOptions = [
@@ -121,302 +116,219 @@ export default function EditarImovelPage() {
     { value: "reservado",  label: "🟡 Reservado",  color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
   ];
 
-  const imovelParaPublicar = {
-    id: String(id),
-    titulo: formData.titulo,
-    tipo: formData.tipo,
-    finalidade: formData.finalidade,
-    preco: Number(formData.preco),
-    area: Number(formData.area),
-    quartos: Number(formData.quartos),
-    banheiros: Number(formData.banheiros),
-    vagas: Number(formData.vagas),
-    bairro: formData.bairro,
-    cidade: formData.cidade,
-    descricao: formData.descricao,
-    fotoCapa: formData.imagem_url,
-  };
-
-  if (loading)
+  // ============================================================
+  // TELA DE SUCESSO
+  // ============================================================
+  if (imovelCriado) {
     return (
-      <div className="p-20 text-center flex flex-col items-center gap-4">
-        <Loader2 className="animate-spin text-green-700" size={40} />
-        <p className="font-bold text-gray-500">Puxando informações do banco...</p>
+      <div className="max-w-xl mx-auto pb-20 px-4 pt-16">
+        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-10 flex flex-col items-center gap-6">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+            <CheckCircle className="text-green-600" size={42} />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-black text-gray-900">Imóvel cadastrado!</h1>
+            <p className="text-gray-500 text-sm mt-2"><span className="font-bold text-gray-700">{imovelCriado.titulo}</span> foi salvo com sucesso.</p>
+          </div>
+          {imovelCriado.fotoCapa && (
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+              <Image src={imovelCriado.fotoCapa} fill className="object-cover" alt="Capa" />
+            </div>
+          )}
+          {/* PUBLICAR NAS REDES na tela de sucesso */}
+          <div className="w-full bg-gradient-to-br from-blue-50 to-pink-50 rounded-2xl p-5 border border-blue-100">
+            <PublicarRedes imovel={imovelCriado} inline={true} />
+          </div>
+          <div className="flex gap-3 w-full">
+            <Link href="/admin/imoveis" className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm text-center transition-all">
+              Ver todos os imóveis
+            </Link>
+            <button onClick={() => {
+              setImovelCriado(null);
+              setFormData({ titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
+                status: "disponivel", destaque: true, cidade: "Porto União", bairro: "", endereco: "", area: "",
+                quartos: "0", banheiros: "0", vagas: "0", descricao: "", imagem_url: "", fotos_adicionais: [],
+                latitude: -26.2303, longitude: -51.0904 });
+            }} className="flex-1 bg-[#0f2e20] hover:bg-black text-white font-bold py-3 rounded-xl text-sm transition-all">
+              Cadastrar outro
+            </button>
+          </div>
+        </div>
       </div>
     );
+  }
 
+  // ============================================================
+  // FORMULÁRIO
+  // ============================================================
   return (
-    <div className="max-w-5xl mx-auto pb-20">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin/imoveis" className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+    <div className="max-w-5xl mx-auto pb-20 px-4">
+      <div className="flex items-center gap-4 mb-8 pt-10">
+        <Link href="/admin/imoveis" className="p-3 bg-white hover:bg-gray-100 rounded-2xl shadow-sm text-gray-500 transition-all border border-gray-100">
           <ArrowLeft size={24} />
         </Link>
-        <h1 className="text-2xl font-bold text-gray-800">Editar Imóvel #{id}</h1>
+        <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Novo Imóvel</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
 
-        {/* SEÇÃO FOTOS */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Fotos do Imóvel</h2>
-          <p className="text-xs text-gray-400">
-            Clique em qualquer foto da galeria para{" "}
-            <span className="font-bold text-amber-600">definir como capa</span>. A capa atual vai para a galeria automaticamente.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="col-span-1">
-              <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest flex items-center gap-1">
-                <Crown size={12} className="text-amber-500" /> Capa Atual
-              </label>
-              <div className="relative aspect-video rounded-lg overflow-hidden border-4 border-amber-400 shadow-lg">
-                <Image src={formData.imagem_url || "/logo.png"} fill className="object-cover" alt="Capa" />
-                <div className="absolute top-2 left-2 bg-amber-400 text-white rounded-full p-1 shadow">
-                  <Crown size={14} />
+        {/* SEÇÃO 1: IMAGENS */}
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="col-span-1">
+            <label className="text-[10px] font-black uppercase text-gray-400 ml-2 mb-2 block">Capa Principal</label>
+            <div className="relative aspect-video bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-all cursor-pointer group overflow-hidden">
+              {formData.imagem_url ? (
+                <>
+                  <Image src={formData.imagem_url} fill className="object-cover" alt="Capa" />
+                  <button type="button" onClick={() => setFormData(p => ({ ...p, imagem_url: "" }))} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full z-10"><X size={14} /></button>
+                </>
+              ) : (
+                <div className="flex flex-col items-center">
+                  {uploading ? <Loader2 className="animate-spin text-green-600" /> : <UploadCloud className="text-gray-300 group-hover:text-green-600" size={30} />}
+                  <span className="text-[10px] font-bold text-gray-400 mt-2">UPLOAD CAPA</span>
                 </div>
-                <label className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
-                  <div className="flex flex-col items-center text-white gap-1">
-                    <UploadCloud size={22} />
-                    <span className="text-[10px] font-bold">Novo upload</span>
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const urls = await uploadFiles(e.target.files);
-                      if (urls) setFormData((p) => ({ ...p, imagem_url: urls[0] }));
-                    }}
-                  />
-                </label>
-              </div>
+              )}
+              <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleCapaChange} disabled={uploading} />
             </div>
-            <div className="col-span-2">
-              <label className="label-admin font-bold text-gray-600 block mb-2 uppercase text-[10px] tracking-widest">
-                Galeria — clique para definir como capa
+          </div>
+          <div className="col-span-2">
+            <label className="text-[10px] font-black uppercase text-gray-400 ml-2 mb-2 block">Galeria de Fotos</label>
+            <div className="grid grid-cols-4 gap-3">
+              <label className="aspect-square bg-gray-50 border-2 border-dashed rounded-2xl flex items-center justify-center cursor-pointer hover:bg-green-50 transition-colors">
+                <Plus className="text-green-600" />
+                <input type="file" multiple className="hidden" accept="image/*" onChange={handleGaleriaChange} disabled={uploading} />
               </label>
-              <div className="grid grid-cols-4 gap-2">
-                <label className="aspect-square bg-gray-50 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-green-50 transition-colors">
-                  <Plus className="text-green-600" />
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={async (e) => {
-                      const urls = await uploadFiles(e.target.files);
-                      if (urls)
-                        setFormData((p) => ({ ...p, fotos_adicionais: [...p.fotos_adicionais, ...urls] }));
-                    }}
-                  />
-                </label>
-                {formData.fotos_adicionais.map((url, i) => (
-                  <div
-                    key={i}
-                    className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-amber-400 transition-all group cursor-pointer shadow-sm"
-                    onClick={() => handleDefinirCapa(url, i)}
-                    title="Clique para definir como capa"
-                  >
-                    <Image
-                      src={url}
-                      fill
-                      className="object-cover group-hover:brightness-75 transition-all"
-                      alt="Galeria"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="bg-amber-400 text-white rounded-full p-2 shadow-lg">
-                        <Crown size={16} />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFormData((p) => ({
-                          ...p,
-                          fotos_adicionais: p.fotos_adicionais.filter((_, idx) => idx !== i),
-                        }));
-                      }}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                    >
-                      <X size={10} />
-                    </button>
-                  </div>
-                ))}
+              {formData.fotos_adicionais.map((url, i) => (
+                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                  <Image src={url} fill className="object-cover" alt="Galeria" />
+                  <button type="button" onClick={() => removeFoto(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"><X size={10} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* SEÇÃO 2: DESTAQUE + PUBLICAR NAS REDES */}
+        <div className={`p-6 rounded-[2rem] border-2 transition-all shadow-sm ${formData.destaque ? "bg-amber-50 border-amber-400" : "bg-white border-gray-100"}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-5">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${formData.destaque ? "bg-amber-400 text-white shadow-lg shadow-amber-200" : "bg-gray-100 text-gray-400"}`}>
+                <Star size={28} fill={formData.destaque ? "currentColor" : "none"} />
+              </div>
+              <div>
+                <h3 className={`font-black uppercase text-sm tracking-widest ${formData.destaque ? "text-amber-900" : "text-gray-900"}`}>
+                  {formData.destaque ? "Cadastrando como DESTAQUE" : "Cadastro Padrão"}
+                </h3>
+                <p className="text-xs text-gray-500 font-medium">Imóvel aparecerá automaticamente no topo da home.</p>
               </div>
             </div>
+            <button type="button" onClick={() => setFormData({ ...formData, destaque: !formData.destaque })}
+              className={`w-16 h-8 rounded-full relative transition-all ${formData.destaque ? "bg-amber-500" : "bg-gray-200"}`}>
+              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${formData.destaque ? "left-9" : "left-1"}`} />
+            </button>
           </div>
-        </div>
 
-        {/* SEÇÃO DESTAQUE + PUBLICAR NAS REDES */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <Star size={18} className="text-amber-500 fill-amber-500" /> Imóvel em Destaque na Home
-              </h2>
-              <p className="text-xs text-gray-500 mt-1">
-                Habilite para que este imóvel apareça nos Destaques da página inicial.
-              </p>
+          {/* PUBLICAR NAS REDES — só aparece quando tiver foto de capa */}
+          {formData.imagem_url && (
+            <div className="mt-4 bg-white rounded-2xl p-4 border border-gray-100">
+              <PublicarRedes imovel={{
+                id: "novo",
+                titulo: formData.titulo || "Novo Imóvel",
+                tipo: formData.tipo, finalidade: formData.finalidade,
+                preco: parseFloat(formData.preco) || 0, area: parseInt(formData.area) || 0,
+                quartos: parseInt(formData.quartos) || 0, banheiros: parseInt(formData.banheiros) || 0,
+                vagas: parseInt(formData.vagas) || 0, bairro: formData.bairro, cidade: formData.cidade,
+                descricao: formData.descricao, fotoCapa: formData.imagem_url,
+              }} inline={true} />
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.destaque}
-                onChange={(e) => setFormData({ ...formData, destaque: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-            </label>
-          </div>
-
-          {/* PUBLICAR NAS REDES */}
-          <PublicarRedes imovel={imovelParaPublicar} inline={true} />
+          )}
         </div>
 
-        {/* SEÇÃO STATUS */}
+        {/* SEÇÃO 3: STATUS */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider">Status do Imóvel</h2>
-          <p className="text-xs text-gray-400 mb-4">
-            Imóveis "Vendido", "Alugado" ou "Reservado" aparecerão com destaque nos cards do site.
-          </p>
+          <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Status do Imóvel</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {statusOptions.map((opt) => (
-              <label
-                key={opt.value}
-                className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer font-bold text-sm transition-all
-                  ${formData.status === opt.value
-                    ? opt.color + " border-current shadow-md scale-[1.02]"
-                    : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"
-                  }`}
-              >
-                <input
-                  type="radio"
-                  name="status"
-                  value={opt.value}
-                  checked={formData.status === opt.value}
-                  onChange={handleChange}
-                  className="hidden"
-                />
+              <label key={opt.value} className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer font-bold text-sm transition-all
+                  ${formData.status === opt.value ? opt.color + " border-current shadow-md scale-[1.02]" : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"}`}>
+                <input type="radio" name="status" value={opt.value} checked={formData.status === opt.value} onChange={handleChange} className="hidden" />
                 {opt.label}
               </label>
             ))}
           </div>
         </div>
 
-        {/* DADOS BÁSICOS */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="label-admin">Título</label>
-            <input name="titulo" required value={formData.titulo} onChange={handleChange} className="input-admin" />
-          </div>
-          <div>
-            <label className="label-admin">Código / Referência</label>
-            <input name="codigo" value={formData.codigo} onChange={handleChange} className="input-admin" />
-          </div>
-          <div>
-            <label className="label-admin">Preço (R$)</label>
-            <input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="input-admin" />
-          </div>
-          <div>
-            <label className="label-admin">Tipo de Imóvel</label>
-            <select name="tipo" value={formData.tipo} onChange={handleChange} className="input-admin">
-              <option value="Apartamento">Apartamento</option>
-              <option value="Barracão">Barracão</option>
-              <option value="Casa">Casa</option>
-              <option value="Comercial">Comercial</option>
-              <option value="Imóvel Rural">Imóvel Rural</option>
-              <option value="Kitnet">Kitnet</option>
-              <option value="Sobrado">Sobrado</option>
-              <option value="Terreno Rural">Terreno Rural</option>
-              <option value="Terreno Urbano">Terreno Urbano</option>
-            </select>
-          </div>
-          <div>
-            <label className="label-admin">Finalidade</label>
-            <select name="finalidade" value={formData.finalidade} onChange={handleChange} className="input-admin">
-              <option value="Venda">Venda</option>
-              <option value="Aluguel">Aluguel</option>
-            </select>
-          </div>
-          <div>
-            <label className="label-admin">Cidade</label>
-            <input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="input-admin" />
-            <datalist id="cidades">
-              <option value="Porto União" />
-              <option value="União da Vitória" />
-            </datalist>
-          </div>
-          <div>
-            <label className="label-admin">Bairro</label>
-            <input name="bairro" list="bairros" value={formData.bairro} onChange={handleChange} className="input-admin" />
-            <datalist id="bairros">
-              <option value="Centro" />
-              <option value="São Cristóvão" />
-            </datalist>
-          </div>
-          <div className="md:col-span-2">
-            <label className="label-admin">Endereço Completo</label>
-            <input name="endereco" value={formData.endereco} onChange={handleChange} className="input-admin" />
-          </div>
-        </div>
-
-        {/* CARACTERÍSTICAS */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <label className="label-admin">Área (m²)</label>
-            <input name="area" type="number" value={formData.area} onChange={handleChange} className="input-admin" />
-          </div>
-          <div>
-            <label className="label-admin">Quartos</label>
-            <input name="quartos" type="number" value={formData.quartos} onChange={handleChange} className="input-admin" />
-          </div>
-          <div>
-            <label className="label-admin">Banheiros</label>
-            <input name="banheiros" type="number" value={formData.banheiros} onChange={handleChange} className="input-admin" />
-          </div>
-          <div>
-            <label className="label-admin">Vagas</label>
-            <input name="vagas" type="number" value={formData.vagas} onChange={handleChange} className="input-admin" />
-          </div>
-          <div className="col-span-2 md:col-span-4 mt-2">
-            <label className="label-admin">Descrição para o Site</label>
-            <textarea
-              name="descricao"
-              rows={5}
-              value={formData.descricao}
-              onChange={handleChange}
-              className="input-admin resize-none"
-            />
-          </div>
-        </div>
-
-        {/* MAPA */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-2">
-            <MapPin size={16} /> Localização no Mapa
-          </h2>
-          <p className="text-xs text-gray-400 mb-4">Clique no mapa para atualizar a localização exata do imóvel</p>
-          <MapPicker
-            lat={formData.latitude}
-            lng={formData.longitude}
-            onLocationChange={(lat, lng) => setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng }))}
-          />
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="label-admin">Latitude</label>
-              <input type="text" value={Number(formData.latitude).toFixed(6)} readOnly className="input-admin bg-gray-50 cursor-not-allowed" />
+        {/* SEÇÃO 4: DADOS BÁSICOS */}
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
+          <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Informações do Imóvel</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Título do Anúncio</label>
+              <input name="titulo" required value={formData.titulo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="Ex: Casa Linda no Centro" />
             </div>
             <div>
-              <label className="label-admin">Longitude</label>
-              <input type="text" value={Number(formData.longitude).toFixed(6)} readOnly className="input-admin bg-gray-50 cursor-not-allowed" />
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Preço (R$)</label>
+              <input name="preco" type="number" step="0.01" required value={formData.preco} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="0.00" />
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Código / Referência</label>
+              <input name="codigo" required value={formData.codigo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="Ex: REF-1234" />
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Tipo de Imóvel</label>
+              <select name="tipo" value={formData.tipo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
+                <option value="Apartamento">Apartamento</option>
+                <option value="Barracão">Barracão</option>
+                <option value="Casa">Casa</option>
+                <option value="Comercial">Comercial</option>
+                <option value="Imóvel Rural">Imóvel Rural</option>
+                <option value="Kitnet">Kitnet</option>
+                <option value="Sobrado">Sobrado</option>
+                <option value="Terreno Rural">Terreno Rural</option>
+                <option value="Terreno Urbano">Terreno Urbano</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Finalidade</label>
+              <select name="finalidade" value={formData.finalidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
+                <option value="Venda">Venda</option>
+                <option value="Aluguel">Aluguel</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Cidade</label>
+              <input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
+              <datalist id="cidades"><option value="Porto União" /><option value="União da Vitória" /></datalist>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Bairro</label>
+              <input name="bairro" value={formData.bairro} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Endereço Completo</label>
+              <input name="endereco" value={formData.endereco} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
+            </div>
+            <div className="grid grid-cols-4 gap-4 md:col-span-2">
+              <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Área (m²)</label><input name="area" type="number" value={formData.area} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Quartos</label><input name="quartos" type="number" value={formData.quartos} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Banheiros</label><input name="banheiros" type="number" value={formData.banheiros} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Vagas</label><input name="vagas" type="number" value={formData.vagas} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Descrição Completa</label>
+              <textarea name="descricao" rows={5} value={formData.descricao} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-medium focus:ring-2 focus:ring-[#0f2e20]" placeholder="Descreva os detalhes do imóvel..." />
             </div>
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={saving || uploading}
-          className="w-full bg-[#0f2e20] hover:bg-black text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
-        >
-          {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />} SALVAR ALTERAÇÕES
+        {/* SEÇÃO 5: MAPA */}
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+          <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Localização no Mapa</h2>
+          <MapPicker lat={formData.latitude} lng={formData.longitude} onLocationChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))} />
+        </div>
+
+        <button type="submit" disabled={loading || uploading} className="w-full bg-[#0f2e20] text-white font-black py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl hover:bg-black transition-all uppercase tracking-widest text-sm">
+          {loading ? <Loader2 className="animate-spin" /> : <Save size={20} />} Publicar Imóvel
         </button>
       </form>
     </div>
