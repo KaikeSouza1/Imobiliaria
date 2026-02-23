@@ -27,9 +27,6 @@ interface PublicarRedesProps {
   inline?: boolean;
 }
 
-// ============================================================
-// MODAL DE PREVIEW
-// ============================================================
 function ModalPreview({
   imovel,
   onClose,
@@ -48,27 +45,36 @@ function ModalPreview({
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://imobiliariaportoiguacu.com.br";
   const linkImovel = `${SITE_URL}/imovel/${imovel.id}`;
 
-  const legendaFacebook = [
-    `🏠 ${imovel.tipo} para ${imovel.finalidade}`,
-    ``,
-    `📍 ${imovel.bairro}, ${imovel.cidade}/PR`,
-    ``,
-    `💬 Consulte todas as informações:`,
-    `👉 ${linkImovel}`,
-    ``,
-    `#imoveis #ImobiliariaPortoIguacu #PortoUniao #UniaoVitoria #${(imovel.tipo || "imovel").replace(/\s/g, "")}`,
-  ].join("\n");
+  // Monta legenda igual ao route.ts
+  function montarLegenda(paraInstagram: boolean): string {
+    const linhas = [
+      `🏠 ${imovel.tipo} para ${imovel.finalidade}`,
+      ``,
+      `📍 ${imovel.bairro}, ${imovel.cidade}/PR`,
+      ``,
+    ];
 
-  const legendaInstagram = [
-    `🏠 ${imovel.tipo} para ${imovel.finalidade}`,
-    ``,
-    `📍 ${imovel.bairro}, ${imovel.cidade}/PR`,
-    ``,
-    `💬 Consulte todas as informações:`,
-    `👉 Link completo na bio do perfil!`,
-    ``,
-    `#imoveis #ImobiliariaPortoIguacu #PortoUniao #UniaoVitoria #${(imovel.tipo || "imovel").replace(/\s/g, "")}`,
-  ].join("\n");
+    if (imovel.descricao && imovel.descricao.trim()) {
+      linhas.push(imovel.descricao.trim());
+      linhas.push(``);
+    }
+
+    linhas.push(`💬 Consulte todas as informações:`);
+
+    if (paraInstagram) {
+      linhas.push(`👉 Link completo na bio do perfil!`);
+    } else {
+      linhas.push(`👉 ${linkImovel}`);
+    }
+
+    linhas.push(``);
+    linhas.push(`#imoveis #ImobiliariaPortoIguacu #PortoUniao #UniaoVitoria #${(imovel.tipo || "imovel").replace(/\s/g, "")}`);
+
+    return linhas.join("\n");
+  }
+
+  const legendaFacebook = montarLegenda(false);
+  const legendaInstagram = montarLegenda(true);
 
   async function carregarPreview() {
     if (!imovel.fotoCapa) return;
@@ -86,7 +92,6 @@ function ModalPreview({
     }
   }
 
-  // ✅ CORREÇÃO: useEffect garante que roda apenas uma vez após montar
   useEffect(() => {
     carregarPreview();
   }, []);
@@ -115,7 +120,7 @@ function ModalPreview({
 
         <div className="p-8 space-y-8">
 
-          {/* SEÇÃO: FOTOS */}
+          {/* FOTOS */}
           <div>
             <h3 className="font-black text-gray-700 text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
               <Images size={16} className="text-blue-500" />
@@ -129,45 +134,32 @@ function ModalPreview({
               </div>
             ) : fotos.length > 0 ? (
               <div>
-                {/* Foto principal com navegação */}
                 <div className="relative aspect-video bg-gray-100 rounded-2xl overflow-hidden mb-3">
-                  <img
-                    src={fotos[fotoAtiva]}
-                    alt={`Foto ${fotoAtiva + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={fotos[fotoAtiva]} alt={`Foto ${fotoAtiva + 1}`} className="w-full h-full object-cover" />
                   <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full">
                     {fotoAtiva + 1} / {fotos.length}
                   </div>
                   {fotoAtiva > 0 && (
-                    <button
-                      onClick={() => setFotoAtiva(fotoAtiva - 1)}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all"
-                    >
+                    <button onClick={() => setFotoAtiva(fotoAtiva - 1)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all">
                       <ChevronLeft size={18} className="text-gray-700" />
                     </button>
                   )}
                   {fotoAtiva < fotos.length - 1 && (
-                    <button
-                      onClick={() => setFotoAtiva(fotoAtiva + 1)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all"
-                    >
+                    <button onClick={() => setFotoAtiva(fotoAtiva + 1)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all">
                       <ChevronRight size={18} className="text-gray-700" />
                     </button>
                   )}
                 </div>
 
-                {/* Miniaturas */}
                 {fotos.length > 1 && (
                   <div className="flex gap-2 flex-wrap">
                     {fotos.map((foto, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setFotoAtiva(i)}
+                      <button key={i} onClick={() => setFotoAtiva(i)}
                         className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${
                           fotoAtiva === i ? "border-blue-500 scale-110 shadow-lg" : "border-gray-200 hover:border-gray-400"
-                        }`}
-                      >
+                        }`}>
                         <img src={foto} alt="" className="w-full h-full object-cover" />
                         {i === 0 && (
                           <div className="absolute bottom-0 inset-x-0 bg-blue-500/80 text-white text-[8px] font-black text-center py-0.5">
@@ -182,10 +174,7 @@ function ModalPreview({
                 <div className={`mt-3 inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full ${
                   fotos.length > 1 ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
                 }`}>
-                  {fotos.length > 1
-                    ? `✅ ${fotos.length} fotos — será publicado como carrossel`
-                    : "📸 1 foto — publicação simples"
-                  }
+                  {fotos.length > 1 ? `✅ ${fotos.length} fotos — será publicado como carrossel` : "📸 1 foto — publicação simples"}
                 </div>
               </div>
             ) : (
@@ -195,10 +184,8 @@ function ModalPreview({
             )}
           </div>
 
-          {/* SEÇÃO: LEGENDA */}
+          {/* LEGENDAS */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* Facebook */}
             <div className="border-2 border-blue-100 rounded-2xl overflow-hidden">
               <div className="bg-blue-50 px-4 py-3 flex items-center gap-2 border-b border-blue-100">
                 <Facebook size={16} className="text-blue-600" />
@@ -209,7 +196,6 @@ function ModalPreview({
               </div>
             </div>
 
-            {/* Instagram */}
             <div className="border-2 border-pink-100 rounded-2xl overflow-hidden">
               <div className="bg-pink-50 px-4 py-3 flex items-center gap-2 border-b border-pink-100">
                 <Instagram size={16} className="text-pink-600" />
@@ -221,18 +207,14 @@ function ModalPreview({
             </div>
           </div>
 
-          {/* SEÇÃO: ESCOLHER REDES */}
+          {/* ONDE PUBLICAR */}
           <div className="bg-gray-50 rounded-2xl p-6">
-            <h3 className="font-black text-gray-700 text-sm uppercase tracking-wider mb-4">
-              Onde publicar?
-            </h3>
+            <h3 className="font-black text-gray-700 text-sm uppercase tracking-wider mb-4">Onde publicar?</h3>
             <div className="flex gap-4">
               <label className="flex items-center gap-3 cursor-pointer bg-white border-2 px-5 py-3 rounded-xl transition-all flex-1 justify-center"
                 style={{ borderColor: facebook ? "#2563eb" : "#e5e7eb" }}>
-                <div
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${facebook ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}
-                  onClick={() => setFacebook(!facebook)}
-                >
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${facebook ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}
+                  onClick={() => setFacebook(!facebook)}>
                   {facebook && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                 </div>
                 <Facebook size={18} className="text-blue-600" />
@@ -241,10 +223,8 @@ function ModalPreview({
 
               <label className="flex items-center gap-3 cursor-pointer bg-white border-2 px-5 py-3 rounded-xl transition-all flex-1 justify-center"
                 style={{ borderColor: instagram ? "#db2777" : "#e5e7eb" }}>
-                <div
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${instagram ? "bg-pink-600 border-pink-600" : "border-gray-300"}`}
-                  onClick={() => setInstagram(!instagram)}
-                >
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${instagram ? "bg-pink-600 border-pink-600" : "border-gray-300"}`}
+                  onClick={() => setInstagram(!instagram)}>
                   {instagram && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                 </div>
                 <Instagram size={18} className="text-pink-600" />
@@ -254,7 +234,7 @@ function ModalPreview({
           </div>
         </div>
 
-        {/* Footer com botões */}
+        {/* Footer */}
         <div className="sticky bottom-0 bg-white border-t border-gray-100 px-8 py-5 flex items-center justify-between gap-4 rounded-b-3xl">
           <button onClick={onClose} className="text-gray-500 font-bold hover:text-gray-700 transition-colors text-sm">
             Cancelar
@@ -262,8 +242,7 @@ function ModalPreview({
           <button
             onClick={() => onPublicar(facebook, instagram)}
             disabled={(!facebook && !instagram) || fotos.length === 0}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-pink-600 hover:opacity-90 text-white font-black px-8 py-3.5 rounded-2xl transition-all disabled:opacity-40 text-sm uppercase tracking-wider shadow-lg"
-          >
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-pink-600 hover:opacity-90 text-white font-black px-8 py-3.5 rounded-2xl transition-all disabled:opacity-40 text-sm uppercase tracking-wider shadow-lg">
             <Share2 size={16} />
             Confirmar e Publicar
           </button>
@@ -273,9 +252,6 @@ function ModalPreview({
   );
 }
 
-// ============================================================
-// COMPONENTE PRINCIPAL
-// ============================================================
 export function PublicarRedes({ imovel, inline = false }: PublicarRedesProps) {
   const [modalPreview, setModalPreview] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -336,13 +312,9 @@ export function PublicarRedes({ imovel, inline = false }: PublicarRedesProps) {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
           <button
             type="button"
-            onClick={() => {
-              setResultado(null);
-              setModalPreview(true);
-            }}
+            onClick={() => { setResultado(null); setModalPreview(true); }}
             disabled={loading || !imovel.fotoCapa}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-pink-600 hover:opacity-90 text-white px-5 py-2.5 rounded-xl font-bold text-sm disabled:opacity-40 transition shadow-md"
-          >
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-pink-600 hover:opacity-90 text-white px-5 py-2.5 rounded-xl font-bold text-sm disabled:opacity-40 transition shadow-md">
             {loading ? (
               <><Loader2 size={15} className="animate-spin" /> Publicando...</>
             ) : (

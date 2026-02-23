@@ -40,8 +40,15 @@ function formatarLegenda(imovel: any, paraInstagram: boolean): string {
     ``,
     `📍 ${imovel.bairro}, ${imovel.cidade}/PR`,
     ``,
-    `💬 Consulte todas as informações:`,
   ];
+
+  // Descrição do imóvel como corpo do post
+  if (imovel.descricao && imovel.descricao.trim()) {
+    linhas.push(imovel.descricao.trim());
+    linhas.push(``);
+  }
+
+  linhas.push(`💬 Consulte todas as informações:`);
 
   if (paraInstagram) {
     linhas.push(`👉 Link completo na bio do perfil!`);
@@ -56,13 +63,12 @@ function formatarLegenda(imovel: any, paraInstagram: boolean): string {
 }
 
 // ============================================================
-// FACEBOOK — carrossel com até 10 fotos
+// FACEBOOK
 // ============================================================
 async function publishFacebook(imovel: any, fotos: string[]) {
   const mensagem = formatarLegenda(imovel, false);
   const fotosParaUsar = fotos.slice(0, 10);
 
-  // Foto única
   if (fotosParaUsar.length === 1) {
     const res = await fetch(`https://graph.facebook.com/v22.0/${PAGE_ID}/photos`, {
       method: "POST",
@@ -79,17 +85,12 @@ async function publishFacebook(imovel: any, fotos: string[]) {
     return data;
   }
 
-  // Múltiplas fotos — upload sem publicar, depois cria post com todas
   const fotoIds: string[] = [];
   for (const url of fotosParaUsar) {
     const r = await fetch(`https://graph.facebook.com/v22.0/${PAGE_ID}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url,
-        published: false,
-        access_token: PAGE_TOKEN,
-      }),
+      body: JSON.stringify({ url, published: false, access_token: PAGE_TOKEN }),
     });
     const d = await r.json();
     console.log("FB upload foto:", JSON.stringify(d));
@@ -97,7 +98,6 @@ async function publishFacebook(imovel: any, fotos: string[]) {
   }
 
   console.log(`FB fotos enviadas: ${fotoIds.length} de ${fotosParaUsar.length}`);
-
   if (fotoIds.length === 0) throw new Error("Facebook: nenhuma foto enviada");
 
   const postRes = await fetch(`https://graph.facebook.com/v22.0/${PAGE_ID}/feed`, {
@@ -116,13 +116,12 @@ async function publishFacebook(imovel: any, fotos: string[]) {
 }
 
 // ============================================================
-// INSTAGRAM — carrossel com até 10 fotos
+// INSTAGRAM
 // ============================================================
 async function publishInstagram(imovel: any, fotos: string[]) {
   const mensagem = formatarLegenda(imovel, true);
   const fotosParaUsar = fotos.slice(0, 10);
 
-  // Foto única
   if (fotosParaUsar.length === 1) {
     const containerRes = await fetch(`https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`, {
       method: "POST",
@@ -149,7 +148,6 @@ async function publishInstagram(imovel: any, fotos: string[]) {
     return published;
   }
 
-  // Carrossel
   const itemIds: string[] = [];
   for (const url of fotosParaUsar) {
     const r = await fetch(`https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`, {
@@ -168,7 +166,6 @@ async function publishInstagram(imovel: any, fotos: string[]) {
   }
 
   console.log(`IG itens criados: ${itemIds.length} de ${fotosParaUsar.length}`);
-
   if (itemIds.length === 0) throw new Error("Instagram: nenhum item de carrossel criado");
 
   await new Promise((r) => setTimeout(r, 5000));
