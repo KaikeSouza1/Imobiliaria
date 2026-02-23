@@ -1,130 +1,104 @@
-// ARQUIVO: app/api/social/publish/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
+import { Pool } from "pg";
 
 const PAGE_TOKEN = process.env.META_PAGE_ACCESS_TOKEN!;
 const PAGE_ID = process.env.META_PAGE_ID!;
 const IG_ACCOUNT_ID = process.env.META_INSTAGRAM_ACCOUNT_ID!;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
 
-// Busca fotos via Supabase REST
+const pool = new Pool({
+  host: process.env.DATABASE_HOST,
+  port: Number(process.env.DATABASE_PORT),
+  user: process.env.DATABASE_USER,
+  password: process.env.DATABASE_PASSWORD,
+  database: process.env.DATABASE_NAME,
+  ssl: false,
+});
+
 async function buscarFotos(imovelId: string): Promise<string[]> {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.log("Supabase URL ou Key não encontradas");
-      return [];
-    }
-
-    // Garante que é número inteiro
     const idInt = parseInt(imovelId);
-    if (isNaN(idInt)) {
-      console.log("ID inválido:", imovelId);
-      return [];
-    }
+    if (isNaN(idInt)) return [];
 
-    const url = `${supabaseUrl}/rest/v1/imovel_fotos?imovel_id=eq.${idInt}&select=url&order=id.asc`;
-    console.log("Buscando fotos em:", url);
+    const result = await pool.query(
+      "SELECT url FROM imovel_fotos WHERE imovel_id = $1 ORDER BY id ASC",
+      [idInt]
+    );
 
-    const res = await fetch(url, {
-      headers: {
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    const text = await res.text();
-    console.log("Resposta fotos:", text);
-
-    if (!res.ok) return [];
-
-    const data = JSON.parse(text);
-    return Array.isArray(data) ? data.map((f: any) => f.url).filter(Boolean) : [];
+    return result.rows.map((r: any) => r.url).filter(Boolean);
   } catch (e) {
     console.error("Erro ao buscar fotos:", e);
     return [];
   }
 }
 
-function formatarMensagem(imovel: any): string {
-  const finalidade = imovel.finalidade === "Venda" ? "🏷️ VENDA" : "🔑 LOCAÇÃO";
-  const preco = imovel.preco
-    ? `R$ ${Number(imovel.preco).toLocaleString("pt-BR")}`
-    : "Consulte";
+function formatarLegenda(imovel: any, paraInstagram: boolean): string {
+  const linkImovel = `${SITE_URL}/imovel/${imovel.id}`;
 
   const linhas = [
-    `${finalidade} — ${imovel.tipo}`,
+    `🏠 ${imovel.tipo} para ${imovel.finalidade}`,
     ``,
     `📍 ${imovel.bairro}, ${imovel.cidade}/PR`,
-    `💰 ${preco}`,
+    ``,
+    `💬 Consulte todas as informações:`,
   ];
 
-  if (imovel.area) linhas.push(`📐 ${imovel.area}m²`);
-  if (imovel.quartos) linhas.push(`🛏️ ${imovel.quartos} quarto(s)`);
-  if (imovel.banheiros) linhas.push(`🚿 ${imovel.banheiros} banheiro(s)`);
-  if (imovel.vagas) linhas.push(`🚗 ${imovel.vagas} vaga(s)`);
-
-  if (imovel.descricao) {
-    linhas.push(``);
-    linhas.push(imovel.descricao.substring(0, 250) + "...");
+  if (paraInstagram) {
+    linhas.push(`👉 Link completo na bio do perfil!`);
+  } else {
+    linhas.push(`👉 ${linkImovel}`);
   }
 
   linhas.push(``);
-  linhas.push(`#imoveis #ImobiliariaPortoIguacu #PortoUniao #${(imovel.tipo || "imovel").replace(/\s/g, "")} #imobiliaria`);
+  linhas.push(`#imoveis #ImobiliariaPortoIguacu #PortoUniao #UniaoVitoria #${(imovel.tipo || "imovel").replace(/\s/g, "")}`);
 
   return linhas.join("\n");
 }
 
-function formatarMensagemFacebook(imovel: any): string {
-  // Facebook renderiza URLs como links clicáveis automaticamente
-  const linkImovel = `${SITE_URL}/imoveis/${imovel.id}`;
-  return `${formatarMensagem(imovel)}\n\n👉 Veja mais detalhes: ${linkImovel}`;
-}
-
-function formatarMensagemInstagram(imovel: any): string {
-  // Instagram não clica em links na legenda — orienta para o link na bio
-  return `${formatarMensagem(imovel)}\n\n👉 Link completo na bio do perfil!`;
-}
-
 // ============================================================
-// FACEBOOK
+// FACEBOOK — carrossel com até 10 fotos
 // ============================================================
 async function publishFacebook(imovel: any, fotos: string[]) {
-  const mensagem = formatarMensagemFacebook(imovel);
+  const mensagem = formatarLegenda(imovel, false);
+  const fotosParaUsar = fotos.slice(0, 10);
 
-  if (fotos.length <= 1) {
-    const res = await fetch(
-      `https://graph.facebook.com/v22.0/${PAGE_ID}/photos`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: fotos[0],
-          caption: mensagem,
-          access_token: PAGE_TOKEN,
-        }),
-      }
-    );
+  // Foto única
+  if (fotosParaUsar.length === 1) {
+    const res = await fetch(`https://graph.facebook.com/v22.0/${PAGE_ID}/photos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: fotosParaUsar[0],
+        caption: mensagem,
+        access_token: PAGE_TOKEN,
+      }),
+    });
     const data = await res.json();
+    console.log("FB foto única:", JSON.stringify(data));
     if (data.error) throw new Error(`Facebook: ${data.error.message}`);
     return data;
   }
 
-  // Múltiplas fotos — sobe sem publicar e depois cria o post
+  // Múltiplas fotos — upload sem publicar, depois cria post com todas
   const fotoIds: string[] = [];
-  for (const url of fotos.slice(0, 10)) {
+  for (const url of fotosParaUsar) {
     const r = await fetch(`https://graph.facebook.com/v22.0/${PAGE_ID}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, published: false, access_token: PAGE_TOKEN }),
+      body: JSON.stringify({
+        url,
+        published: false,
+        access_token: PAGE_TOKEN,
+      }),
     });
     const d = await r.json();
-    console.log("Facebook foto upload:", JSON.stringify(d));
+    console.log("FB upload foto:", JSON.stringify(d));
     if (d.id) fotoIds.push(d.id);
   }
+
+  console.log(`FB fotos enviadas: ${fotoIds.length} de ${fotosParaUsar.length}`);
+
+  if (fotoIds.length === 0) throw new Error("Facebook: nenhuma foto enviada");
 
   const postRes = await fetch(`https://graph.facebook.com/v22.0/${PAGE_ID}/feed`, {
     method: "POST",
@@ -136,44 +110,40 @@ async function publishFacebook(imovel: any, fotos: string[]) {
     }),
   });
   const postData = await postRes.json();
+  console.log("FB post:", JSON.stringify(postData));
   if (postData.error) throw new Error(`Facebook: ${postData.error.message}`);
   return postData;
 }
 
 // ============================================================
-// INSTAGRAM
+// INSTAGRAM — carrossel com até 10 fotos
 // ============================================================
 async function publishInstagram(imovel: any, fotos: string[]) {
-  const mensagem = formatarMensagemInstagram(imovel);
+  const mensagem = formatarLegenda(imovel, true);
   const fotosParaUsar = fotos.slice(0, 10);
 
-  if (fotosParaUsar.length <= 1) {
-    const containerRes = await fetch(
-      `https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_url: fotosParaUsar[0],
-          caption: mensagem,
-          access_token: PAGE_TOKEN,
-        }),
-      }
-    );
+  // Foto única
+  if (fotosParaUsar.length === 1) {
+    const containerRes = await fetch(`https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image_url: fotosParaUsar[0],
+        caption: mensagem,
+        access_token: PAGE_TOKEN,
+      }),
+    });
     const container = await containerRes.json();
     if (container.error) throw new Error(`Instagram container: ${container.error.message}`);
     if (!container.id) throw new Error(`Instagram: container sem ID`);
 
     await new Promise((r) => setTimeout(r, 5000));
 
-    const publishRes = await fetch(
-      `https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media_publish`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ creation_id: container.id, access_token: PAGE_TOKEN }),
-      }
-    );
+    const publishRes = await fetch(`https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media_publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creation_id: container.id, access_token: PAGE_TOKEN }),
+    });
     const published = await publishRes.json();
     if (published.error) throw new Error(`Instagram publish: ${published.error.message}`);
     return published;
@@ -194,47 +164,71 @@ async function publishInstagram(imovel: any, fotos: string[]) {
     const d = await r.json();
     console.log("IG item:", JSON.stringify(d));
     if (d.id) itemIds.push(d.id);
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 2000));
   }
 
-  if (itemIds.length === 0) throw new Error("Instagram: nenhum item criado");
+  console.log(`IG itens criados: ${itemIds.length} de ${fotosParaUsar.length}`);
+
+  if (itemIds.length === 0) throw new Error("Instagram: nenhum item de carrossel criado");
 
   await new Promise((r) => setTimeout(r, 5000));
 
-  const carrosselRes = await fetch(
-    `https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        media_type: "CAROUSEL",
-        children: itemIds,
-        caption: mensagem,
-        access_token: PAGE_TOKEN,
-      }),
-    }
-  );
+  const carrosselRes = await fetch(`https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      media_type: "CAROUSEL",
+      children: itemIds,
+      caption: mensagem,
+      access_token: PAGE_TOKEN,
+    }),
+  });
   const carrossel = await carrosselRes.json();
   console.log("IG carrossel:", JSON.stringify(carrossel));
   if (carrossel.error) throw new Error(`Instagram carrossel: ${carrossel.error.message}`);
+  if (!carrossel.id) throw new Error("Instagram: carrossel sem ID");
 
-  await new Promise((r) => setTimeout(r, 3000));
+  await new Promise((r) => setTimeout(r, 5000));
 
-  const publishRes = await fetch(
-    `https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media_publish`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ creation_id: carrossel.id, access_token: PAGE_TOKEN }),
-    }
-  );
+  const publishRes = await fetch(`https://graph.facebook.com/v22.0/${IG_ACCOUNT_ID}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ creation_id: carrossel.id, access_token: PAGE_TOKEN }),
+  });
   const published = await publishRes.json();
   if (published.error) throw new Error(`Instagram carrossel publish: ${published.error.message}`);
   return published;
 }
 
 // ============================================================
-// HANDLER
+// ENDPOINT: PREVIEW (GET)
+// ============================================================
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const imovelId = searchParams.get("imovelId");
+    const fotoCapa = searchParams.get("fotoCapa");
+
+    if (!imovelId || !fotoCapa) {
+      return NextResponse.json({ error: "imovelId e fotoCapa são obrigatórios" }, { status: 400 });
+    }
+
+    const fotosGaleria = await buscarFotos(imovelId);
+    const todasFotos = [fotoCapa, ...fotosGaleria.filter((f) => f !== fotoCapa)];
+
+    console.log(`Preview imóvel ${imovelId}: ${todasFotos.length} foto(s) encontrada(s)`);
+
+    return NextResponse.json({
+      fotos: todasFotos,
+      total: todasFotos.length,
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// ============================================================
+// ENDPOINT: PUBLICAR (POST)
 // ============================================================
 export async function POST(req: NextRequest) {
   try {
@@ -244,32 +238,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ sucesso: false, erro: "Imóvel sem foto de capa" }, { status: 400 });
     }
 
-    // Busca fotos adicionais no banco
     const fotosGaleria = await buscarFotos(String(imovel.id));
-    console.log("Fotos galeria:", fotosGaleria);
-
-    // Monta array: capa primeiro, depois galeria sem duplicatas
     const todasFotos = [imovel.fotoCapa, ...fotosGaleria.filter((f) => f !== imovel.fotoCapa)];
-    console.log(`Total fotos: ${todasFotos.length}`);
+
+    console.log(`Publicando imóvel ${imovel.id} com ${todasFotos.length} foto(s)`);
 
     const resultados: any = {};
     const erros: any = {};
 
     if (publicarFacebook) {
-      try { resultados.facebook = await publishFacebook(imovel, todasFotos); }
-      catch (e: any) { erros.facebook = e.message; }
+      try {
+        resultados.facebook = await publishFacebook(imovel, todasFotos);
+      } catch (e: any) {
+        erros.facebook = e.message;
+      }
     }
 
     if (publicarInstagram) {
-      try { resultados.instagram = await publishInstagram(imovel, todasFotos); }
-      catch (e: any) { erros.instagram = e.message; }
+      try {
+        resultados.instagram = await publishInstagram(imovel, todasFotos);
+      } catch (e: any) {
+        erros.instagram = e.message;
+      }
     }
 
     const temErro = Object.keys(erros).length > 0;
     const temSucesso = Object.keys(resultados).length > 0;
 
     return NextResponse.json({
-      sucesso: temSucesso,
+      sucesso: temSucesso && !temErro,
       parcial: temSucesso && temErro,
       resultados,
       erros: temErro ? erros : undefined,
