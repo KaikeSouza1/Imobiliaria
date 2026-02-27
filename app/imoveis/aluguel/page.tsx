@@ -31,6 +31,7 @@ const categories = [
   { label: "Barracões",    value: "Barracão" },
   { label: "Casas",        value: "Casa" },
   { label: "Comerciais",   value: "Comercial" },
+  { label: "Imóvel Litoral", value: "Imóvel Litoral" },
   { label: "Kitnets",      value: "Kitnet" },
   { label: "Sobrados",     value: "Sobrado" },
   { label: "T. Rurais",    value: "Terreno Rural" },

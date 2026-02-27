@@ -86,7 +86,6 @@ export default function Page() {
     imagem: imovel.imagem_url || "/logo_nova.png",
   });
 
-  // Filtrar apenas imóveis disponíveis (não vendidos, não alugados, não reservados) para os destaques
   const imoveisDisponiveis = useMemo(() => {
     return imoveis.filter((i) => i.status === "disponivel" || !i.status);
   }, [imoveis]);
@@ -186,6 +185,7 @@ export default function Page() {
                   { label: "Barracão",       value: "Barracão" },
                   { label: "Casa",           value: "Casa" },
                   { label: "Comercial",      value: "Comercial" },
+                  { label: "Imóvel Litoral", value: "Imóvel Litoral" },
                   { label: "Imóvel Rural",   value: "Imóvel Rural" },
                   { label: "Kitnet",         value: "Kitnet" },
                   { label: "Sobrado",        value: "Sobrado" },

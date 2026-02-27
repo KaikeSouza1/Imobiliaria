@@ -322,6 +322,7 @@ export default function EditarImovelPage() {
               <option value="Barracão">Barracão</option>
               <option value="Casa">Casa</option>
               <option value="Comercial">Comercial</option>
+              <option value="Imóvel Litoral">Imóvel Litoral</option>
               <option value="Imóvel Rural">Imóvel Rural</option>
               <option value="Kitnet">Kitnet</option>
               <option value="Sobrado">Sobrado</option>

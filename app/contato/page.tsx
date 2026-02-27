@@ -46,7 +46,7 @@ const corretores: Corretor[] = [
     cargo: "Corretora de Imóveis",
   },
   {
-    nome: "Anna Karol",
+    nome: "Anna Karoline",
     foto: "/foto anna.jpeg",
     creci: "52528",
     whatsapp: "5542988346963",
