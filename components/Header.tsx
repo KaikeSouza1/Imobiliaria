@@ -32,6 +32,7 @@ export default function Header() {
     "Barracão",
     "Casa",
     "Comercial",
+    "Imóvel Litoral",
     "Imóvel Rural",
     "Sobrado",
     "Terreno Rural",
@@ -43,6 +44,7 @@ export default function Header() {
     "Barracão",
     "Casa",
     "Comercial",
+    "Imóvel Litoral",
     "Imóvel Rural",
     "Kitnet",
     "Sobrado",
@@ -122,6 +124,10 @@ export default function Header() {
                 </button>
                 <div className={`absolute ${isCompact ? "top-12" : "top-16"} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-lg overflow-hidden transition-all duration-300 ${dropdownVenda ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}>
                   <div className="py-2">
+                    {/* Opção de Ver Todos */}
+                    <Link href="/imoveis/venda" className="block px-6 py-2 text-white bg-green-700 hover:bg-green-600 text-[10px] font-black uppercase transition-colors border-b border-green-800/50">
+                      Ver todos à venda
+                    </Link>
                     {propertyTypesVenda.map((tipo) => (
                       <Link key={tipo} href={`/imoveis/venda?tipo=${tipo}`} className="block px-6 py-2 text-green-100 hover:bg-green-800 text-[10px] font-bold uppercase transition-colors">
                         {tipo}
@@ -138,6 +144,10 @@ export default function Header() {
                 </button>
                 <div className={`absolute ${isCompact ? "top-12" : "top-16"} left-0 w-48 bg-[#0f2e20] shadow-2xl rounded-b-lg overflow-hidden transition-all duration-300 ${dropdownLocacao ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}>
                   <div className="py-2">
+                    {/* Opção de Ver Todos */}
+                    <Link href="/imoveis/aluguel" className="block px-6 py-2 text-white bg-green-700 hover:bg-green-600 text-[10px] font-black uppercase transition-colors border-b border-green-800/50">
+                      Ver todos para alugar
+                    </Link>
                     {propertyTypesLocacao.map((tipo) => (
                       <Link key={tipo} href={`/imoveis/aluguel?tipo=${tipo}`} className="block px-6 py-2 text-green-100 hover:bg-green-800 text-[10px] font-bold uppercase transition-colors">
                         {tipo}
@@ -173,8 +183,9 @@ export default function Header() {
           <div className="p-6 space-y-2">
             <Link href="/" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-white hover:bg-green-800 rounded-lg uppercase text-sm border-l-4 border-green-500">Home</Link>
             <Link href="/indices" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-yellow-400 hover:bg-green-800 rounded-lg uppercase text-sm">Índices Econômicos</Link>
-            <Link href="/imoveis/venda" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Venda</Link>
-            <Link href="/imoveis/aluguel" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Locação</Link>
+            <Link href="/imoveis/venda" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Venda (Ver Todos)</Link>
+            <Link href="/imoveis/venda?tipo=Imóvel Litoral" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-300 hover:bg-green-800 rounded-lg uppercase text-sm pl-8">↳ Imóvel Litoral</Link>
+            <Link href="/imoveis/aluguel" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Locação (Ver Todos)</Link>
             <Link href="/imoveis/aluguel?tipo=Kitnet" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-300 hover:bg-green-800 rounded-lg uppercase text-sm pl-8">↳ Kitnets</Link>
             <Link href="/anuncie" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Anuncie</Link>
             <Link href="/contato" onClick={() => setMenuAberto(false)} className="block px-4 py-3 font-bold text-green-100 hover:bg-green-800 rounded-lg uppercase text-sm">Contato</Link>
