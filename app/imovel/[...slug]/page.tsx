@@ -61,13 +61,12 @@ function GaleriaMobile({ fotos, onOpen }: { fotos: string[]; onOpen: (index: num
           src={fotos[0]}
           alt="Foto principal"
           fill
+          sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
           priority
         />
-        {/* Overlay gradiente suave */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
-        {/* Badge contador de fotos */}
         <button
           onClick={(e) => { e.stopPropagation(); onOpen(0); }}
           className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/20"
@@ -91,8 +90,14 @@ function GaleriaMobile({ fotos, onOpen }: { fotos: string[]; onOpen: (index: num
               className="relative flex-none rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-green-500 transition-all"
               style={{ width: 80, height: 60 }}
             >
-              <Image src={foto} alt={`Foto ${i + 2}`} fill className="object-cover" />
-              {/* Última miniatura com overlay "+N" se houver muitas */}
+              <Image 
+                src={foto} 
+                alt={`Foto ${i + 2}`} 
+                fill 
+                sizes="80px"
+                className="object-cover" 
+                unoptimized={true}
+              />
               {i === 4 && fotos.length > 6 && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                   <span className="text-white text-xs font-black">+{fotos.length - 6}</span>
@@ -112,7 +117,7 @@ function GaleriaDesktop({ fotos, onOpen }: { fotos: string[]; onOpen: (index: nu
   if (total === 1) {
     return (
       <div className="hidden md:block relative h-[500px] rounded-3xl overflow-hidden cursor-pointer" onClick={() => onOpen(0)}>
-        <Image src={fotos[0]} alt="Principal" fill className="object-cover hover:brightness-90 transition-all" priority />
+        <Image src={fotos[0]} alt="Principal" fill sizes="100vw" className="object-cover hover:brightness-90 transition-all" priority />
       </div>
     );
   }
@@ -122,7 +127,7 @@ function GaleriaDesktop({ fotos, onOpen }: { fotos: string[]; onOpen: (index: nu
       <div className="hidden md:grid grid-cols-2 gap-2 h-[500px] rounded-3xl overflow-hidden">
         {fotos.slice(0, 2).map((foto, i) => (
           <div key={i} className="relative cursor-pointer group" onClick={() => onOpen(i)}>
-            <Image src={foto} alt={`Foto ${i+1}`} fill className="object-cover group-hover:brightness-90 transition-all" priority={i === 0} />
+            <Image src={foto} alt={`Foto ${i+1}`} fill sizes="50vw" className="object-cover group-hover:brightness-90 transition-all" priority={i === 0} />
           </div>
         ))}
       </div>
@@ -133,11 +138,11 @@ function GaleriaDesktop({ fotos, onOpen }: { fotos: string[]; onOpen: (index: nu
     return (
       <div className="hidden md:grid grid-cols-2 gap-2 h-[500px] rounded-3xl overflow-hidden">
         <div className="relative cursor-pointer group row-span-2" onClick={() => onOpen(0)}>
-          <Image src={fotos[0]} alt="Principal" fill className="object-cover group-hover:brightness-90 transition-all" priority />
+          <Image src={fotos[0]} alt="Principal" fill sizes="50vw" className="object-cover group-hover:brightness-90 transition-all" priority />
         </div>
         {fotos.slice(1, 3).map((foto, i) => (
           <div key={i} className="relative cursor-pointer group" onClick={() => onOpen(i+1)}>
-            <Image src={foto} alt={`Foto ${i+2}`} fill className="object-cover group-hover:brightness-90 transition-all" />
+            <Image src={foto} alt={`Foto ${i+2}`} fill sizes="50vw" className="object-cover group-hover:brightness-90 transition-all" />
           </div>
         ))}
       </div>
@@ -148,14 +153,14 @@ function GaleriaDesktop({ fotos, onOpen }: { fotos: string[]; onOpen: (index: nu
   return (
     <div className="hidden md:grid grid-cols-4 grid-rows-2 gap-2 h-[500px] rounded-3xl overflow-hidden relative">
       <div className="col-span-2 row-span-2 relative cursor-pointer group" onClick={() => onOpen(0)}>
-        <Image src={fotos[0]} alt="Principal" fill className="object-cover group-hover:brightness-90 transition-all" priority />
+        <Image src={fotos[0]} alt="Principal" fill sizes="(max-width: 1200px) 100vw, 50vw" className="object-cover group-hover:brightness-90 transition-all" priority />
       </div>
       {[1, 2, 3, 4].map((idx) => {
         if (!fotos[idx]) return <div key={idx} className="bg-gray-100" />;
         const isLast = idx === 4 && extras > 0;
         return (
           <div key={idx} className="relative cursor-pointer group" onClick={() => onOpen(idx)}>
-            <Image src={fotos[idx]} alt={`Foto ${idx+1}`} fill className="object-cover group-hover:brightness-90 transition-all" />
+            <Image src={fotos[idx]} alt={`Foto ${idx+1}`} fill sizes="25vw" className="object-cover group-hover:brightness-90 transition-all" />
             {isLast && (
               <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white pointer-events-none">
                 <Camera size={24} className="mb-1" />
@@ -175,7 +180,6 @@ function ModalGaleria({ fotos, fotoAtiva, onClose, onChange }: {
   onClose: () => void;
   onChange: (i: number) => void;
 }) {
-  // Fechar com ESC
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -188,7 +192,6 @@ function ModalGaleria({ fotos, fotoAtiva, onClose, onChange }: {
 
   return (
     <div className="fixed inset-0 bg-black/95 z-[100] flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
         <span className="text-white font-bold text-sm">{fotoAtiva + 1} / {fotos.length}</span>
         <button onClick={onClose} className="text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors">
@@ -196,9 +199,8 @@ function ModalGaleria({ fotos, fotoAtiva, onClose, onChange }: {
         </button>
       </div>
 
-      {/* Foto principal */}
       <div className="flex-1 relative min-h-0">
-        <Image src={fotos[fotoAtiva]} alt={`Foto ${fotoAtiva + 1}`} fill className="object-contain" />
+        <Image src={fotos[fotoAtiva]} alt={`Foto ${fotoAtiva + 1}`} fill sizes="100vw" className="object-contain" priority />
 
         {fotoAtiva > 0 && (
           <button
@@ -218,7 +220,6 @@ function ModalGaleria({ fotos, fotoAtiva, onClose, onChange }: {
         )}
       </div>
 
-      {/* Thumbnails */}
       <div className="flex gap-2 p-3 overflow-x-auto border-t border-white/10 flex-shrink-0" style={{ scrollbarWidth: "none" }}>
         {fotos.map((foto, i) => (
           <button
@@ -227,7 +228,7 @@ function ModalGaleria({ fotos, fotoAtiva, onClose, onChange }: {
             className={`relative flex-shrink-0 w-14 h-10 md:w-16 md:h-12 rounded-lg overflow-hidden transition-all
               ${fotoAtiva === i ? "ring-2 ring-green-400 scale-105" : "opacity-50 hover:opacity-100"}`}
           >
-            <Image src={foto} alt="" fill className="object-cover" />
+            <Image src={foto} alt="" fill sizes="100px" className="object-cover" unoptimized={true} />
           </button>
         ))}
       </div>
@@ -312,7 +313,6 @@ function ImovelDetalhesContent() {
 
   return (
     <div className="min-h-screen bg-white pb-20 font-sans">
-
       {/* BREADCRUMB */}
       <div className="max-w-7xl mx-auto px-4 pt-6">
         <nav className="flex items-center gap-2 text-xs text-gray-400 font-medium">
@@ -367,18 +367,13 @@ function ImovelDetalhesContent() {
 
       {/* GALERIA */}
       <section className="max-w-7xl mx-auto px-4">
-        {/* Mobile */}
         <GaleriaMobile fotos={todasFotos} onOpen={openModal} />
-        {/* Desktop */}
         <GaleriaDesktop fotos={todasFotos} onOpen={openModal} />
       </section>
 
       {/* CONTEÚDO PRINCIPAL */}
       <div className="max-w-7xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-12">
-
-        {/* ESQUERDA */}
         <div className="lg:col-span-2">
-
           {/* ÍCONES */}
           <div className="flex flex-wrap gap-6 md:gap-8 py-6 md:py-8 border-y border-gray-100 mb-8">
             {imovel.quartos > 0 && (
