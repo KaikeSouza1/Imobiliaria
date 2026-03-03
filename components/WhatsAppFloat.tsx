@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 
-const WHATSAPP_NUMBER = "5542999755493";
+const WHATSAPP_NUMBER = "5542998439975";
 const WHATSAPP_MESSAGE = "Olá! Vim pelo site da Imobiliária Porto Iguaçu e gostaria de mais informações.";
 
 export default function WhatsAppFloat() {

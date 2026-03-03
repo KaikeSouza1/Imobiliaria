@@ -472,7 +472,7 @@ function ImovelDetalhesContent() {
             <h4 className="font-black text-xl mb-2 uppercase">Tenho interesse!</h4>
             <p className="text-green-200 text-sm mb-6">Fale diretamente com um corretor agora</p>
             <Link
-              href={`https://api.whatsapp.com/send?phone=5542999755493&text=Ol%C3%A1!%20Tenho%20interesse%20no%20im%C3%B3vel%3A%20${encodeURIComponent(imovel.titulo)}%20-%20${urlCompartilhar}`}
+              href={`https://api.whatsapp.com/send?phone=5542998439975&text=Ol%C3%A1!%20Tenho%20interesse%20no%20im%C3%B3vel%3A%20${encodeURIComponent(imovel.titulo)}%20-%20${urlCompartilhar}`}
               target="_blank"
               className="w-full bg-green-500 hover:bg-green-400 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg mb-3"
             >
