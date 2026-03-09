@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    unoptimized: true, // 👈 DESATIVA otimização da Vercel
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "res.cloudinary.com",
+        hostname: "pub-574d165956bd4fa68acb1286fcafdd02.r2.dev",
       },
     ],
   },
