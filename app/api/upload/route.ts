@@ -1,6 +1,8 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import sharp from "sharp";
+import path from "path";
+import fs from "fs";
 
 const R2 = new S3Client({
   region: "auto",
@@ -14,22 +16,49 @@ const R2 = new S3Client({
 function gerarNomeArquivo(): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
-  // Sempre salva como webp após conversão
   return `imovel-${timestamp}-${random}.webp`;
 }
 
-async function otimizarImagem(buffer: Buffer): Promise<Buffer> {
-  return sharp(buffer)
+async function otimizarComMarcaDagua(buffer: Buffer): Promise<Buffer> {
+  // Lê o logo da pasta public
+  const logoPath = path.join(process.cwd(), "public", "logo_nova.png");
+  const logoBuffer = fs.readFileSync(logoPath);
+
+  // Pega dimensões da imagem principal
+  const imagem = sharp(buffer);
+  const { width = 1280, height = 960 } = await imagem.metadata();
+
+  // Redimensiona o logo para 35% da largura da imagem
+  const logoWidth = Math.round(width * 0.35);
+  const logoResized = await sharp(logoBuffer)
+    .resize(logoWidth)
+    .composite([]) // mantém transparência
+    .png()
+    .toBuffer();
+
+  // Pega dimensões do logo já redimensionado
+  const { width: lw = 0, height: lh = 0 } = await sharp(logoResized).metadata();
+
+  // Centraliza
+  const left = Math.round((width - lw) / 2);
+  const top = Math.round((height - lh) / 2);
+
+  return imagem
     .resize({
-      width: 1280,        // Máximo 1280px de largura
-      height: 960,        // Máximo 960px de altura
-      fit: "inside",      // Mantém proporção, não corta
-      withoutEnlargement: true, // Nunca aumenta imagem pequena
+      width: 1280,
+      height: 960,
+      fit: "inside",
+      withoutEnlargement: true,
     })
-    .webp({
-      quality: 82,        // Boa qualidade com tamanho reduzido
-      effort: 4,          // Nível de compressão (0-6, mais alto = menor arquivo)
-    })
+    .composite([
+      {
+        input: logoResized,
+        left,
+        top,
+        blend: "over",
+      },
+    ])
+    .webp({ quality: 82, effort: 4 })
     .toBuffer();
 }
 
@@ -48,22 +77,19 @@ export async function POST(request: Request) {
       const arrayBuffer = await file.arrayBuffer();
       const bufferOriginal = Buffer.from(arrayBuffer);
 
-      // Otimiza antes de enviar
-      const bufferOtimizado = await otimizarImagem(bufferOriginal);
-
+      const bufferFinal = await otimizarComMarcaDagua(bufferOriginal);
       const fileName = gerarNomeArquivo();
 
       await R2.send(
         new PutObjectCommand({
           Bucket: process.env.R2_BUCKET_NAME!,
           Key: fileName,
-          Body: bufferOtimizado,
+          Body: bufferFinal,
           ContentType: "image/webp",
         })
       );
 
-      const url = `${process.env.NEXT_PUBLIC_R2_URL}/${fileName}`;
-      urls.push(url);
+      urls.push(`${process.env.NEXT_PUBLIC_R2_URL}/${fileName}`);
     }
 
     return NextResponse.json({ urls });
