@@ -20,44 +20,46 @@ function gerarNomeArquivo(): string {
 }
 
 async function otimizarComMarcaDagua(buffer: Buffer): Promise<Buffer> {
-  // Lê o logo da pasta public
   const logoPath = path.join(process.cwd(), "public", "logo_nova.png");
   const logoBuffer = fs.readFileSync(logoPath);
 
-  // Pega dimensões da imagem principal
   const imagem = sharp(buffer);
   const { width = 1280, height = 960 } = await imagem.metadata();
 
-  // Redimensiona o logo para 35% da largura da imagem
-  const logoWidth = Math.round(width * 0.35);
+  // Redimensiona o logo para 45% da largura
+  const logoWidth = Math.round(width * 0.45);
   const logoResized = await sharp(logoBuffer)
     .resize(logoWidth)
-    .composite([]) // mantém transparência
+    .ensureAlpha()
+    .toBuffer();
+
+  // Aplica opacidade de 35% manipulando o canal alpha
+  const { data, info } = await sharp(logoResized)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const opacidade = 0.35;
+  for (let i = 3; i < data.length; i += 4) {
+    data[i] = Math.round(data[i] * opacidade);
+  }
+
+  const logoComOpacidade = await sharp(data, {
+    raw: { width: info.width, height: info.height, channels: 4 },
+  })
     .png()
     .toBuffer();
 
-  // Pega dimensões do logo já redimensionado
-  const { width: lw = 0, height: lh = 0 } = await sharp(logoResized).metadata();
+  const { width: lw = 0, height: lh = 0 } =
+    await sharp(logoComOpacidade).metadata();
 
   // Centraliza
   const left = Math.round((width - lw) / 2);
   const top = Math.round((height - lh) / 2);
 
   return imagem
-    .resize({
-      width: 1280,
-      height: 960,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .composite([
-      {
-        input: logoResized,
-        left,
-        top,
-        blend: "over",
-      },
-    ])
+    .resize({ width: 1280, height: 960, fit: "inside", withoutEnlargement: true })
+    .composite([{ input: logoComOpacidade, left, top, blend: "over" }])
     .webp({ quality: 82, effort: 4 })
     .toBuffer();
 }
