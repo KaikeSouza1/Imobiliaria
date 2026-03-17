@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { BarChart3 } from "lucide-react";
 import Image from "next/image";
 import { Edit, Trash2, Plus, Power, Loader2, Home, Building2, TreePine, Store, CheckCircle, XCircle, TrendingUp, Search, X, SlidersHorizontal, Warehouse, DoorOpen } from "lucide-react";
 
@@ -167,12 +168,23 @@ export default function AdminImoveisPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-1 ml-7">Gerencie todo o portfólio da imobiliária</p>
         </div>
-        <Link
-          href="/admin/imoveis/novo"
-          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
-        >
-          <Plus size={20} strokeWidth={3} /> Novo Imóvel
-        </Link>
+        
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* BOTÃO DO CRM */}
+          <Link
+            href="/crm"
+            className="flex-1 md:flex-none bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
+          >
+            <BarChart3 size={20} strokeWidth={3} /> Acessar CRM
+          </Link>
+          
+          <Link
+            href="/admin/imoveis/novo"
+            className="flex-1 md:flex-none bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
+          >
+            <Plus size={20} strokeWidth={3} /> Novo Imóvel
+          </Link>
+        </div>
       </div>
 
       {/* ESTATÍSTICAS */}

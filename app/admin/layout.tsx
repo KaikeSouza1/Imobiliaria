@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, PlusCircle, LogOut, Sparkles, MessageSquare } from "lucide-react";
+import { Home, PlusCircle, LogOut, Sparkles, MessageSquare, BarChart3 } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
@@ -71,6 +71,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 {totalNovos}
               </span>
             )}
+          </Link>
+
+          {/* LINK CRM */}
+          <Link
+            href="/crm"
+            className="flex items-center gap-3 p-4 rounded-xl hover:bg-white/5 transition-all text-green-100 font-bold group relative"
+          >
+            <BarChart3 size={20} className="group-hover:scale-110 transition-transform" />
+            <span>Master CRM</span>
           </Link>
         </nav>
 

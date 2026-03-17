@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import ConditionalLayout from "@/components/ConditionalLayout"; // <-- NOVO IMPORT AQUI
 
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" });
 
@@ -122,10 +123,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="font-sans antialiased">
-        <Navbar />
+        
+        {/* <-- AQUI ESCONDE A NAVBAR NO ADMIN --> */}
+        <ConditionalLayout>
+          <Navbar />
+        </ConditionalLayout>
+
         {children}
-        <Footer />
-        <WhatsAppFloat />
+
+        {/* <-- AQUI ESCONDE O FOOTER E O BOTAO DO WHATS NO ADMIN --> */}
+        <ConditionalLayout>
+          <Footer />
+          <WhatsAppFloat />
+        </ConditionalLayout>
+        
       </body>
     </html>
   );
