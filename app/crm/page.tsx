@@ -138,13 +138,28 @@ export default function CRMImobiliaria() {
       const [resLeads, resImoveis, resProps] = await Promise.all([
         fetch("/api/admin/crm"), fetch("/api/imoveis"), fetch("/api/admin/proprietarios")
       ]);
-      setLeads((await resLeads.json()) as any[]);
-      setImoveis((await resImoveis.json()) as any[]);
-      setProprietarios((await resProps.json()) as Proprietario[]);
+      const leadsData = await resLeads.json();
+      const imoveisData = await resImoveis.json();
+      const propsData = await resProps.json();
+
+      setLeads(Array.isArray(leadsData) ? leadsData : []);
+      setImoveis(Array.isArray(imoveisData) ? imoveisData : []);
+      setProprietarios(Array.isArray(propsData) ? propsData : []);
     } catch(e){ console.error(e); } finally { setLoading(false); }
   };
-  const carregarLeads = async () => { const r = await fetch("/api/admin/crm"); setLeads(await r.json()); };
-  const carregarProprietarios = async () => { const r = await fetch("/api/admin/proprietarios"); setProprietarios(await r.json()); };
+  
+  const carregarLeads = async () => { 
+    const r = await fetch("/api/admin/crm"); 
+    const data = await r.json();
+    setLeads(Array.isArray(data) ? data : []); 
+  };
+  
+  const carregarProprietarios = async () => { 
+    const r = await fetch("/api/admin/proprietarios"); 
+    const data = await r.json();
+    setProprietarios(Array.isArray(data) ? data : []); 
+  };
+  
   useEffect(() => { carregarDados(); }, []);
 
   // ── CRM: ações ──
@@ -227,18 +242,24 @@ export default function CRMImobiliaria() {
   }), [leads,buscaArquivados,filtroCategoriaArquivado]);
 
   // ── Filtros Captação ──
-  const propsFiltradas = useMemo(() => proprietarios.filter(p => {
-    const mb = !buscaProp || (p.nome_proprietario||"").toLowerCase().includes(buscaProp.toLowerCase()) || (p.titulo_imovel||"").toLowerCase().includes(buscaProp.toLowerCase()) || (p.localizacao||"").toLowerCase().includes(buscaProp.toLowerCase());
-    return mb && (filtroTipoProp==="TODOS"||p.tipo_anuncio===filtroTipoProp) && (filtroCorretorProp==="TODOS"||p.corretor===filtroCorretorProp);
-  }), [proprietarios,buscaProp,filtroTipoProp,filtroCorretorProp]);
+  const propsFiltradas = useMemo(() => {
+    if (!Array.isArray(proprietarios)) return [];
+    return proprietarios.filter(p => {
+      const mb = !buscaProp || (p.nome_proprietario||"").toLowerCase().includes(buscaProp.toLowerCase()) || (p.titulo_imovel||"").toLowerCase().includes(buscaProp.toLowerCase()) || (p.localizacao||"").toLowerCase().includes(buscaProp.toLowerCase());
+      return mb && (filtroTipoProp==="TODOS"||p.tipo_anuncio===filtroTipoProp) && (filtroCorretorProp==="TODOS"||p.corretor===filtroCorretorProp);
+    });
+  }, [proprietarios,buscaProp,filtroTipoProp,filtroCorretorProp]);
 
-  const kpisCapt = useMemo(() => ({
-    total: proprietarios.length,
-    novos: proprietarios.filter(p=>p.estagio==="NOVO").length,
-    captados: proprietarios.filter(p=>p.estagio==="CAPTADO").length,
-    venda: proprietarios.filter(p=>p.tipo_anuncio==="Venda").length,
-    aluguel: proprietarios.filter(p=>p.tipo_anuncio==="Aluguel").length,
-  }), [proprietarios]);
+  const kpisCapt = useMemo(() => {
+    if (!Array.isArray(proprietarios)) return { total: 0, novos: 0, captados: 0, venda: 0, aluguel: 0 };
+    return {
+      total: proprietarios.length,
+      novos: proprietarios.filter(p=>p.estagio==="NOVO").length,
+      captados: proprietarios.filter(p=>p.estagio==="CAPTADO").length,
+      venda: proprietarios.filter(p=>p.tipo_anuncio==="Venda").length,
+      aluguel: proprietarios.filter(p=>p.tipo_anuncio==="Aluguel").length,
+    }
+  }, [proprietarios]);
 
   // ── Analytics ──
   const mesesDisponiveis = useMemo(() => {

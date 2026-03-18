@@ -9,6 +9,9 @@ export async function GET(req: Request) {
   const action = searchParams.get("action");
 
   try {
+    // Garante que a tabela existe antes de fazer o select
+    await criarTabelaSeNaoExiste();
+
     if (action === "kpis") {
       const res = await query(`
         SELECT
