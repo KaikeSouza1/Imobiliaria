@@ -6,7 +6,7 @@ import {
   X, Trash2, CheckCircle, Clock, FileText,
   Calendar, Building, AlignLeft, CalendarDays, 
   TrendingUp, LayoutDashboard, Filter, Users,
-  Tag, Target, Key, Edit2, Search, Globe, ChevronDown, Award, Activity, BarChart3, Archive, RefreshCcw, Home
+  Tag, Target, Key, Edit2, Search, Globe, ChevronDown, Award, Activity, Archive, RefreshCcw, Home
 } from "lucide-react";
 import Link from "next/link";
 
@@ -79,9 +79,12 @@ export default function CRMImobiliaria() {
   const [filtroMes, setFiltroMes] = useState<string>("TODOS");
   const [filtroCorretor, setFiltroCorretor] = useState<string>("TODOS");
   
-  // Filtros para aba de Arquivados
   const [filtroCategoriaArquivado, setFiltroCategoriaArquivado] = useState<string>("TODOS");
   const [buscaArquivados, setBuscaArquivados] = useState<string>("");
+
+  // ESTADOS DO DRAG AND DROP
+  const [draggedLeadId, setDraggedLeadId] = useState<number | null>(null);
+  const [draggedOverCol, setDraggedOverCol] = useState<string | null>(null);
 
   const corretores: string[] = ["André", "Anna", "Claudinei", "Jessica", "Luane"];
 
@@ -128,7 +131,57 @@ export default function CRMImobiliaria() {
     carregarLeads();
   };
 
-  // Filtra leads do Kanban (esconde os Arquivados)
+  // ----- FUNÇÕES DO DRAG AND DROP -----
+  const handleDragStart = (e: React.DragEvent, leadId: number) => {
+    setDraggedLeadId(leadId);
+    e.dataTransfer.effectAllowed = "move";
+    // É necessário settar dataTransfer para o Firefox funcionar o drag and drop
+    e.dataTransfer.setData("text/plain", leadId.toString()); 
+    
+    // Pequeno truque para o card ficar semi-transparente enquanto arrasta
+    setTimeout(() => {
+      const element = document.getElementById(`lead-${leadId}`);
+      if (element) element.style.opacity = '0.5';
+    }, 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent, leadId: number) => {
+    setDraggedLeadId(null);
+    setDraggedOverCol(null);
+    const element = document.getElementById(`lead-${leadId}`);
+    if (element) element.style.opacity = '1';
+  };
+
+  const handleDragOver = (e: React.DragEvent, colId: string) => {
+    e.preventDefault(); // Necessário para permitir o drop
+    e.dataTransfer.dropEffect = "move";
+    if (draggedOverCol !== colId) {
+      setDraggedOverCol(colId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDraggedOverCol(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, colId: string) => {
+    e.preventDefault();
+    setDraggedOverCol(null);
+    const leadId = draggedLeadId;
+    
+    if (leadId) {
+      // Pega o lead atual para ver se realmente mudou de coluna
+      const leadAnterior = leads.find(l => l.id === leadId);
+      if (leadAnterior && leadAnterior.estagio !== colId) {
+        moverLead(leadId, colId);
+      }
+    }
+    
+    setDraggedLeadId(null);
+  };
+  // ------------------------------------
+
   const leadsKanban = useMemo(() => {
     return leads.filter((l: any) => {
       if (l.estagio === 'ARQUIVADO') return false;
@@ -139,7 +192,6 @@ export default function CRMImobiliaria() {
     });
   }, [leads, buscaKanban, filtroCorretorKanban, filtroTipoKanban]);
 
-  // Filtra Leads Arquivados
   const leadsArquivadosList = useMemo(() => {
     return leads.filter((l: any) => {
       if (l.estagio !== 'ARQUIVADO') return false;
@@ -154,7 +206,6 @@ export default function CRMImobiliaria() {
     return Array.from(meses).sort().reverse();
   }, [leads]);
 
-  // KPIs não contabilizam os Arquivados
   const kpis: DashboardKPIs = useMemo(() => {
     const baseLeads = leads.filter((l: any) => {
       if (l.estagio === 'ARQUIVADO') return false;
@@ -233,7 +284,7 @@ export default function CRMImobiliaria() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .crm-kanban-wrapper { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; padding: 20px 24px; background: #f8fafc; }
         .crm-board { display: flex; gap: 18px; width: max-content; height: 100%; align-items: flex-start; padding-right: 24px; padding-bottom: 4px; }
-        .crm-col { width: 310px; min-width: 310px; max-width: 310px; flex-shrink: 0; display: flex; flex-direction: column; height: 100%; background: rgba(241, 245, 249, 0.85); border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 12px; overflow: hidden; }
+        .crm-col { width: 310px; min-width: 310px; max-width: 310px; flex-shrink: 0; display: flex; flex-direction: column; height: 100%; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 12px; overflow: hidden; transition: all 0.2s ease; }
         .crm-col-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; padding-bottom: 16px; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-up { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
@@ -307,11 +358,19 @@ export default function CRMImobiliaria() {
                 {estagios.map((coluna: Estagio) => {
                   const leadsDaColuna = leadsKanban.filter((l: any) => l.estagio === coluna.id);
                   const valorFase = leadsDaColuna.reduce((acc: number, l: any) => acc + Number(l.valor_estimado || 0), 0);
+                  
+                  const isHovered = draggedOverCol === coluna.id;
 
                   return (
-                    <div className="crm-col" key={coluna.id}>
-                      <div className={`h-1.5 w-full flex-shrink-0 rounded-full bg-gradient-to-r ${coluna.cor} mb-3 opacity-80`} />
-                      <div className="px-2 pb-3 flex-shrink-0 flex items-center justify-between border-b border-slate-200/60 mb-1">
+                    <div 
+                      className={`crm-col ${isHovered ? 'bg-emerald-50/70 border-emerald-400 scale-[1.01] shadow-xl' : 'bg-[rgba(241,245,249,0.85)]'}`} 
+                      key={coluna.id}
+                      onDragOver={(e) => handleDragOver(e, coluna.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, coluna.id)}
+                    >
+                      <div className={`h-1.5 w-full flex-shrink-0 rounded-full bg-gradient-to-r ${coluna.cor} mb-3 ${isHovered ? 'opacity-100' : 'opacity-80'}`} />
+                      <div className="px-2 pb-3 flex-shrink-0 flex items-center justify-between border-b border-slate-200/60 mb-1 pointer-events-none">
                         <div className="flex items-center gap-2">
                           <div className={`p-1.5 rounded-lg ${coluna.bg} shadow-sm`}>{coluna.icone}</div>
                           <div>
@@ -324,21 +383,30 @@ export default function CRMImobiliaria() {
 
                       <div className="crm-col-body custom-scrollbar">
                         {leadsDaColuna.length === 0 && (
-                          <div className="flex flex-col items-center justify-center h-28 border-2 border-dashed border-slate-200 bg-white/60 rounded-xl gap-2 mt-1">
-                            <AlignLeft className="w-4 h-4 text-slate-300" />
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum Lead</p>
+                          <div className={`flex flex-col items-center justify-center h-28 border-2 border-dashed rounded-xl gap-2 mt-1 pointer-events-none transition-colors ${isHovered ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200 bg-white/60'}`}>
+                            <AlignLeft className={`w-4 h-4 ${isHovered ? 'text-emerald-400' : 'text-slate-300'}`} />
+                            <p className={`text-[10px] font-black uppercase tracking-widest ${isHovered ? 'text-emerald-500' : 'text-slate-400'}`}>
+                              {isHovered ? 'Solte aqui!' : 'Nenhum Lead'}
+                            </p>
                           </div>
                         )}
 
                         {leadsDaColuna.map((lead: any) => (
-                          <div key={lead.id} className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative flex flex-col gap-3 flex-shrink-0">
+                          <div 
+                            key={lead.id} 
+                            id={`lead-${lead.id}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, lead.id)}
+                            onDragEnd={(e) => handleDragEnd(e, lead.id)}
+                            className="bg-white border border-slate-200/80 hover:border-emerald-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative flex flex-col gap-3 flex-shrink-0 cursor-grab active:cursor-grabbing"
+                          >
                             <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/80 p-1 rounded-lg backdrop-blur-sm">
                               <button onClick={() => moverLead(lead.id, 'ARQUIVADO')} title="Arquivar Lead" className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-all"><Archive className="w-3.5 h-3.5" /></button>
                               <button onClick={() => abrirModalEditar(lead)} title="Editar" className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
                               <button onClick={() => excluirLead(lead.id)} title="Excluir" className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
 
-                            <div className="flex items-center gap-3 pr-20">
+                            <div className="flex items-center gap-3 pr-20 pointer-events-none">
                               <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 border-2 border-white shadow-sm ${coluna.bg} ${coluna.text}`}>
                                 {getIniciais(lead.cliente_nome)}
                               </div>
@@ -356,7 +424,7 @@ export default function CRMImobiliaria() {
                             </div>
 
                             {(lead.telefone || lead.email) && (
-                              <div className="flex flex-col gap-1.5">
+                              <div className="flex flex-col gap-1.5 pointer-events-none">
                                 {lead.telefone && (
                                   <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
                                     <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" />
@@ -366,7 +434,7 @@ export default function CRMImobiliaria() {
                               </div>
                             )}
 
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-2 pointer-events-none">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 ${lead.tipo_negocio === 'Venda' ? 'bg-emerald-50 text-emerald-600' : 'bg-violet-50 text-violet-600'}`}>
                                   {lead.tipo_negocio}
@@ -384,17 +452,11 @@ export default function CRMImobiliaria() {
                             </div>
 
                             {Number(lead.valor_estimado || 0) > 0 && (
-                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
+                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1 pointer-events-none">
                                 <span className="text-[9px] uppercase tracking-widest font-bold text-slate-400">Potencial</span>
                                 <span className="font-black text-emerald-600 text-sm tracking-tight">R$ {Number(lead.valor_estimado).toLocaleString("pt-BR")}</span>
                               </div>
                             )}
-
-                            <div className="border-t border-slate-100 pt-2 mt-auto">
-                              <select value={lead.estagio} onChange={(e) => moverLead(lead.id, e.target.value)} className={`w-full px-2 py-1.5 rounded-lg border-2 text-[10px] uppercase tracking-widest font-black outline-none cursor-pointer transition-colors ${coluna.bg} ${coluna.text} ${coluna.border}`}>
-                                {estagios.map((est: Estagio) => <option key={est.id} value={est.id} className="bg-white text-slate-800">Mover: {est.nome}</option>)}
-                              </select>
-                            </div>
                           </div>
                         ))}
                       </div>
