@@ -7,15 +7,16 @@ export default function Footer() {
       <div className="bg-[#0a1f16] text-white py-8 px-4 border-t border-green-900">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-sm font-medium opacity-70">
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <p>© 2026 - IMOBILIÁRIA PORTO IGUAÇU - CRECI-PR J09362</p>
-            {/* O BOTÃO SECRETO DO CRM ESTÁ AQUI */}
+            {/* Botão do CRM mais visível agora */}
             <Link 
               href="/crm" 
-              className="opacity-10 hover:opacity-100 hover:text-green-400 transition-all p-1" 
+              className="opacity-50 hover:opacity-100 text-white hover:text-green-400 transition-all flex items-center gap-1.5 bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/10" 
               title="Acesso Sistema CRM"
             >
-              <LayoutDashboard size={14} />
+              <LayoutDashboard size={14} /> 
+              <span className="text-[9px] uppercase tracking-widest font-black hidden sm:inline">CRM</span>
             </Link>
           </div>
 

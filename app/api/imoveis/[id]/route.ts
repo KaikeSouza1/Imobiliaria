@@ -7,6 +7,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    
+    // INCREMENTA AS VISUALIZAÇÕES TODA VEZ QUE A PÁGINA É ACESSADA
+    await query("UPDATE imoveis SET visualizacoes = COALESCE(visualizacoes, 0) + 1 WHERE id = $1", [id]);
+
     const res = await query("SELECT * FROM imoveis WHERE id = $1", [id]);
     
     if (res.rows.length === 0) {
@@ -39,7 +43,7 @@ export async function PUT(
     const banheiros = parseInt(body.banheiros) || 0;
     const vagas = parseInt(body.vagas) || 0;
     const status = body.status || "disponivel";
-    const destaque = body.destaque || false; // Adicionado
+    const destaque = body.destaque || false; 
     const ativo = body.ativo !== undefined ? body.ativo : true;
     const latitude = body.latitude || -26.2303;
     const longitude = body.longitude || -51.0904;

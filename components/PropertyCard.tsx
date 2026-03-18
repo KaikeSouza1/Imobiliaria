@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { MapPin, BedDouble, Bath, Car, Maximize, ArrowRight, CheckCircle, XCircle } from "lucide-react";
+import { MapPin, BedDouble, Bath, Car, Maximize, ArrowRight, CheckCircle, XCircle, Eye } from "lucide-react";
 import { generateSlug } from "@/lib/slug";
 
 interface PropertyProps {
@@ -22,6 +22,7 @@ interface PropertyProps {
     finalidade: string;
     tipo?: string;
     status?: string;
+    visualizacoes?: number; // NOVA PROP AQUI
   };
 }
 
@@ -89,7 +90,7 @@ export default function PropertyCard({ property }: PropertyProps) {
   const { texto: precoTexto, isConsultar } = formatarPreco(property.preco);
 
   return (
-    <div className="rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-green-900/20 transition-all duration-500 group border border-green-900/10">
+    <div className="rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-green-900/20 transition-all duration-500 group border border-green-900/10 bg-white">
 
       {/* FOTO */}
       <Link href={href} className="relative block h-64 overflow-hidden">
@@ -113,12 +114,18 @@ export default function PropertyCard({ property }: PropertyProps) {
           </div>
         )}
 
-        {/* BADGE */}
+        {/* BADGE ESQUERDA (VENDA/ALUGUEL) */}
         <div className="absolute top-4 left-4">
           <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-lg backdrop-blur-sm"
             style={{ backgroundColor: currentStatus.bgHex }}>
             {isSoldOrRented ? currentStatus.label : property.finalidade}
           </span>
+        </div>
+
+        {/* CONTADOR DE VISUALIZAÇÕES (DIREITA) */}
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-bold text-white shadow-lg border border-white/10">
+          <Eye size={12} className="text-white/80" /> 
+          {property.visualizacoes || 0}
         </div>
 
         {/* PREÇO */}
