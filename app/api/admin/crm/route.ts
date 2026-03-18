@@ -10,6 +10,7 @@ export async function GET(req: Request) {
       const funilRes = await query(`
         SELECT estagio, COUNT(*) as qtd, COALESCE(SUM(valor_estimado), 0) as valor
         FROM crm_leads
+        WHERE estagio != 'ARQUIVADO'
         GROUP BY estagio
       `);
       
@@ -20,8 +21,9 @@ export async function GET(req: Request) {
           COALESCE(SUM(CASE WHEN estagio = 'FECHADO' THEN valor_estimado ELSE 0 END), 0) as receita_total,
           COALESCE(AVG(CASE WHEN estagio = 'FECHADO' THEN valor_estimado ELSE NULL END), 0) as ticket_medio,
           COALESCE(MAX(CASE WHEN estagio = 'FECHADO' THEN valor_estimado ELSE 0 END), 0) as maior_venda,
-          COALESCE(SUM(CASE WHEN estagio != 'FECHADO' THEN valor_estimado ELSE 0 END), 0) as pipeline_aberto
+          COALESCE(SUM(CASE WHEN estagio NOT IN ('FECHADO', 'ARQUIVADO') THEN valor_estimado ELSE 0 END), 0) as pipeline_aberto
         FROM crm_leads
+        WHERE estagio != 'ARQUIVADO'
       `);
 
       return NextResponse.json({
@@ -41,13 +43,11 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    // 1. Adicionamos 'origem' aqui
-    const { cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem } = body;
+    const { cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel } = body;
     
-    // 2. Adicionamos 'origem' na instrução SQL e o $10 nos VALUES
     const result = await query(
-      `INSERT INTO crm_leads (cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      `INSERT INTO crm_leads (cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
         cliente_nome, 
         telefone, 
@@ -58,7 +58,8 @@ export async function POST(req: Request) {
         observacoes, 
         tipo_negocio || 'Venda', 
         corretor || 'Não Atribuído',
-        origem || 'WhatsApp' // Define um padrão se não vier nada
+        origem || 'WhatsApp',
+        categoria_imovel || 'Indefinido'
       ]
     );
     return NextResponse.json(result.rows[0]);
@@ -74,19 +75,17 @@ export async function PUT(req: Request) {
     
     // Se o frontend enviar o cliente_nome, significa que é uma EDIÇÃO COMPLETA do Modal
     if (body.cliente_nome) {
-      // 3. Adicionamos 'origem' aqui também
-      const { id, cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem } = body;
+      const { id, cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel } = body;
       
-      // 4. Adicionamos 'origem = $10' na instrução de UPDATE e o id vira $11
       const result = await query(
         `UPDATE crm_leads 
-         SET cliente_nome = $1, telefone = $2, email = $3, interesse = $4, valor_estimado = $5, estagio = $6, observacoes = $7, tipo_negocio = $8, corretor = $9, origem = $10
-         WHERE id = $11 RETURNING *`,
-        [cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, id]
+         SET cliente_nome = $1, telefone = $2, email = $3, interesse = $4, valor_estimado = $5, estagio = $6, observacoes = $7, tipo_negocio = $8, corretor = $9, origem = $10, categoria_imovel = $11
+         WHERE id = $12 RETURNING *`,
+        [cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel, id]
       );
       return NextResponse.json(result.rows[0]);
     } else {
-      // Se não, é só uma atualização rápida de estágio no Kanban (mover de coluna)
+      // Atualização rápida de estágio (ex: mover para ARQUIVADO ou Kanban)
       const { id, estagio } = body;
       const result = await query(
         "UPDATE crm_leads SET estagio = $1 WHERE id = $2 RETURNING *",

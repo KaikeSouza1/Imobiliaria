@@ -8,6 +8,6 @@ export default withAuth({
 });
 
 export const config = {
-  // Protege tudo que estiver dentro de /admin
-  matcher: ["/admin/:path*"],
+  // Protege tudo que estiver dentro de /admin e /crm
+  matcher: ["/admin/:path*", "/crm/:path*"],
 };

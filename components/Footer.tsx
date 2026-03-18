@@ -1,4 +1,4 @@
-import { Facebook, Instagram, Linkedin } from "lucide-react";
+import { Facebook, Instagram, Linkedin, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 
 export default function Footer() {
@@ -6,7 +6,18 @@ export default function Footer() {
     <footer className="w-full font-sans">
       <div className="bg-[#0a1f16] text-white py-8 px-4 border-t border-green-900">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-sm font-medium opacity-70">
-          <p>© 2026 - IMOBILIÁRIA PORTO IGUAÇU - CRECI-PR J09362</p>
+          
+          <div className="flex items-center gap-2">
+            <p>© 2026 - IMOBILIÁRIA PORTO IGUAÇU - CRECI-PR J09362</p>
+            {/* O BOTÃO SECRETO DO CRM ESTÁ AQUI */}
+            <Link 
+              href="/crm" 
+              className="opacity-10 hover:opacity-100 hover:text-green-400 transition-all p-1" 
+              title="Acesso Sistema CRM"
+            >
+              <LayoutDashboard size={14} />
+            </Link>
+          </div>
 
           <div className="flex items-center gap-8">
             <div className="flex gap-5">

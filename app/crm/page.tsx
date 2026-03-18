@@ -6,7 +6,7 @@ import {
   X, Trash2, CheckCircle, Clock, FileText,
   Calendar, Building, AlignLeft, CalendarDays, 
   TrendingUp, LayoutDashboard, Filter, Users,
-  Tag, Target, Key, Edit2, Search, Globe, ChevronDown, Award, Activity, BarChart3
+  Tag, Target, Key, Edit2, Search, Globe, ChevronDown, Award, Activity, BarChart3, Archive, RefreshCcw, Home
 } from "lucide-react";
 import Link from "next/link";
 
@@ -47,16 +47,28 @@ const fotosCorretores: Record<string, string> = {
   "Luane": "/foto luane.jpeg"
 };
 
+const categoriasDeImoveis = [
+  "Indefinido",
+  "Apartamento",
+  "Casa",
+  "Kitnet",
+  "Terreno",
+  "Comercial",
+  "Sítio / Chácara",
+  "Galpão",
+  "Sobrado"
+];
+
 export default function CRMImobiliaria() {
   const [leads, setLeads] = useState<any[]>([]);
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [modal, setModal] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [form, setForm] = useState<any>({ estagio: "LEAD", tipo_negocio: "Venda", corretor: "André", origem: "WhatsApp" });
+  const [form, setForm] = useState<any>({ estagio: "LEAD", tipo_negocio: "Venda", corretor: "André", origem: "WhatsApp", categoria_imovel: "Indefinido" });
   
   const [showImoveisList, setShowImoveisList] = useState<boolean>(false);
-  const [activeView, setActiveView] = useState<'KANBAN' | 'ANALYTICS'>('KANBAN');
+  const [activeView, setActiveView] = useState<'KANBAN' | 'ANALYTICS' | 'ARQUIVADOS'>('KANBAN');
   
   const [analyticsTab, setAnalyticsTab] = useState<'GERAL' | 'Venda' | 'Aluguel'>('GERAL');
 
@@ -66,6 +78,10 @@ export default function CRMImobiliaria() {
 
   const [filtroMes, setFiltroMes] = useState<string>("TODOS");
   const [filtroCorretor, setFiltroCorretor] = useState<string>("TODOS");
+  
+  // Filtros para aba de Arquivados
+  const [filtroCategoriaArquivado, setFiltroCategoriaArquivado] = useState<string>("TODOS");
+  const [buscaArquivados, setBuscaArquivados] = useState<string>("");
 
   const corretores: string[] = ["André", "Anna", "Claudinei", "Jessica", "Luane"];
 
@@ -92,7 +108,7 @@ export default function CRMImobiliaria() {
 
   useEffect(() => { carregarDados(); }, []);
 
-  const abrirModalNovo = () => { setIsEditing(false); setForm({ estagio: "LEAD", tipo_negocio: "Venda", corretor: "André", origem: "WhatsApp", interesse: "" }); setModal(true); setShowImoveisList(false); };
+  const abrirModalNovo = () => { setIsEditing(false); setForm({ estagio: "LEAD", tipo_negocio: "Venda", corretor: "André", origem: "WhatsApp", interesse: "", categoria_imovel: "Indefinido" }); setModal(true); setShowImoveisList(false); };
   const abrirModalEditar = (lead: any) => { setIsEditing(true); setForm(lead); setModal(true); setShowImoveisList(false); };
 
   const handleSalvar = async (e: React.FormEvent) => {
@@ -112,8 +128,10 @@ export default function CRMImobiliaria() {
     carregarLeads();
   };
 
+  // Filtra leads do Kanban (esconde os Arquivados)
   const leadsKanban = useMemo(() => {
     return leads.filter((l: any) => {
+      if (l.estagio === 'ARQUIVADO') return false;
       const matchBusca = buscaKanban === "" || (l.cliente_nome || "").toLowerCase().includes(buscaKanban.toLowerCase()) || (l.telefone || "").includes(buscaKanban) || (l.interesse || "").toLowerCase().includes(buscaKanban.toLowerCase());
       const matchCorretor = filtroCorretorKanban === "TODOS" || l.corretor === filtroCorretorKanban;
       const matchTipo = filtroTipoKanban === "TODOS" || l.tipo_negocio === filtroTipoKanban;
@@ -121,13 +139,25 @@ export default function CRMImobiliaria() {
     });
   }, [leads, buscaKanban, filtroCorretorKanban, filtroTipoKanban]);
 
+  // Filtra Leads Arquivados
+  const leadsArquivadosList = useMemo(() => {
+    return leads.filter((l: any) => {
+      if (l.estagio !== 'ARQUIVADO') return false;
+      const matchBusca = buscaArquivados === "" || (l.cliente_nome || "").toLowerCase().includes(buscaArquivados.toLowerCase()) || (l.interesse || "").toLowerCase().includes(buscaArquivados.toLowerCase());
+      const matchCategoria = filtroCategoriaArquivado === "TODOS" || l.categoria_imovel === filtroCategoriaArquivado;
+      return matchBusca && matchCategoria;
+    });
+  }, [leads, buscaArquivados, filtroCategoriaArquivado]);
+
   const mesesDisponiveis = useMemo(() => {
     const meses = new Set(leads.map((l: any) => new Date(l.criado_em).toISOString().slice(0, 7)));
     return Array.from(meses).sort().reverse();
   }, [leads]);
 
+  // KPIs não contabilizam os Arquivados
   const kpis: DashboardKPIs = useMemo(() => {
     const baseLeads = leads.filter((l: any) => {
+      if (l.estagio === 'ARQUIVADO') return false;
       const dataStr = new Date(l.criado_em).toISOString().slice(0, 7);
       if (filtroMes !== "TODOS" && dataStr !== filtroMes) return false;
       if (filtroCorretor !== "TODOS" && l.corretor !== filtroCorretor) return false;
@@ -225,12 +255,15 @@ export default function CRMImobiliaria() {
               </h1>
               <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-1">Inteligência Comercial</p>
             </div>
-            <div className="hidden md:flex ml-4 bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-inner">
+            <div className="hidden md:flex ml-4 bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-inner overflow-x-auto">
               <button onClick={() => setActiveView('KANBAN')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView === 'KANBAN' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                 <LayoutDashboard className="w-3.5 h-3.5" /> Kanban
               </button>
               <button onClick={() => setActiveView('ANALYTICS')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView === 'ANALYTICS' ? 'bg-[#0f2e20] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>
                 <Activity className="w-3.5 h-3.5" /> Analytics
+              </button>
+              <button onClick={() => setActiveView('ARQUIVADOS')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView === 'ARQUIVADOS' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>
+                <Archive className="w-3.5 h-3.5" /> Arquivados
               </button>
             </div>
           </div>
@@ -299,12 +332,13 @@ export default function CRMImobiliaria() {
 
                         {leadsDaColuna.map((lead: any) => (
                           <div key={lead.id} className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative flex flex-col gap-3 flex-shrink-0">
-                            <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
-                              <button onClick={() => abrirModalEditar(lead)} className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
-                              <button onClick={() => excluirLead(lead.id)} className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                            <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/80 p-1 rounded-lg backdrop-blur-sm">
+                              <button onClick={() => moverLead(lead.id, 'ARQUIVADO')} title="Arquivar Lead" className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-all"><Archive className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => abrirModalEditar(lead)} title="Editar" className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => excluirLead(lead.id)} title="Excluir" className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
 
-                            <div className="flex items-center gap-3 pr-14">
+                            <div className="flex items-center gap-3 pr-20">
                               <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 border-2 border-white shadow-sm ${coluna.bg} ${coluna.text}`}>
                                 {getIniciais(lead.cliente_nome)}
                               </div>
@@ -338,7 +372,7 @@ export default function CRMImobiliaria() {
                                   {lead.tipo_negocio}
                                 </span>
                                 <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 bg-slate-100 text-slate-500 border border-slate-200/60">
-                                  <Globe className="w-3 h-3 text-slate-400" /> {lead.origem || 'Desconhecida'}
+                                  <Home className="w-3 h-3 text-slate-400" /> {lead.categoria_imovel || 'Indefinido'}
                                 </span>
                               </div>
                               {lead.interesse && (
@@ -368,6 +402,82 @@ export default function CRMImobiliaria() {
                   );
                 })}
               </div>
+            </main>
+          </div>
+        )}
+
+        {/* ── VISÃO ARQUIVADOS ── */}
+        {activeView === 'ARQUIVADOS' && (
+          <div className="flex-1 min-h-0 flex flex-col w-full bg-slate-50/50">
+            <div className="shrink-0 bg-white border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 z-30 w-full shadow-sm">
+              <div className="relative w-full md:w-1/3">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Buscar arquivados por nome, imóvel..." value={buscaArquivados} onChange={e => setBuscaArquivados(e.target.value)} className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all" />
+                {buscaArquivados && <button onClick={() => setBuscaArquivados('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>}
+              </div>
+              <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 flex-shrink-0">
+                  <Filter className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Categoria:</span>
+                  <select value={filtroCategoriaArquivado} onChange={e => setFiltroCategoriaArquivado(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold text-slate-600 cursor-pointer min-w-[140px]">
+                    <option value="TODOS">Todas</option>
+                    {categoriasDeImoveis.map((c: string) => c !== 'Indefinido' && <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <main className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar">
+               {leadsArquivadosList.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center h-full text-center">
+                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Archive className="w-8 h-8 text-slate-300" /></div>
+                   <h2 className="text-xl font-black text-slate-700">Nenhum Lead Arquivado</h2>
+                   <p className="text-sm text-slate-400 mt-2 max-w-md">Os leads que você arquivar no Kanban aparecerão aqui. Você pode resgatá-los no futuro quando surgir uma oportunidade.</p>
+                 </div>
+               ) : (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                   {leadsArquivadosList.map((lead: any) => (
+                      <div key={lead.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col gap-3 opacity-90 hover:opacity-100">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 bg-slate-100 text-slate-500 border-2 border-slate-200">
+                              {getIniciais(lead.cliente_nome)}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-800 text-sm">{lead.cliente_nome}</p>
+                              <p className="text-[10px] font-semibold text-slate-400">{formatarData(lead.criado_em)}</p>
+                            </div>
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                            {lead.categoria_imovel}
+                          </span>
+                        </div>
+
+                        {lead.telefone && (
+                          <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-2 mt-2">
+                            <Phone className="w-3.5 h-3.5 text-slate-400" /> {lead.telefone}
+                          </div>
+                        )}
+
+                        {lead.interesse && (
+                          <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-start gap-2 mt-1">
+                            <Building className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                            <span className="line-clamp-2">{lead.interesse}</span>
+                          </div>
+                        )}
+
+                        <div className="mt-auto pt-4 flex gap-2">
+                          <button onClick={() => moverLead(lead.id, 'LEAD')} className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors">
+                            <RefreshCcw className="w-3.5 h-3.5" /> Restaurar
+                          </button>
+                          <button onClick={() => excluirLead(lead.id)} className="p-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                   ))}
+                 </div>
+               )}
             </main>
           </div>
         )}
@@ -475,8 +585,6 @@ export default function CRMImobiliaria() {
              </div>
 
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-               
-               {/* ── GRÁFICO 1: FUNIL DE VENDAS (RESTAURADO) ── */}
                <div className="animate-fade-up delay-100 bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm flex flex-col">
                  <div className="flex items-center justify-between mb-8">
                    <div>
@@ -524,7 +632,6 @@ export default function CRMImobiliaria() {
                  </div>
                </div>
 
-               {/* GRÁFICO 2: ORIGEM DOS LEADS */}
                <div className="animate-fade-up delay-200 bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm flex flex-col">
                  <div className="flex items-center justify-between mb-8">
                    <div>
@@ -568,7 +675,6 @@ export default function CRMImobiliaria() {
                </div>
              </div>
 
-             {/* LINHA 3: RANKING DE CORRETORES */}
              <div className="animate-fade-up delay-300 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col pb-2">
                <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                  <div className="flex items-center gap-4">
@@ -676,7 +782,7 @@ export default function CRMImobiliaria() {
                 <button type="button" onClick={() => setModal(false)} className="p-2 bg-white/10 hover:bg-red-500 rounded-full text-white transition-all"><X className="w-5 h-5" /></button>
               </div>
 
-              <div className="p-8 overflow-y-auto flex-1 space-y-5 relative">
+              <div className="p-8 overflow-y-auto flex-1 space-y-5 relative custom-scrollbar">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="sm:col-span-2 space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome do Cliente *</label>
@@ -710,6 +816,27 @@ export default function CRMImobiliaria() {
                     </div>
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo de Negócio</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
+                      <Tag className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <select value={form.tipo_negocio || "Venda"} className="w-full py-3 bg-transparent outline-none font-semibold text-sm text-slate-700 cursor-pointer" onChange={(e) => setForm({ ...form, tipo_negocio: e.target.value })}>
+                        <option value="Venda">Venda</option>
+                        <option value="Aluguel">Aluguel</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Categoria do Imóvel</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
+                      <Home className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <select value={form.categoria_imovel || "Indefinido"} className="w-full py-3 bg-transparent outline-none font-semibold text-sm text-slate-700 cursor-pointer" onChange={(e) => setForm({ ...form, categoria_imovel: e.target.value })}>
+                        {categoriasDeImoveis.map((cat: string) => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="sm:col-span-2 space-y-1.5 relative z-50">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Imóvel de Interesse ou Preferência</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all relative">
@@ -718,7 +845,7 @@ export default function CRMImobiliaria() {
                         type="text" placeholder="Busque por Cód/Título ou digite a preferência..." value={form.interesse || ""}
                         className="w-full py-3 bg-transparent outline-none font-semibold text-sm text-slate-700 cursor-text"
                         onChange={(e) => { setForm({ ...form, interesse: e.target.value }); setShowImoveisList(true); }} 
-                        onFocus={() => setShowImoveisList(true)} onBlur={() => setShowImoveisList(false)}
+                        onFocus={() => setShowImoveisList(true)} onBlur={() => setTimeout(() => setShowImoveisList(false), 200)}
                       />
                       <button type="button" onClick={() => setShowImoveisList(!showImoveisList)}>
                          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showImoveisList ? "rotate-180" : ""}`} />
@@ -752,17 +879,6 @@ export default function CRMImobiliaria() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo de Negócio</label>
-                    <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
-                      <Tag className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      <select value={form.tipo_negocio || "Venda"} className="w-full py-3 bg-transparent outline-none font-semibold text-sm text-slate-700 cursor-pointer" onChange={(e) => setForm({ ...form, tipo_negocio: e.target.value })}>
-                        <option value="Venda">Venda</option>
-                        <option value="Aluguel">Aluguel</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor Responsável</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 flex-shrink-0" />
@@ -780,7 +896,7 @@ export default function CRMImobiliaria() {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="sm:col-span-2 space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Observações</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
                       <AlignLeft className="w-4 h-4 text-slate-400 flex-shrink-0" />
