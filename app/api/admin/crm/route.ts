@@ -43,13 +43,25 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel } = body;
+    const { 
+      cliente_nome, telefone, email, interesse, valor_estimado, 
+      estagio, observacoes, tipo_negocio, corretor, origem, 
+      categoria_imovel, link_origem 
+    } = body;
+    
+    // --- MÁGICA DA VALIDAÇÃO (NÃO DEIXA DUPLICAR O MESMO POST) ---
+    if (link_origem) {
+      const check = await query("SELECT id FROM crm_leads WHERE link_origem = $1", [link_origem]);
+      if (check.rows.length > 0) {
+        return NextResponse.json({ error: "Lead já capturado do Facebook!" }, { status: 409 });
+      }
+    }
     
     const result = await query(
-      `INSERT INTO crm_leads (cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      `INSERT INTO crm_leads (cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel, link_origem) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
-        cliente_nome, 
+        cliente_nome || 'Lead Facebook', 
         telefone, 
         email, 
         interesse, 
@@ -58,8 +70,9 @@ export async function POST(req: Request) {
         observacoes, 
         tipo_negocio || 'Venda', 
         corretor || 'Não Atribuído',
-        origem || 'WhatsApp',
-        categoria_imovel || 'Indefinido'
+        origem || 'Facebook',
+        categoria_imovel || 'Indefinido',
+        link_origem || null
       ]
     );
     return NextResponse.json(result.rows[0]);
@@ -75,17 +88,21 @@ export async function PUT(req: Request) {
     
     // Se o frontend enviar o cliente_nome, significa que é uma EDIÇÃO COMPLETA do Modal
     if (body.cliente_nome) {
-      const { id, cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel } = body;
+      const { 
+        id, cliente_nome, telefone, email, interesse, valor_estimado, 
+        estagio, observacoes, tipo_negocio, corretor, origem, 
+        categoria_imovel, link_origem 
+      } = body;
       
       const result = await query(
         `UPDATE crm_leads 
-         SET cliente_nome = $1, telefone = $2, email = $3, interesse = $4, valor_estimado = $5, estagio = $6, observacoes = $7, tipo_negocio = $8, corretor = $9, origem = $10, categoria_imovel = $11
-         WHERE id = $12 RETURNING *`,
-        [cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel, id]
+         SET cliente_nome = $1, telefone = $2, email = $3, interesse = $4, valor_estimado = $5, estagio = $6, observacoes = $7, tipo_negocio = $8, corretor = $9, origem = $10, categoria_imovel = $11, link_origem = $12
+         WHERE id = $13 RETURNING *`,
+        [cliente_nome, telefone, email, interesse, valor_estimado, estagio, observacoes, tipo_negocio, corretor, origem, categoria_imovel, link_origem, id]
       );
       return NextResponse.json(result.rows[0]);
     } else {
-      // Atualização rápida de estágio (ex: mover para ARQUIVADO ou Kanban)
+      // Atualização rápida de estágio (ex: mover para ARQUIVADO ou arrastar no Kanban)
       const { id, estagio } = body;
       const result = await query(
         "UPDATE crm_leads SET estagio = $1 WHERE id = $2 RETURNING *",

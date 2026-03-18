@@ -296,17 +296,29 @@ export default function CRMImobiliaria() {
         
         {/* HEADER GERAL */}
         <header className="shrink-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-4 shadow-sm z-40 flex-wrap w-full">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 md:gap-6">
             <Link href="/admin/imoveis" className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all text-slate-500 hover:text-emerald-700">
               <ArrowLeft className="w-5 h-5" />
             </Link>
+            
+            {/* --- COMEÇO DA LOGO DA IMOBILIÁRIA --- */}
+            <div className="hidden sm:flex items-center gap-3 pr-4 md:pr-6 border-r border-slate-200">
+              <img src="/logo_nova.png" alt="Porto Iguaçu" className="h-10 w-auto object-contain drop-shadow-sm" />
+              <div className="flex flex-col">
+                <span className="font-black text-[12px] uppercase tracking-widest text-slate-800 leading-none mb-0.5">Porto Iguaçu</span>
+                <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Imobiliária</span>
+              </div>
+            </div>
+            {/* --- FIM DA LOGO --- */}
+
             <div>
-              <h1 className="font-black text-2xl tracking-tight text-slate-900 leading-none flex items-center gap-2">
+              <h1 className="font-black text-xl md:text-2xl tracking-tight text-slate-900 leading-none flex items-center gap-2">
                 Pipeline <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">CRM</span>
               </h1>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-1">Inteligência Comercial</p>
+              <p className="text-[9px] md:text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-1">Inteligência Comercial</p>
             </div>
-            <div className="hidden md:flex ml-4 bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-inner overflow-x-auto">
+
+            <div className="hidden lg:flex ml-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-inner overflow-x-auto">
               <button onClick={() => setActiveView('KANBAN')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView === 'KANBAN' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                 <LayoutDashboard className="w-3.5 h-3.5" /> Kanban
               </button>
@@ -318,9 +330,10 @@ export default function CRMImobiliaria() {
               </button>
             </div>
           </div>
+          
           <div className="flex items-center gap-4 flex-wrap">
-            <button onClick={abrirModalNovo} className="flex items-center gap-2 bg-[#0f2e20] hover:bg-emerald-900 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/20 transition-all active:scale-95 whitespace-nowrap">
-              <Plus className="w-4 h-4" strokeWidth={3} /> Novo Lead
+            <button onClick={abrirModalNovo} className="flex items-center gap-2 bg-[#0f2e20] hover:bg-emerald-900 text-white px-5 py-2.5 md:px-6 md:py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/20 transition-all active:scale-95 whitespace-nowrap">
+              <Plus className="w-4 h-4" strokeWidth={3} /> <span className="hidden sm:inline">Novo Lead</span>
             </button>
           </div>
         </header>
