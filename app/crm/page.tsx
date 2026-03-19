@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import {
   ArrowLeft, Plus, DollarSign, User, Phone,
   X, Trash2, CheckCircle, Clock, FileText,
   Calendar, Building, AlignLeft, CalendarDays,
   TrendingUp, LayoutDashboard, Filter, Users,
   Tag, Target, Key, Edit2, Search, Globe, ChevronDown, Award, Activity, Archive, RefreshCcw, Home,
-  MapPin, ExternalLink, AlertCircle, XCircle
+  MapPin, ExternalLink, AlertCircle, XCircle, Bell, CalendarClock, PhoneCall, ListTodo
 } from "lucide-react";
 import Link from "next/link";
 
@@ -31,6 +32,10 @@ interface Proprietario {
   descricao?: string; link_anuncio?: string; tipo_anuncio: string;
   origem: string; estagio: string; corretor: string;
   observacoes?: string; criado_em: string;
+}
+interface AgendaItem {
+  id: number; titulo: string; descricao: string; data_hora: string; 
+  corretor: string; tipo: string; status: string; lead_id?: number; lead_nome?: string;
 }
 
 // ================================================================
@@ -69,18 +74,24 @@ const getIniciais = (nome: string) => {
   const p = nome.split(" ");
   return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : nome.substring(0,2).toUpperCase();
 };
-const formatarData = (d: string) =>
-  new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","");
+const formatarData = (d: string) => new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","");
+const formatarHora = (d: string) => new Date(d).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
 const formatarMesAno = (d: string) => {
   const p = d.split("-"); if(p.length<2) return d;
   const ms = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
   return `${ms[parseInt(p[1])-1]} ${p[0]}`;
 };
+const isToday = (d: string) => { const date = new Date(d); const today = new Date(); return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear(); };
+const isPast = (d: string) => new Date(d).getTime() < new Date().getTime() && !isToday(d);
 
 // ================================================================
 // COMPONENTE PRINCIPAL
 // ================================================================
 export default function CRMImobiliaria() {
+  const { data: session } = useSession();
+  const isCorretor = (session?.user as any)?.role === "corretor";
+  const userName = session?.user?.name || "TODOS";
+
   // ── Estado CRM leads ──
   const [leads, setLeads] = useState<any[]>([]);
   const [imoveis, setImoveis] = useState<any[]>([]);
@@ -91,7 +102,7 @@ export default function CRMImobiliaria() {
   const [showImoveisList, setShowImoveisList] = useState<boolean>(false);
 
   // ── Views ──
-  const [activeView, setActiveView] = useState<'KANBAN'|'ANALYTICS'|'ARQUIVADOS'|'CAPTACAO'>('KANBAN');
+  const [activeView, setActiveView] = useState<'KANBAN'|'ANALYTICS'|'ARQUIVADOS'|'CAPTACAO'|'AGENDA'>('KANBAN');
 
   // ── Analytics ──
   const [analyticsTab, setAnalyticsTab] = useState<'GERAL'|'Venda'|'Aluguel'>('GERAL');
@@ -122,6 +133,13 @@ export default function CRMImobiliaria() {
   const [dragPropId, setDragPropId] = useState<number|null>(null);
   const [dragPropCol, setDragPropCol] = useState<string|null>(null);
 
+  // ── Estado Agenda ──
+  const [agenda, setAgenda] = useState<AgendaItem[]>([]);
+  const [modalAgenda, setModalAgenda] = useState<boolean>(false);
+  const [formAgenda, setFormAgenda] = useState<Partial<AgendaItem>>({});
+  const [showResumoDia, setShowResumoDia] = useState<boolean>(false);
+  const [resumoJaVisto, setResumoJaVisto] = useState<boolean>(false);
+
   const corretores: string[] = ["André","Anna","Claudinei","Jessica","Luane"];
 
   const estagios: Estagio[] = [
@@ -132,19 +150,30 @@ export default function CRMImobiliaria() {
     { id:"FECHADO", nome:"Negócio Fechado", cor:"from-emerald-500 to-emerald-600", border:"border-emerald-200", text:"text-emerald-700", bg:"bg-emerald-50", badge:"bg-emerald-100 text-emerald-700", icone:<CheckCircle className="w-4 h-4 text-emerald-600"/> },
   ];
 
+  // ── Bloqueio de Corretores na Inicialização ──
+  useEffect(() => {
+    if (isCorretor && userName !== "TODOS") {
+      setFiltroCorretorKanban(userName);
+      setFiltroCorretorProp(userName);
+      setFiltroCorretor(userName);
+    }
+  }, [isCorretor, userName]);
+
   // ── Carregar dados ──
   const carregarDados = async () => {
     try {
-      const [resLeads, resImoveis, resProps] = await Promise.all([
-        fetch("/api/admin/crm"), fetch("/api/imoveis"), fetch("/api/admin/proprietarios")
+      const [resLeads, resImoveis, resProps, resAgenda] = await Promise.all([
+        fetch("/api/admin/crm"), fetch("/api/imoveis"), fetch("/api/admin/proprietarios"), fetch("/api/admin/agenda")
       ]);
       const leadsData = await resLeads.json();
       const imoveisData = await resImoveis.json();
       const propsData = await resProps.json();
+      const agendaData = await resAgenda.json();
 
       setLeads(Array.isArray(leadsData) ? leadsData : []);
       setImoveis(Array.isArray(imoveisData) ? imoveisData : []);
       setProprietarios(Array.isArray(propsData) ? propsData : []);
+      setAgenda(Array.isArray(agendaData) ? agendaData : []);
     } catch(e){ console.error(e); } finally { setLoading(false); }
   };
   
@@ -159,11 +188,28 @@ export default function CRMImobiliaria() {
     const data = await r.json();
     setProprietarios(Array.isArray(data) ? data : []); 
   };
+
+  const carregarAgenda = async () => {
+    const r = await fetch("/api/admin/agenda");
+    const data = await r.json();
+    setAgenda(Array.isArray(data) ? data : []);
+  }
   
   useEffect(() => { carregarDados(); }, []);
 
+  // Mostra o resumo do dia logo após carregar os dados (uma vez por acesso)
+  useEffect(() => {
+    if (!loading && agenda.length > 0 && !resumoJaVisto) {
+      const compromissosHoje = agenda.filter(a => isToday(a.data_hora) && a.status === 'Pendente' && (userName === 'TODOS' || a.corretor === userName));
+      if (compromissosHoje.length > 0) {
+        setShowResumoDia(true);
+      }
+      setResumoJaVisto(true);
+    }
+  }, [loading, agenda, resumoJaVisto, userName]);
+
   // ── CRM: ações ──
-  const abrirModalNovo = () => { setIsEditing(false); setForm({ estagio:"LEAD", tipo_negocio:"Venda", corretor:"André", origem:"WhatsApp", interesse:"", categoria_imovel:"Indefinido" }); setModal(true); setShowImoveisList(false); };
+  const abrirModalNovo = () => { setIsEditing(false); setForm({ estagio:"LEAD", tipo_negocio:"Venda", corretor: isCorretor ? userName : "André", origem:"WhatsApp", interesse:"", categoria_imovel:"Indefinido" }); setModal(true); setShowImoveisList(false); };
   const abrirModalEditar = (lead: any) => { setIsEditing(true); setForm(lead); setModal(true); setShowImoveisList(false); };
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,7 +243,7 @@ export default function CRMImobiliaria() {
   };
 
   // ── Captação: ações ──
-  const abrirModalPropNovo = () => { setEditandoProp(false); setFormProp(FORM_PROP_VAZIO); setModalProp(true); };
+  const abrirModalPropNovo = () => { setEditandoProp(false); setFormProp({ ...FORM_PROP_VAZIO, corretor: isCorretor ? userName : "André" }); setModalProp(true); };
   const abrirModalPropEditar = (p: Proprietario) => { setEditandoProp(true); setFormProp(p); setModalProp(true); };
   const salvarProp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,6 +274,27 @@ export default function CRMImobiliaria() {
     setDragPropId(null);
   };
 
+  // ── Agenda: ações ──
+  const abrirNovaAgenda = (leadId?: number) => {
+    setFormAgenda({ tipo: 'Visita', status: 'Pendente', corretor: isCorretor ? userName : 'André', lead_id: leadId, data_hora: new Date().toISOString().slice(0,16) });
+    setModalAgenda(true);
+  };
+  const salvarAgenda = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetch("/api/admin/agenda", { method: "POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formAgenda) });
+    setModalAgenda(false);
+    carregarAgenda();
+  };
+  const alterarStatusAgenda = async (id: number, status: string) => {
+    setAgenda(agenda.map(a => a.id === id ? { ...a, status } : a));
+    await fetch("/api/admin/agenda", { method: "PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id, status}) });
+  };
+  const excluirAgenda = async (id: number) => {
+    if(!confirm("Cancelar compromisso?")) return;
+    await fetch(`/api/admin/agenda?id=${id}`,{method:"DELETE"});
+    setAgenda(agenda.filter(a => a.id !== id));
+  };
+
   // ── Filtros Kanban ──
   const leadsKanban = useMemo(() => leads.filter((l:any) => {
     if(l.estagio==='ARQUIVADO') return false;
@@ -249,6 +316,13 @@ export default function CRMImobiliaria() {
       return mb && (filtroTipoProp==="TODOS"||p.tipo_anuncio===filtroTipoProp) && (filtroCorretorProp==="TODOS"||p.corretor===filtroCorretorProp);
     });
   }, [proprietarios,buscaProp,filtroTipoProp,filtroCorretorProp]);
+
+  // ── Filtros Agenda ──
+  const agendaFiltrada = useMemo(() => agenda.filter(a => filtroCorretorKanban === "TODOS" || a.corretor === filtroCorretorKanban), [agenda, filtroCorretorKanban]);
+  
+  const compromissosHoje = agendaFiltrada.filter(a => isToday(a.data_hora) && a.status === 'Pendente');
+  const compromissosAtrasados = agendaFiltrada.filter(a => isPast(a.data_hora) && a.status === 'Pendente');
+  const compromissosFuturos = agendaFiltrada.filter(a => !isToday(a.data_hora) && !isPast(a.data_hora) && a.status === 'Pendente');
 
   const kpisCapt = useMemo(() => {
     if (!Array.isArray(proprietarios)) return { total: 0, novos: 0, captados: 0, venda: 0, aluguel: 0 };
@@ -344,13 +418,15 @@ export default function CRMImobiliaria() {
               <button onClick={()=>setActiveView('KANBAN')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView==='KANBAN'?'bg-white text-emerald-700 shadow-sm':'text-slate-400 hover:text-slate-600'}`}>
                 <LayoutDashboard className="w-3.5 h-3.5"/> Kanban
               </button>
+              <button onClick={()=>setActiveView('AGENDA')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView==='AGENDA'?'bg-blue-600 text-white shadow-md':'text-slate-400 hover:text-slate-600'}`}>
+                <CalendarClock className="w-3.5 h-3.5"/> Agenda {compromissosHoje.length>0 && <span className="bg-red-500 text-white px-1.5 py-0.5 rounded-full text-[8px] leading-none">{compromissosHoje.length}</span>}
+              </button>
               <button onClick={()=>setActiveView('ANALYTICS')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView==='ANALYTICS'?'bg-[#0f2e20] text-white shadow-md':'text-slate-400 hover:text-slate-600'}`}>
                 <Activity className="w-3.5 h-3.5"/> Analytics
               </button>
               <button onClick={()=>setActiveView('ARQUIVADOS')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView==='ARQUIVADOS'?'bg-slate-800 text-white shadow-md':'text-slate-400 hover:text-slate-600'}`}>
                 <Archive className="w-3.5 h-3.5"/> Arquivados
               </button>
-              {/* ── NOVA ABA CAPTAÇÃO ── */}
               <button onClick={()=>setActiveView('CAPTACAO')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeView==='CAPTACAO'?'bg-orange-600 text-white shadow-md':'text-slate-400 hover:text-slate-600'}`}>
                 <Home className="w-3.5 h-3.5"/> Captação
               </button>
@@ -358,7 +434,17 @@ export default function CRMImobiliaria() {
           </div>
 
           <div className="flex items-center gap-4 flex-wrap">
-            {activeView==='CAPTACAO' ? (
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+              <User className="w-4 h-4 text-slate-400"/>
+              <span className="text-xs font-bold text-slate-600">{userName}</span>
+              {isCorretor && <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase font-black">Corretor</span>}
+            </div>
+
+            {activeView==='AGENDA' ? (
+              <button onClick={()=>abrirNovaAgenda()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 md:px-6 md:py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 whitespace-nowrap">
+                <Plus className="w-4 h-4" strokeWidth={3}/> <span className="hidden sm:inline">Novo Compromisso</span>
+              </button>
+            ) : activeView==='CAPTACAO' ? (
               <button onClick={abrirModalPropNovo} className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 md:px-6 md:py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 whitespace-nowrap">
                 <Plus className="w-4 h-4" strokeWidth={3}/> <span className="hidden sm:inline">Novo Proprietário</span>
               </button>
@@ -384,7 +470,7 @@ export default function CRMImobiliaria() {
               <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 flex-shrink-0">
                   <Key className="w-3.5 h-3.5 text-emerald-500"/>
-                  <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold text-slate-600 cursor-pointer min-w-[140px]">
+                  <select disabled={isCorretor} value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className={`py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] ${isCorretor ? 'text-slate-400' : 'text-slate-600'}`}>
                     <option value="TODOS">Todos Corretores</option>
                     {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
                   </select>
@@ -429,9 +515,11 @@ export default function CRMImobiliaria() {
                         {ldc.map((lead:any) => (
                           <div key={lead.id} id={`lead-${lead.id}`} draggable onDragStart={e=>handleDragStart(e,lead.id)} onDragEnd={e=>handleDragEnd(e,lead.id)}
                             className="bg-white border border-slate-200/80 hover:border-emerald-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative flex flex-col gap-3 flex-shrink-0 cursor-grab active:cursor-grabbing">
-                            <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/80 p-1 rounded-lg backdrop-blur-sm">
+                            <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg backdrop-blur-sm shadow-sm border border-slate-100">
+                              {/* NOVO BOTÃO DE AGENDA RÁPIDA */}
+                              <button onClick={()=>abrirNovaAgenda(lead.id)} title="Agendar Compromisso" className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-all"><CalendarClock className="w-3.5 h-3.5"/></button>
                               <button onClick={()=>moverLead(lead.id,'ARQUIVADO')} title="Arquivar" className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-all"><Archive className="w-3.5 h-3.5"/></button>
-                              <button onClick={()=>abrirModalEditar(lead)} title="Editar" className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
+                              <button onClick={()=>abrirModalEditar(lead)} title="Editar" className="p-1.5 rounded-lg bg-emerald-50 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
                               <button onClick={()=>excluirLead(lead.id)} title="Excluir" className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
                             </div>
                             <div className="flex items-center gap-3 pr-20 pointer-events-none">
@@ -529,6 +617,129 @@ export default function CRMImobiliaria() {
                 </div>
               )}
             </main>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════
+            VISÃO AGENDA (NOVO MÓDULO DE COMPROMISSOS)
+        ════════════════════════════════════════════════════════ */}
+        {activeView==='AGENDA' && (
+          <div className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar bg-slate-50/50 w-full relative">
+            <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+              <div className="animate-fade-up bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                 <div>
+                   <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3"><CalendarClock className="w-8 h-8 text-blue-600"/> Gerenciador de Compromissos</h2>
+                   <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Controle suas visitas, reuniões e ligações</p>
+                 </div>
+                 <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2 w-full md:w-auto">
+                      <Users className="w-4 h-4 text-slate-400"/>
+                      <select disabled={isCorretor} value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className={`bg-transparent w-full text-xs font-bold outline-none cursor-pointer ${isCorretor ? 'text-slate-400' : 'text-slate-700'}`}>
+                        <option value="TODOS">Visão Geral da Imobiliária</option>
+                        {corretores.map(c=><option key={c} value={c}>Compromissos: {c}</option>)}
+                      </select>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* COLUNA 1: HOJE */}
+                <div className="animate-fade-up delay-100 bg-white rounded-[2rem] border border-blue-100 shadow-md overflow-hidden flex flex-col h-[600px]">
+                  <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                    <h3 className="font-black flex items-center gap-2 text-lg"><Bell className="w-5 h-5"/> Para Hoje</h3>
+                    <span className="bg-white/20 px-3 py-1 rounded-xl text-xs font-black shadow-sm">{compromissosHoje.length}</span>
+                  </div>
+                  <div className="p-5 flex-1 overflow-y-auto custom-scrollbar bg-blue-50/30 space-y-4">
+                    {compromissosHoje.length===0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center opacity-60">
+                         <CheckCircle className="w-12 h-12 text-blue-300 mb-3"/>
+                         <p className="font-bold text-slate-500">Nenhum compromisso para hoje.</p>
+                      </div>
+                    ) : compromissosHoje.map(item => (
+                      <div key={item.id} className="bg-white p-5 rounded-2xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-all relative group">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">{formatarHora(item.data_hora)}</span>
+                          <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={()=>alterarStatusAgenda(item.id, 'Concluído')} title="Concluir" className="p-1.5 rounded bg-emerald-50 text-emerald-500 hover:bg-emerald-100"><CheckCircle className="w-4 h-4"/></button>
+                            <button onClick={()=>excluirAgenda(item.id)} title="Cancelar" className="p-1.5 rounded bg-red-50 text-red-400 hover:bg-red-100"><XCircle className="w-4 h-4"/></button>
+                          </div>
+                        </div>
+                        <h4 className="font-black text-slate-800 text-sm">{item.titulo}</h4>
+                        {item.lead_nome && <p className="text-xs font-bold text-slate-500 flex items-center gap-1.5 mt-2 bg-slate-50 p-2 rounded-lg border border-slate-100"><User className="w-3.5 h-3.5 text-blue-400"/> {item.lead_nome}</p>}
+                        {item.descricao && <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 leading-relaxed">{item.descricao}</p>}
+                        <div className="mt-3 flex justify-between items-center pt-3 border-t border-slate-50">
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-slate-100 text-slate-500 rounded-md border border-slate-200">{item.tipo}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.corretor}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* COLUNA 2: ATRASADOS / PENDÊNCIAS */}
+                <div className="animate-fade-up delay-200 bg-white rounded-[2rem] border border-red-100 shadow-md overflow-hidden flex flex-col h-[600px]">
+                  <div className="bg-gradient-to-r from-red-500 to-rose-400 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                    <h3 className="font-black flex items-center gap-2 text-lg"><AlertCircle className="w-5 h-5"/> Atrasados</h3>
+                    <span className="bg-white/20 px-3 py-1 rounded-xl text-xs font-black shadow-sm">{compromissosAtrasados.length}</span>
+                  </div>
+                  <div className="p-5 flex-1 overflow-y-auto custom-scrollbar bg-red-50/30 space-y-4">
+                    {compromissosAtrasados.length===0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center opacity-60">
+                         <Award className="w-12 h-12 text-red-300 mb-3"/>
+                         <p className="font-bold text-slate-500">Tudo em dia! Nenhuma pendência.</p>
+                      </div>
+                    ) : compromissosAtrasados.map(item => (
+                      <div key={item.id} className="bg-white p-5 rounded-2xl border-l-4 border-red-500 shadow-sm hover:shadow-md transition-all relative group">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-xs font-black text-red-600 bg-red-50 px-2.5 py-1 rounded-lg border border-red-100">{formatarData(item.data_hora)}</span>
+                          <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={()=>alterarStatusAgenda(item.id, 'Concluído')} title="Concluir (Baixar)" className="p-1.5 rounded bg-emerald-50 text-emerald-500 hover:bg-emerald-100"><CheckCircle className="w-4 h-4"/></button>
+                            <button onClick={()=>excluirAgenda(item.id)} title="Cancelar" className="p-1.5 rounded bg-slate-50 text-slate-400 hover:bg-slate-100"><XCircle className="w-4 h-4"/></button>
+                          </div>
+                        </div>
+                        <h4 className="font-black text-slate-800 text-sm">{item.titulo}</h4>
+                        {item.lead_nome && <p className="text-xs font-bold text-slate-500 flex items-center gap-1.5 mt-2 bg-slate-50 p-2 rounded-lg border border-slate-100"><User className="w-3.5 h-3.5 text-red-400"/> {item.lead_nome}</p>}
+                        <div className="mt-3 flex justify-between items-center pt-3 border-t border-slate-50">
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-slate-100 text-slate-500 rounded-md border border-slate-200">{item.tipo}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.corretor}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* COLUNA 3: PRÓXIMOS DIAS */}
+                <div className="animate-fade-up delay-300 bg-white rounded-[2rem] border border-emerald-100 shadow-md overflow-hidden flex flex-col h-[600px]">
+                  <div className="bg-gradient-to-r from-emerald-500 to-teal-400 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                    <h3 className="font-black flex items-center gap-2 text-lg"><Calendar className="w-5 h-5"/> Próximos Dias</h3>
+                    <span className="bg-white/20 px-3 py-1 rounded-xl text-xs font-black shadow-sm">{compromissosFuturos.length}</span>
+                  </div>
+                  <div className="p-5 flex-1 overflow-y-auto custom-scrollbar bg-emerald-50/30 space-y-4">
+                    {compromissosFuturos.length===0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center opacity-60">
+                         <CalendarDays className="w-12 h-12 text-emerald-300 mb-3"/>
+                         <p className="font-bold text-slate-500">Agenda livre para os próximos dias.</p>
+                      </div>
+                    ) : compromissosFuturos.map(item => (
+                      <div key={item.id} className="bg-white p-5 rounded-2xl border-l-4 border-emerald-500 shadow-sm hover:shadow-md transition-all relative group">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5"><Calendar className="w-3 h-3"/> {formatarData(item.data_hora)} às {formatarHora(item.data_hora)}</span>
+                          <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={()=>excluirAgenda(item.id)} title="Cancelar/Excluir" className="p-1.5 rounded bg-red-50 text-red-400 hover:bg-red-100"><Trash2 className="w-4 h-4"/></button>
+                          </div>
+                        </div>
+                        <h4 className="font-black text-slate-800 text-sm mt-3">{item.titulo}</h4>
+                        {item.lead_nome && <p className="text-xs font-bold text-slate-500 flex items-center gap-1.5 mt-2 bg-slate-50 p-2 rounded-lg border border-slate-100"><User className="w-3.5 h-3.5 text-emerald-500"/> {item.lead_nome}</p>}
+                        <div className="mt-3 flex justify-between items-center pt-3 border-t border-slate-50">
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-slate-100 text-slate-500 rounded-md border border-slate-200">{item.tipo}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.corretor}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -752,7 +963,7 @@ export default function CRMImobiliaria() {
                 </div>
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 shrink-0">
                   <Key className="w-3.5 h-3.5 text-violet-500"/>
-                  <select value={filtroCorretorProp} onChange={e=>setFiltroCorretorProp(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold text-slate-600 cursor-pointer min-w-[140px]">
+                  <select disabled={isCorretor} value={filtroCorretorProp} onChange={e=>setFiltroCorretorProp(e.target.value)} className={`py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] ${isCorretor ? 'text-slate-400' : 'text-slate-600'}`}>
                     <option value="TODOS">Todos Corretores</option>
                     {CORRETORES_LIST.filter(c=>c!=="Não Atribuído").map(c=><option key={c}>{c}</option>)}
                   </select>
@@ -795,7 +1006,7 @@ export default function CRMImobiliaria() {
                             onDragStart={e=>onDragStartProp(e,prop.id)} onDragEnd={e=>onDragEndProp(e,prop.id)}
                             className="bg-white border border-slate-200/80 hover:border-orange-300 rounded-xl p-3.5 shadow-sm hover:shadow-md transition-all group relative flex flex-col gap-2.5 cursor-grab active:cursor-grabbing shrink-0">
                             {/* Ações hover */}
-                            <div className="absolute top-2.5 right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg shadow-sm">
+                            <div className="absolute top-2.5 right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg shadow-sm border border-slate-100">
                               {prop.link_anuncio&&<a href={prop.link_anuncio} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg bg-blue-50 text-blue-400 hover:text-blue-700 hover:bg-blue-100 transition-all"><ExternalLink className="w-3.5 h-3.5"/></a>}
                               <button onClick={()=>abrirModalPropEditar(prop)} className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
                               <button onClick={()=>excluirProp(prop.id)} className="p-1.5 rounded-lg bg-red-50 text-red-300 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
@@ -842,10 +1053,116 @@ export default function CRMImobiliaria() {
         )}
 
         {/* ════════════════════════════════════════════════════════
-            MODAL CRM LEADS
+            MODAL DE RESUMO DO DIA (APARECE AO LOGAR SE HOUVER COMPROMISSOS)
+        ════════════════════════════════════════════════════════ */}
+        {showResumoDia && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden" style={{animation:"modalIn .4s cubic-bezier(.34,1.56,.64,1)"}}>
+              <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-8 text-center relative">
+                <button onClick={()=>setShowResumoDia(false)} className="absolute top-4 right-4 text-white/70 hover:text-white"><X className="w-5 h-5"/></button>
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-md">
+                  <Bell className="w-8 h-8 text-white"/>
+                </div>
+                <h2 className="text-2xl font-black text-white">Bom dia, {userName}!</h2>
+                <p className="text-blue-100 font-medium mt-1">Aqui está sua agenda para hoje.</p>
+              </div>
+              <div className="p-6 max-h-80 overflow-y-auto custom-scrollbar space-y-3 bg-slate-50">
+                {agenda.filter(a => isToday(a.data_hora) && a.status === 'Pendente' && (userName === 'TODOS' || a.corretor === userName)).map(item => (
+                  <div key={item.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div className="bg-blue-50 text-blue-600 font-black text-sm p-3 rounded-xl text-center leading-none">
+                       {formatarHora(item.data_hora)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800">{item.titulo}</h4>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.tipo}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 bg-white border-t border-slate-100 text-center flex gap-3">
+                <button onClick={()=>setShowResumoDia(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-3 rounded-xl uppercase tracking-widest text-xs transition-all">Fechar</button>
+                <button onClick={()=>{setShowResumoDia(false); setActiveView('AGENDA');}} className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-xl uppercase tracking-widest text-xs transition-all shadow-md">Abrir Agenda Completa</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════
+            MODAL CRIAR COMPROMISSO (AGENDA)
+        ════════════════════════════════════════════════════════ */}
+        {modalAgenda && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[99990] flex items-center justify-center p-4">
+            <form onSubmit={salvarAgenda} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col" style={{animation:"modalIn .25s ease-out"}}>
+              <div className="bg-blue-600 px-6 py-5 flex items-center justify-between">
+                <h3 className="text-lg font-black text-white flex items-center gap-2"><CalendarClock className="w-5 h-5"/> Novo Compromisso</h3>
+                <button type="button" onClick={()=>setModalAgenda(false)} className="text-white/70 hover:text-white"><X className="w-5 h-5"/></button>
+              </div>
+              <div className="p-6 space-y-4">
+                 <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Título do Compromisso *</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 transition-all">
+                      <ListTodo className="w-4 h-4 text-slate-400 shrink-0"/>
+                      <input required type="text" placeholder="Ex: Reunião Captação, Ligar para Cliente..." value={formAgenda.titulo||""} onChange={e=>setFormAgenda({...formAgenda, titulo:e.target.value})} className="w-full py-3 bg-transparent outline-none text-sm font-semibold text-slate-700"/>
+                    </div>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                   <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data e Hora *</label>
+                      <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 transition-all">
+                        <Calendar className="w-4 h-4 text-slate-400 shrink-0"/>
+                        <input required type="datetime-local" value={formAgenda.data_hora||""} onChange={e=>setFormAgenda({...formAgenda, data_hora:e.target.value})} className="w-full py-3 bg-transparent outline-none text-sm font-semibold text-slate-700"/>
+                      </div>
+                   </div>
+                   <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tipo *</label>
+                      <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 transition-all">
+                        <Tag className="w-4 h-4 text-slate-400 shrink-0"/>
+                        <select value={formAgenda.tipo||"Visita"} onChange={e=>setFormAgenda({...formAgenda, tipo:e.target.value})} className="w-full py-3 bg-transparent outline-none text-sm font-semibold text-slate-700 cursor-pointer">
+                          <option>Visita</option><option>Reunião</option><option>Ligação</option><option>Vistoria</option><option>Outros</option>
+                        </select>
+                      </div>
+                   </div>
+                 </div>
+                 <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Corretor Responsável</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 transition-all">
+                      <Key className="w-4 h-4 text-blue-500 shrink-0"/>
+                      <select disabled={isCorretor} value={formAgenda.corretor||"André"} onChange={e=>setFormAgenda({...formAgenda, corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer ${isCorretor ? 'text-slate-400' : 'text-slate-700'}`}>
+                        {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                 </div>
+                 <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Vincular a um Lead (Opcional)</label>
+                    <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 transition-all">
+                      <User className="w-4 h-4 text-slate-400 shrink-0"/>
+                      <select value={formAgenda.lead_id||""} onChange={e=>setFormAgenda({...formAgenda, lead_id: Number(e.target.value)})} className="w-full py-3 bg-transparent outline-none text-sm font-semibold text-slate-700 cursor-pointer">
+                        <option value="">Nenhum (Compromisso Avulso)</option>
+                        {leads.filter(l=>l.estagio!=='ARQUIVADO').map(l=><option key={l.id} value={l.id}>{l.cliente_nome}</option>)}
+                      </select>
+                    </div>
+                 </div>
+                 <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Descrição</label>
+                    <div className="flex gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 py-3 transition-all">
+                      <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-0.5"/>
+                      <textarea rows={3} placeholder="Endereço, detalhes, lembretes..." value={formAgenda.descricao||""} onChange={e=>setFormAgenda({...formAgenda, descricao:e.target.value})} className="w-full bg-transparent outline-none text-sm font-semibold text-slate-700 resize-none"/>
+                    </div>
+                 </div>
+              </div>
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 shrink-0">
+                <button type="button" onClick={()=>setModalAgenda(false)} className="flex-1 bg-white border-2 border-slate-200 hover:bg-slate-100 text-slate-500 font-black py-3.5 rounded-xl text-xs uppercase tracking-widest transition-all">Cancelar</button>
+                <button type="submit" className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">Agendar Compromisso</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════
+            MODAL CRM LEADS (EXISTENTE)
         ════════════════════════════════════════════════════════ */}
         {modal && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e=>{if(e.target===e.currentTarget)setModal(false);}}>
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[99990] flex items-center justify-center p-4" onClick={e=>{if(e.target===e.currentTarget)setModal(false);}}>
             <form onSubmit={handleSalvar} className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]" style={{animation:"modalIn .25s cubic-bezier(.34,1.56,.64,1)"}}>
               <div className="bg-[#0f2e20] px-8 py-6 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-4">
@@ -929,7 +1246,7 @@ export default function CRMImobiliaria() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor Responsável</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 flex-shrink-0"/>
-                      <select value={form.corretor||"André"} className="w-full py-3 bg-transparent outline-none font-semibold text-sm text-slate-700 cursor-pointer" onChange={e=>setForm({...form,corretor:e.target.value})}>
+                      <select disabled={isCorretor} value={form.corretor||"André"} className={`w-full py-3 bg-transparent outline-none font-semibold text-sm cursor-pointer ${isCorretor ? 'text-slate-400' : 'text-slate-700'}`} onChange={e=>setForm({...form,corretor:e.target.value})}>
                         {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
@@ -959,10 +1276,10 @@ export default function CRMImobiliaria() {
         )}
 
         {/* ════════════════════════════════════════════════════════
-            MODAL CAPTAÇÃO — PROPRIETÁRIOS
+            MODAL CAPTAÇÃO — PROPRIETÁRIOS (EXISTENTE)
         ════════════════════════════════════════════════════════ */}
         {modalProp && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e=>{if(e.target===e.currentTarget)setModalProp(false);}}>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99990] flex items-center justify-center p-4" onClick={e=>{if(e.target===e.currentTarget)setModalProp(false);}}>
             <form onSubmit={salvarProp} className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]" style={{animation:"modalIn .25s cubic-bezier(.34,1.56,.64,1)"}}>
               <div className="bg-orange-700 px-7 py-5 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-4">
@@ -1033,7 +1350,7 @@ export default function CRMImobiliaria() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-orange-400 rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 shrink-0"/>
-                      <select value={formProp.corretor||"Não Atribuído"} onChange={e=>setFormProp({...formProp,corretor:e.target.value})} className="w-full py-3 bg-transparent outline-none text-sm font-semibold text-slate-700 cursor-pointer">
+                      <select disabled={isCorretor} value={formProp.corretor||"Não Atribuído"} onChange={e=>setFormProp({...formProp,corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer ${isCorretor ? 'text-slate-400' : 'text-slate-700'}`}>
                         {CORRETORES_LIST.map(c=><option key={c}>{c}</option>)}
                       </select>
                     </div>
