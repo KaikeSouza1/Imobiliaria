@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, SessionProvider } from "next-auth/react";
 import {
   ArrowLeft, Plus, DollarSign, User, Phone,
   X, Trash2, CheckCircle, Clock, FileText,
@@ -84,10 +84,17 @@ const formatarMesAno = (d: string) => {
 const isToday = (d: string) => { const date = new Date(d); const today = new Date(); return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear(); };
 const isPast = (d: string) => new Date(d).getTime() < new Date().getTime() && !isToday(d);
 
+// Helper para verificar se algo está há mais de 24h na base
+const isAtrasado24h = (dataString: string) => {
+  if (!dataString) return false;
+  const diff = new Date().getTime() - new Date(dataString).getTime();
+  return diff > 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+};
+
 // ================================================================
-// COMPONENTE PRINCIPAL
+// COMPONENTE INTERNO
 // ================================================================
-export default function CRMImobiliaria() {
+function CRMContent() {
   const { data: session } = useSession();
   const isCorretor = (session?.user as any)?.role === "corretor";
   const userName = session?.user?.name || "TODOS";
@@ -150,7 +157,7 @@ export default function CRMImobiliaria() {
     { id:"FECHADO", nome:"Negócio Fechado", cor:"from-emerald-500 to-emerald-600", border:"border-emerald-200", text:"text-emerald-700", bg:"bg-emerald-50", badge:"bg-emerald-100 text-emerald-700", icone:<CheckCircle className="w-4 h-4 text-emerald-600"/> },
   ];
 
-  // ── Bloqueio de Corretores na Inicialização ──
+  // ── SETA O FILTRO INICIAL PARA O NOME DO CORRETOR (MAS PERMITE MUDAR DEPOIS) ──
   useEffect(() => {
     if (isCorretor && userName !== "TODOS") {
       setFiltroCorretorKanban(userName);
@@ -387,6 +394,16 @@ export default function CRMImobiliaria() {
         .animate-fade-up{animation:fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) forwards;opacity:0;}
         .delay-100{animation-delay:100ms;}.delay-200{animation-delay:200ms;}.delay-300{animation-delay:300ms;}
         @keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+        
+        /* ANIMAÇÃO DOS CARDS ATRASADOS (PULSAÇÃO SUAVE) */
+        @keyframes alert-breathe {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); border-color: #fca5a5; transform: translateY(0); }
+          50% { box-shadow: 0 4px 12px rgba(239,68,68,0.5); border-color: #ef4444; transform: translateY(-3px); }
+        }
+        .card-alerta-24h {
+          animation: alert-breathe 2.5s infinite ease-in-out;
+          border-width: 1px !important;
+        }
       `}</style>
 
       <div style={{margin:0,padding:0}} className="h-screen w-screen overflow-hidden bg-[#f8fafc] flex flex-col font-sans text-slate-800 fixed top-0 left-0 right-0 bottom-0 z-[9999]">
@@ -470,7 +487,8 @@ export default function CRMImobiliaria() {
               <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 flex-shrink-0">
                   <Key className="w-3.5 h-3.5 text-emerald-500"/>
-                  <select disabled={isCorretor} value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className={`py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] ${isCorretor ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {/* RETIRADO O DISABLED DAQUI */}
+                  <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] text-slate-600">
                     <option value="TODOS">Todos Corretores</option>
                     {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
                   </select>
@@ -512,54 +530,57 @@ export default function CRMImobiliaria() {
                             <p className={`text-[10px] font-black uppercase tracking-widest ${isHov?'text-emerald-500':'text-slate-400'}`}>{isHov?'Solte aqui!':'Nenhum Lead'}</p>
                           </div>
                         )}
-                        {ldc.map((lead:any) => (
-                          <div key={lead.id} id={`lead-${lead.id}`} draggable onDragStart={e=>handleDragStart(e,lead.id)} onDragEnd={e=>handleDragEnd(e,lead.id)}
-                            className="bg-white border border-slate-200/80 hover:border-emerald-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative flex flex-col gap-3 flex-shrink-0 cursor-grab active:cursor-grabbing">
-                            <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg backdrop-blur-sm shadow-sm border border-slate-100">
-                              {/* NOVO BOTÃO DE AGENDA RÁPIDA */}
-                              <button onClick={()=>abrirNovaAgenda(lead.id)} title="Agendar Compromisso" className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-all"><CalendarClock className="w-3.5 h-3.5"/></button>
-                              <button onClick={()=>moverLead(lead.id,'ARQUIVADO')} title="Arquivar" className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-all"><Archive className="w-3.5 h-3.5"/></button>
-                              <button onClick={()=>abrirModalEditar(lead)} title="Editar" className="p-1.5 rounded-lg bg-emerald-50 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
-                              <button onClick={()=>excluirLead(lead.id)} title="Excluir" className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
-                            </div>
-                            <div className="flex items-center gap-3 pr-20 pointer-events-none">
-                              <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 border-2 border-white shadow-sm ${coluna.bg} ${coluna.text}`}>{getIniciais(lead.cliente_nome)}</div>
-                              <div className="overflow-hidden">
-                                <p className="font-bold text-slate-800 text-sm leading-tight truncate">{lead.cliente_nome}</p>
-                                <div className="flex items-center gap-1.5 mt-1 text-[9px] font-semibold text-slate-400">
-                                  {fotosCorretores[lead.corretor] && <img src={fotosCorretores[lead.corretor]} alt={lead.corretor} className="w-3.5 h-3.5 rounded-full object-cover border border-slate-200"/>}
-                                  <span className="font-black uppercase tracking-widest text-slate-500">{lead.corretor}</span>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1"><CalendarDays className="w-2.5 h-2.5"/>{formatarData(lead.criado_em)}</span>
+                        {ldc.map((lead:any) => {
+                          // VERIFICAÇÃO DE +24H NO ESTÁGIO INICIAL
+                          const isAtrasado = lead.estagio === 'LEAD' && isAtrasado24h(lead.criado_em);
+                          return (
+                            <div key={lead.id} id={`lead-${lead.id}`} draggable onDragStart={e=>handleDragStart(e,lead.id)} onDragEnd={e=>handleDragEnd(e,lead.id)}
+                              className={`bg-white border rounded-xl p-4 transition-all duration-200 group relative flex flex-col gap-3 flex-shrink-0 cursor-grab active:cursor-grabbing ${isAtrasado ? 'card-alerta-24h hover:border-red-400' : 'border-slate-200/80 hover:border-emerald-300 shadow-sm hover:shadow-md'}`}>
+                              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg backdrop-blur-sm shadow-sm border border-slate-100">
+                                <button onClick={()=>abrirNovaAgenda(lead.id)} title="Agendar Compromisso" className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-all"><CalendarClock className="w-3.5 h-3.5"/></button>
+                                <button onClick={()=>moverLead(lead.id,'ARQUIVADO')} title="Arquivar" className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-all"><Archive className="w-3.5 h-3.5"/></button>
+                                <button onClick={()=>abrirModalEditar(lead)} title="Editar" className="p-1.5 rounded-lg bg-emerald-50 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
+                                <button onClick={()=>excluirLead(lead.id)} title="Excluir" className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
+                              </div>
+                              <div className="flex items-center gap-3 pr-20 pointer-events-none">
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 border-2 border-white shadow-sm ${coluna.bg} ${coluna.text}`}>{getIniciais(lead.cliente_nome)}</div>
+                                <div className="overflow-hidden">
+                                  <p className="font-bold text-slate-800 text-sm leading-tight truncate">{lead.cliente_nome}</p>
+                                  <div className="flex items-center gap-1.5 mt-1 text-[9px] font-semibold text-slate-400">
+                                    {fotosCorretores[lead.corretor] && <img src={fotosCorretores[lead.corretor]} alt={lead.corretor} className="w-3.5 h-3.5 rounded-full object-cover border border-slate-200"/>}
+                                    <span className="font-black uppercase tracking-widest text-slate-500">{lead.corretor}</span>
+                                    <span>•</span>
+                                    <span className={`flex items-center gap-1 ${isAtrasado ? 'text-red-500 font-bold' : ''}`}><CalendarDays className="w-2.5 h-2.5"/>{formatarData(lead.criado_em)}</span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            {lead.telefone && (
-                              <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 pointer-events-none">
-                                <Phone className="w-3 h-3 text-slate-400 flex-shrink-0"/><span className="truncate">{lead.telefone}</span>
+                              {lead.telefone && (
+                                <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 pointer-events-none">
+                                  <Phone className="w-3 h-3 text-slate-400 flex-shrink-0"/><span className="truncate">{lead.telefone}</span>
+                                </div>
+                              )}
+                              <div className="flex flex-col gap-2 pointer-events-none">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 ${lead.tipo_negocio==='Venda'?'bg-emerald-50 text-emerald-600':'bg-violet-50 text-violet-600'}`}>{lead.tipo_negocio}</span>
+                                  <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 bg-slate-100 text-slate-500 border border-slate-200/60">
+                                    <Home className="w-3 h-3 text-slate-400"/> {lead.categoria_imovel||'Indefinido'}
+                                  </span>
+                                </div>
+                                {lead.interesse && (
+                                  <div className="text-[10px] font-semibold text-slate-600 truncate flex items-center gap-1.5 bg-slate-50/50 border border-slate-100 px-2.5 py-1.5 rounded-lg w-full">
+                                    <Building className="w-3.5 h-3.5 text-slate-400 flex-shrink-0"/><span className="truncate block w-full">{lead.interesse}</span>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            <div className="flex flex-col gap-2 pointer-events-none">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 ${lead.tipo_negocio==='Venda'?'bg-emerald-50 text-emerald-600':'bg-violet-50 text-violet-600'}`}>{lead.tipo_negocio}</span>
-                                <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex-shrink-0 bg-slate-100 text-slate-500 border border-slate-200/60">
-                                  <Home className="w-3 h-3 text-slate-400"/> {lead.categoria_imovel||'Indefinido'}
-                                </span>
-                              </div>
-                              {lead.interesse && (
-                                <div className="text-[10px] font-semibold text-slate-600 truncate flex items-center gap-1.5 bg-slate-50/50 border border-slate-100 px-2.5 py-1.5 rounded-lg w-full">
-                                  <Building className="w-3.5 h-3.5 text-slate-400 flex-shrink-0"/><span className="truncate block w-full">{lead.interesse}</span>
+                              {Number(lead.valor_estimado||0)>0 && (
+                                <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1 pointer-events-none">
+                                  <span className="text-[9px] uppercase tracking-widest font-bold text-slate-400">Potencial</span>
+                                  <span className="font-black text-emerald-600 text-sm tracking-tight">R$ {Number(lead.valor_estimado).toLocaleString("pt-BR")}</span>
                                 </div>
                               )}
                             </div>
-                            {Number(lead.valor_estimado||0)>0 && (
-                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1 pointer-events-none">
-                                <span className="text-[9px] uppercase tracking-widest font-bold text-slate-400">Potencial</span>
-                                <span className="font-black text-emerald-600 text-sm tracking-tight">R$ {Number(lead.valor_estimado).toLocaleString("pt-BR")}</span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   );
@@ -634,7 +655,8 @@ export default function CRMImobiliaria() {
                  <div className="flex items-center gap-3 w-full md:w-auto">
                     <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2 w-full md:w-auto">
                       <Users className="w-4 h-4 text-slate-400"/>
-                      <select disabled={isCorretor} value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className={`bg-transparent w-full text-xs font-bold outline-none cursor-pointer ${isCorretor ? 'text-slate-400' : 'text-slate-700'}`}>
+                      {/* RETIRADO O DISABLED DAQUI */}
+                      <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="bg-transparent w-full text-xs font-bold outline-none cursor-pointer text-slate-700">
                         <option value="TODOS">Visão Geral da Imobiliária</option>
                         {corretores.map(c=><option key={c} value={c}>Compromissos: {c}</option>)}
                       </select>
@@ -963,7 +985,8 @@ export default function CRMImobiliaria() {
                 </div>
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 shrink-0">
                   <Key className="w-3.5 h-3.5 text-violet-500"/>
-                  <select disabled={isCorretor} value={filtroCorretorProp} onChange={e=>setFiltroCorretorProp(e.target.value)} className={`py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] ${isCorretor ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {/* RETIRADO O DISABLED DAQUI */}
+                  <select value={filtroCorretorProp} onChange={e=>setFiltroCorretorProp(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] text-slate-600">
                     <option value="TODOS">Todos Corretores</option>
                     {CORRETORES_LIST.filter(c=>c!=="Não Atribuído").map(c=><option key={c}>{c}</option>)}
                   </select>
@@ -1001,48 +1024,53 @@ export default function CRMImobiliaria() {
                             <p className={`text-[9px] font-black uppercase tracking-widest ${isHov?col.text:'text-slate-400'}`}>{isHov?'Solte aqui!':'Nenhum imóvel'}</p>
                           </div>
                         )}
-                        {cards.map(prop=>(
-                          <div key={prop.id} id={`prop-${prop.id}`} draggable
-                            onDragStart={e=>onDragStartProp(e,prop.id)} onDragEnd={e=>onDragEndProp(e,prop.id)}
-                            className="bg-white border border-slate-200/80 hover:border-orange-300 rounded-xl p-3.5 shadow-sm hover:shadow-md transition-all group relative flex flex-col gap-2.5 cursor-grab active:cursor-grabbing shrink-0">
-                            {/* Ações hover */}
-                            <div className="absolute top-2.5 right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg shadow-sm border border-slate-100">
-                              {prop.link_anuncio&&<a href={prop.link_anuncio} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg bg-blue-50 text-blue-400 hover:text-blue-700 hover:bg-blue-100 transition-all"><ExternalLink className="w-3.5 h-3.5"/></a>}
-                              <button onClick={()=>abrirModalPropEditar(prop)} className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
-                              <button onClick={()=>excluirProp(prop.id)} className="p-1.5 rounded-lg bg-red-50 text-red-300 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
-                            </div>
-                            {/* Nome + data */}
-                            <div className="flex items-center gap-2.5 pr-20 pointer-events-none">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 border-2 border-white shadow-sm ${col.bg} ${col.text}`}>{getIniciais(prop.nome_proprietario)}</div>
-                              <div className="overflow-hidden">
-                                <p className="font-bold text-slate-800 text-sm leading-tight truncate">{prop.nome_proprietario}</p>
-                                <p className="text-[9px] font-semibold text-slate-400 flex items-center gap-1 mt-0.5">
-                                  <Calendar className="w-2.5 h-2.5"/> {formatarData(prop.criado_em)}
-                                  {prop.corretor&&prop.corretor!=="Não Atribuído"&&<><span>·</span><span className="font-black text-slate-500">{prop.corretor}</span></>}
-                                </p>
+                        {cards.map(prop=> {
+                          // VERIFICAÇÃO DE +24H NO ESTÁGIO INICIAL
+                          const isAtrasado = prop.estagio === 'NOVO' && isAtrasado24h(prop.criado_em);
+                          return (
+                            <div key={prop.id} id={`prop-${prop.id}`} draggable
+                              onDragStart={e=>onDragStartProp(e,prop.id)} onDragEnd={e=>onDragEndProp(e,prop.id)}
+                              className={`bg-white border rounded-xl p-3.5 transition-all group relative flex flex-col gap-2.5 cursor-grab active:cursor-grabbing shrink-0 ${isAtrasado ? 'card-alerta-24h hover:border-red-400' : 'border-slate-200/80 hover:border-orange-300 shadow-sm hover:shadow-md'}`}>
+                              {/* Ações hover */}
+                              <div className="absolute top-2.5 right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg shadow-sm border border-slate-100">
+                                {prop.link_anuncio&&<a href={prop.link_anuncio} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg bg-blue-50 text-blue-400 hover:text-blue-700 hover:bg-blue-100 transition-all"><ExternalLink className="w-3.5 h-3.5"/></a>}
+                                <button onClick={()=>abrirModalPropEditar(prop)} className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
+                                <button onClick={()=>excluirProp(prop.id)} className="p-1.5 rounded-lg bg-red-50 text-red-300 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
                               </div>
-                            </div>
-                            {/* Tipo */}
-                            <div className="flex items-center gap-1.5 pointer-events-none flex-wrap">
-                              <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${prop.tipo_anuncio==="Venda"?'bg-emerald-50 text-emerald-600':prop.tipo_anuncio==="Aluguel"?'bg-violet-50 text-violet-600':'bg-slate-100 text-slate-500'}`}>
-                                {prop.tipo_anuncio==="Venda"?"🏡":prop.tipo_anuncio==="Aluguel"?"🔑":"❓"} {prop.tipo_anuncio}
-                              </span>
-                              <span className="text-[9px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">{prop.origem}</span>
-                            </div>
-                            {/* Título */}
-                            {prop.titulo_imovel&&<div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-lg pointer-events-none"><Home className="w-3 h-3 text-slate-400 shrink-0"/><span className="text-[11px] font-semibold text-slate-600 truncate">{prop.titulo_imovel}</span></div>}
-                            {/* Preço + Local */}
-                            {(prop.preco_anuncio||prop.localizacao)&&(
-                              <div className="flex items-center gap-2 pointer-events-none flex-wrap">
-                                {prop.preco_anuncio&&<span className="font-black text-emerald-600 text-sm tracking-tight">{prop.preco_anuncio}</span>}
-                                {prop.localizacao&&<span className="text-[10px] text-slate-400 flex items-center gap-1 font-semibold"><MapPin className="w-2.5 h-2.5"/> {prop.localizacao}</span>}
+                              {/* Nome + data */}
+                              <div className="flex items-center gap-2.5 pr-20 pointer-events-none">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 border-2 border-white shadow-sm ${col.bg} ${col.text}`}>{getIniciais(prop.nome_proprietario)}</div>
+                                <div className="overflow-hidden">
+                                  <p className="font-bold text-slate-800 text-sm leading-tight truncate">{prop.nome_proprietario}</p>
+                                  <p className="text-[9px] font-semibold text-slate-400 flex items-center gap-1 mt-0.5">
+                                    <Calendar className={`w-2.5 h-2.5 ${isAtrasado ? 'text-red-400' : ''}`}/> 
+                                    <span className={isAtrasado ? 'text-red-500 font-bold' : ''}>{formatarData(prop.criado_em)}</span>
+                                    {prop.corretor&&prop.corretor!=="Não Atribuído"&&<><span>·</span><span className="font-black text-slate-500">{prop.corretor}</span></>}
+                                  </p>
+                                </div>
                               </div>
-                            )}
-                            {/* Telefone */}
-                            {prop.telefone&&<div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 pointer-events-none"><Phone className="w-3 h-3 text-slate-400 shrink-0"/><span>{prop.telefone}</span></div>}
-                            
-                          </div>
-                        ))}
+                              {/* Tipo */}
+                              <div className="flex items-center gap-1.5 pointer-events-none flex-wrap">
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${prop.tipo_anuncio==="Venda"?'bg-emerald-50 text-emerald-600':prop.tipo_anuncio==="Aluguel"?'bg-violet-50 text-violet-600':'bg-slate-100 text-slate-500'}`}>
+                                  {prop.tipo_anuncio==="Venda"?"🏡":prop.tipo_anuncio==="Aluguel"?"🔑":"❓"} {prop.tipo_anuncio}
+                                </span>
+                                <span className="text-[9px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">{prop.origem}</span>
+                              </div>
+                              {/* Título */}
+                              {prop.titulo_imovel&&<div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-lg pointer-events-none"><Home className="w-3 h-3 text-slate-400 shrink-0"/><span className="text-[11px] font-semibold text-slate-600 truncate">{prop.titulo_imovel}</span></div>}
+                              {/* Preço + Local */}
+                              {(prop.preco_anuncio||prop.localizacao)&&(
+                                <div className="flex items-center gap-2 pointer-events-none flex-wrap">
+                                  {prop.preco_anuncio&&<span className="font-black text-emerald-600 text-sm tracking-tight">{prop.preco_anuncio}</span>}
+                                  {prop.localizacao&&<span className="text-[10px] text-slate-400 flex items-center gap-1 font-semibold"><MapPin className="w-2.5 h-2.5"/> {prop.localizacao}</span>}
+                                </div>
+                              )}
+                              {/* Telefone */}
+                              {prop.telefone&&<div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 pointer-events-none"><Phone className="w-3 h-3 text-slate-400 shrink-0"/><span>{prop.telefone}</span></div>}
+                              
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   );
@@ -1127,7 +1155,8 @@ export default function CRMImobiliaria() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Corretor Responsável</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-blue-500 shrink-0"/>
-                      <select disabled={isCorretor} value={formAgenda.corretor||"André"} onChange={e=>setFormAgenda({...formAgenda, corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer ${isCorretor ? 'text-slate-400' : 'text-slate-700'}`}>
+                      {/* AQUI NÃO TRAVAMOS MAIS O DISABLED PARA PODER AGENDAR PARA OUTROS */}
+                      <select value={formAgenda.corretor||"André"} onChange={e=>setFormAgenda({...formAgenda, corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer text-slate-700`}>
                         {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
@@ -1246,7 +1275,8 @@ export default function CRMImobiliaria() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor Responsável</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 flex-shrink-0"/>
-                      <select disabled={isCorretor} value={form.corretor||"André"} className={`w-full py-3 bg-transparent outline-none font-semibold text-sm cursor-pointer ${isCorretor ? 'text-slate-400' : 'text-slate-700'}`} onChange={e=>setForm({...form,corretor:e.target.value})}>
+                      {/* AQUI NÃO TRAVAMOS MAIS O DISABLED */}
+                      <select value={form.corretor||"André"} className={`w-full py-3 bg-transparent outline-none font-semibold text-sm cursor-pointer text-slate-700`} onChange={e=>setForm({...form,corretor:e.target.value})}>
                         {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
@@ -1350,7 +1380,8 @@ export default function CRMImobiliaria() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-orange-400 rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 shrink-0"/>
-                      <select disabled={isCorretor} value={formProp.corretor||"Não Atribuído"} onChange={e=>setFormProp({...formProp,corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer ${isCorretor ? 'text-slate-400' : 'text-slate-700'}`}>
+                      {/* AQUI NÃO TRAVAMOS MAIS O DISABLED */}
+                      <select value={formProp.corretor||"Não Atribuído"} onChange={e=>setFormProp({...formProp,corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer text-slate-700`}>
                         {CORRETORES_LIST.map(c=><option key={c}>{c}</option>)}
                       </select>
                     </div>
@@ -1390,5 +1421,16 @@ export default function CRMImobiliaria() {
 
       </div>
     </>
+  );
+}
+
+// ================================================================
+// EXPORTAÇÃO PRINCIPAL ENVOLVIDA NO PROVIDER (RESOLVE O ERRO DE SESSÃO)
+// ================================================================
+export default function CRMImobiliaria() {
+  return (
+    <SessionProvider>
+      <CRMContent />
+    </SessionProvider>
   );
 }
