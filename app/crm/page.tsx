@@ -829,15 +829,7 @@ export default function CRMImobiliaria() {
                             )}
                             {/* Telefone */}
                             {prop.telefone&&<div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 pointer-events-none"><Phone className="w-3 h-3 text-slate-400 shrink-0"/><span>{prop.telefone}</span></div>}
-                            {/* Mover rápido */}
-                            <div className="flex gap-1.5 pt-1 border-t border-slate-100">
-                              {ESTAGIOS_CAPTACAO.filter(e=>e.id!==prop.estagio).slice(0,2).map(e=>(
-                                <button key={e.id} onClick={()=>moverProp(prop.id,e.id)}
-                                  className={`flex-1 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all hover:scale-105 ${e.badge}`}>
-                                  {e.nome.replace(" ✓","")}
-                                </button>
-                              ))}
-                            </div>
+                            
                           </div>
                         ))}
                       </div>
