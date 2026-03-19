@@ -8,7 +8,8 @@ import {
   Calendar, Building, AlignLeft, CalendarDays,
   TrendingUp, LayoutDashboard, Filter, Users,
   Tag, Target, Key, Edit2, Search, Globe, ChevronDown, Award, Activity, Archive, RefreshCcw, Home,
-  MapPin, ExternalLink, AlertCircle, XCircle, Bell, CalendarClock, PhoneCall, ListTodo
+  MapPin, ExternalLink, AlertCircle, XCircle, Bell, CalendarClock, ListTodo,
+  Image as ImageIcon
 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,9 +30,9 @@ interface DashboardKPIs { geral: KPIGroup; venda: KPIGroup; aluguel: KPIGroup; }
 interface Proprietario {
   id: number; nome_proprietario: string; telefone?: string;
   titulo_imovel?: string; preco_anuncio?: string; localizacao?: string;
-  descricao?: string; link_anuncio?: string; tipo_anuncio: string;
+  descricao?: string; link_anuncio?: string; link_anuncio_2?: string; tipo_anuncio: string;
   origem: string; estagio: string; corretor: string;
-  observacoes?: string; criado_em: string;
+  observacoes?: string; criado_em: string; fotos?: string[];
 }
 interface AgendaItem {
   id: number; titulo: string; descricao: string; data_hora: string; 
@@ -42,8 +43,11 @@ interface AgendaItem {
 // CONSTANTES GLOBAIS
 // ================================================================
 const fotosCorretores: Record<string, string> = {
-  "André": "/foto andre.jpeg", "Anna": "/foto anna.jpeg",
-  "Claudinei": "/foto claudinei.jpg", "Jessica": "/foto jessica.jpeg",
+  "André": "/foto andre.jpeg", 
+  "Anna": "/foto anna.jpeg",
+  "Barbara": "/foto barbara.jpeg",
+  "Claudinei": "/foto claudinei.jpg", 
+  "Jessica": "/foto jessica.jpeg",
   "Luane": "/foto luane.jpeg"
 };
 
@@ -52,7 +56,7 @@ const categoriasDeImoveis = [
   "Comercial","Sítio / Chácara","Galpão","Sobrado"
 ];
 
-const CORRETORES_LIST = ["André","Anna","Claudinei","Jessica","Luane","Não Atribuído"];
+const CORRETORES_LIST = ["André","Anna","Barbara","Claudinei","Jessica","Luane","Não Atribuído"];
 
 const ESTAGIOS_CAPTACAO = [
   { id:"NOVO", nome:"Novos Anúncios", cor:"from-sky-500 to-sky-600", bg:"bg-sky-50", text:"text-sky-700", badge:"bg-sky-100 text-sky-700", border:"border-sky-200", icon:<AlertCircle className="w-4 h-4 text-sky-500"/>, desc:"Capturados, aguardando contato" },
@@ -63,7 +67,7 @@ const ESTAGIOS_CAPTACAO = [
 ] as const;
 
 const FORM_PROP_VAZIO: Partial<Proprietario> = {
-  estagio:"NOVO", tipo_anuncio:"Venda", corretor:"André", origem:"Facebook Marketplace"
+  estagio:"NOVO", tipo_anuncio:"Venda", corretor:"André", origem:"Redes Sociais", fotos: []
 };
 
 // ================================================================
@@ -84,11 +88,10 @@ const formatarMesAno = (d: string) => {
 const isToday = (d: string) => { const date = new Date(d); const today = new Date(); return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear(); };
 const isPast = (d: string) => new Date(d).getTime() < new Date().getTime() && !isToday(d);
 
-// Helper para verificar se algo está há mais de 24h na base
 const isAtrasado24h = (dataString: string) => {
   if (!dataString) return false;
   const diff = new Date().getTime() - new Date(dataString).getTime();
-  return diff > 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+  return diff > 24 * 60 * 60 * 1000;
 };
 
 // ================================================================
@@ -147,7 +150,12 @@ function CRMContent() {
   const [showResumoDia, setShowResumoDia] = useState<boolean>(false);
   const [resumoJaVisto, setResumoJaVisto] = useState<boolean>(false);
 
-  const corretores: string[] = ["André","Anna","Claudinei","Jessica","Luane"];
+  // ── ESTADO DO VISUALIZADOR DE FOTOS (LIGHTBOX) ──
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const corretores: string[] = ["André","Anna","Barbara","Claudinei","Jessica","Luane"];
 
   const estagios: Estagio[] = [
     { id:"LEAD", nome:"Novos Contatos", cor:"from-blue-500 to-blue-600", border:"border-blue-200", text:"text-blue-700", bg:"bg-blue-50", badge:"bg-blue-100 text-blue-700", icone:<User className="w-4 h-4 text-blue-500"/> },
@@ -157,7 +165,7 @@ function CRMContent() {
     { id:"FECHADO", nome:"Negócio Fechado", cor:"from-emerald-500 to-emerald-600", border:"border-emerald-200", text:"text-emerald-700", bg:"bg-emerald-50", badge:"bg-emerald-100 text-emerald-700", icone:<CheckCircle className="w-4 h-4 text-emerald-600"/> },
   ];
 
-  // ── SETA O FILTRO INICIAL PARA O NOME DO CORRETOR (MAS PERMITE MUDAR DEPOIS) ──
+  // ── Configura o Filtro Inicial pelo Nome do Usuário ──
   useEffect(() => {
     if (isCorretor && userName !== "TODOS") {
       setFiltroCorretorKanban(userName);
@@ -166,7 +174,6 @@ function CRMContent() {
     }
   }, [isCorretor, userName]);
 
-  // ── Carregar dados ──
   const carregarDados = async () => {
     try {
       const [resLeads, resImoveis, resProps, resAgenda] = await Promise.all([
@@ -184,123 +191,80 @@ function CRMContent() {
     } catch(e){ console.error(e); } finally { setLoading(false); }
   };
   
-  const carregarLeads = async () => { 
-    const r = await fetch("/api/admin/crm"); 
-    const data = await r.json();
-    setLeads(Array.isArray(data) ? data : []); 
-  };
-  
-  const carregarProprietarios = async () => { 
-    const r = await fetch("/api/admin/proprietarios"); 
-    const data = await r.json();
-    setProprietarios(Array.isArray(data) ? data : []); 
-  };
-
-  const carregarAgenda = async () => {
-    const r = await fetch("/api/admin/agenda");
-    const data = await r.json();
-    setAgenda(Array.isArray(data) ? data : []);
-  }
+  const carregarLeads = async () => { const r = await fetch("/api/admin/crm"); const data = await r.json(); setLeads(Array.isArray(data) ? data : []); };
+  const carregarProprietarios = async () => { const r = await fetch("/api/admin/proprietarios"); const data = await r.json(); setProprietarios(Array.isArray(data) ? data : []); };
+  const carregarAgenda = async () => { const r = await fetch("/api/admin/agenda"); const data = await r.json(); setAgenda(Array.isArray(data) ? data : []); }
   
   useEffect(() => { carregarDados(); }, []);
 
-  // Mostra o resumo do dia logo após carregar os dados (uma vez por acesso)
   useEffect(() => {
     if (!loading && agenda.length > 0 && !resumoJaVisto) {
       const compromissosHoje = agenda.filter(a => isToday(a.data_hora) && a.status === 'Pendente' && (userName === 'TODOS' || a.corretor === userName));
-      if (compromissosHoje.length > 0) {
-        setShowResumoDia(true);
-      }
+      if (compromissosHoje.length > 0) setShowResumoDia(true);
       setResumoJaVisto(true);
     }
   }, [loading, agenda, resumoJaVisto, userName]);
 
-  // ── CRM: ações ──
+  // ── CRM Ações ──
   const abrirModalNovo = () => { setIsEditing(false); setForm({ estagio:"LEAD", tipo_negocio:"Venda", corretor: isCorretor ? userName : "André", origem:"WhatsApp", interesse:"", categoria_imovel:"Indefinido" }); setModal(true); setShowImoveisList(false); };
   const abrirModalEditar = (lead: any) => { setIsEditing(true); setForm(lead); setModal(true); setShowImoveisList(false); };
-  const handleSalvar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await fetch("/api/admin/crm", { method: isEditing?"PUT":"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(form) });
-    setModal(false); setIsEditing(false); carregarLeads();
-  };
-  const moverLead = async (id: number, novoEstagio: string) => {
-    setLeads(leads.map(l => l.id===id ? {...l,estagio:novoEstagio} : l));
-    await fetch("/api/admin/crm", { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id,estagio:novoEstagio}) });
-  };
-  const excluirLead = async (id: number) => {
-    if(!confirm("Excluir esta negociação permanentemente?")) return;
-    await fetch(`/api/admin/crm?id=${id}`,{method:"DELETE"}); carregarLeads();
-  };
+  const handleSalvar = async (e: React.FormEvent) => { e.preventDefault(); await fetch("/api/admin/crm", { method: isEditing?"PUT":"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(form) }); setModal(false); setIsEditing(false); carregarLeads(); };
+  const moverLead = async (id: number, novoEstagio: string) => { setLeads(leads.map(l => l.id===id ? {...l,estagio:novoEstagio} : l)); await fetch("/api/admin/crm", { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id,estagio:novoEstagio}) }); };
+  const excluirLead = async (id: number) => { if(!confirm("Excluir negociação permanentemente?")) return; await fetch(`/api/admin/crm?id=${id}`,{method:"DELETE"}); carregarLeads(); };
 
-  // ── CRM: drag & drop ──
-  const handleDragStart = (e: React.DragEvent, leadId: number) => {
-    setDraggedLeadId(leadId); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",leadId.toString());
-    setTimeout(() => { const el=document.getElementById(`lead-${leadId}`); if(el) el.style.opacity='0.5'; },0);
-  };
-  const handleDragEnd = (e: React.DragEvent, leadId: number) => {
-    setDraggedLeadId(null); setDraggedOverCol(null);
-    const el=document.getElementById(`lead-${leadId}`); if(el) el.style.opacity='1';
-  };
+  // ── Drag & Drop Leads ──
+  const handleDragStart = (e: React.DragEvent, leadId: number) => { setDraggedLeadId(leadId); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",leadId.toString()); setTimeout(() => { const el=document.getElementById(`lead-${leadId}`); if(el) el.style.opacity='0.5'; },0); };
+  const handleDragEnd = (e: React.DragEvent, leadId: number) => { setDraggedLeadId(null); setDraggedOverCol(null); const el=document.getElementById(`lead-${leadId}`); if(el) el.style.opacity='1'; };
   const handleDragOver = (e: React.DragEvent, colId: string) => { e.preventDefault(); e.dataTransfer.dropEffect="move"; if(draggedOverCol!==colId) setDraggedOverCol(colId); };
   const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setDraggedOverCol(null); };
-  const handleDrop = async (e: React.DragEvent, colId: string) => {
-    e.preventDefault(); setDraggedOverCol(null);
-    if(draggedLeadId) { const l=leads.find(x=>x.id===draggedLeadId); if(l&&l.estagio!==colId) moverLead(draggedLeadId,colId); }
-    setDraggedLeadId(null);
+  const handleDrop = async (e: React.DragEvent, colId: string) => { e.preventDefault(); setDraggedOverCol(null); if(draggedLeadId) { const l=leads.find(x=>x.id===draggedLeadId); if(l&&l.estagio!==colId) moverLead(draggedLeadId,colId); } setDraggedLeadId(null); };
+
+  // ── Captação Ações ──
+  const abrirModalPropNovo = () => { setEditandoProp(false); setFormProp({ ...FORM_PROP_VAZIO, corretor: isCorretor ? userName : "André", fotos: [] }); setModalProp(true); };
+  const abrirModalPropEditar = (p: Proprietario) => { setEditandoProp(true); setFormProp({ ...p, fotos: p.fotos || [] }); setModalProp(true); };
+  const salvarProp = async (e: React.FormEvent) => { e.preventDefault(); await fetch("/api/admin/proprietarios", { method: editandoProp?"PUT":"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formProp) }); setModalProp(false); carregarProprietarios(); };
+  const excluirProp = async (id: number) => { if(!confirm("Excluir este proprietário?")) return; await fetch(`/api/admin/proprietarios?id=${id}`,{method:"DELETE"}); carregarProprietarios(); };
+  const moverProp = async (id: number, novoEstagio: string) => { setProprietarios(prev => prev.map(p => p.id===id ? {...p,estagio:novoEstagio} : p)); await fetch("/api/admin/proprietarios", { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id,estagio:novoEstagio}) }); };
+
+  // ── Handling Arquivos de Fotos (Captação) ──
+  const handleFotosChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    const currentCount = formProp.fotos?.length || 0;
+    const allowedNew = 3 - currentCount;
+    const filesToProcess = files.slice(0, allowedNew);
+
+    const base64Promises = filesToProcess.map(f => new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(f);
+    }));
+
+    const base64Files = await Promise.all(base64Promises);
+    setFormProp(prev => ({ ...prev, fotos: [...(prev.fotos || []), ...base64Files] }));
+  };
+  const removerFoto = (indexToRemove: number) => {
+    setFormProp(prev => ({ ...prev, fotos: (prev.fotos || []).filter((_, i) => i !== indexToRemove) }));
   };
 
-  // ── Captação: ações ──
-  const abrirModalPropNovo = () => { setEditandoProp(false); setFormProp({ ...FORM_PROP_VAZIO, corretor: isCorretor ? userName : "André" }); setModalProp(true); };
-  const abrirModalPropEditar = (p: Proprietario) => { setEditandoProp(true); setFormProp(p); setModalProp(true); };
-  const salvarProp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await fetch("/api/admin/proprietarios", { method: editandoProp?"PUT":"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formProp) });
-    setModalProp(false); carregarProprietarios();
-  };
-  const excluirProp = async (id: number) => {
-    if(!confirm("Excluir este proprietário?")) return;
-    await fetch(`/api/admin/proprietarios?id=${id}`,{method:"DELETE"}); carregarProprietarios();
-  };
-  const moverProp = async (id: number, novoEstagio: string) => {
-    setProprietarios(prev => prev.map(p => p.id===id ? {...p,estagio:novoEstagio} : p));
-    await fetch("/api/admin/proprietarios", { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id,estagio:novoEstagio}) });
+  const openLightbox = (fotos: string[]) => {
+    if (!fotos || fotos.length === 0) return;
+    setLightboxImages(fotos);
+    setLightboxIndex(0);
+    setLightboxOpen(true);
   };
 
-  // ── Captação: drag & drop ──
-  const onDragStartProp = (e: React.DragEvent, id: number) => {
-    setDragPropId(id); e.dataTransfer.setData("text/plain",id.toString());
-    setTimeout(()=>{ const el=document.getElementById(`prop-${id}`); if(el) el.style.opacity='0.4'; },0);
-  };
-  const onDragEndProp = (e: React.DragEvent, id: number) => {
-    setDragPropId(null); setDragPropCol(null);
-    const el=document.getElementById(`prop-${id}`); if(el) el.style.opacity='1';
-  };
-  const onDropProp = (e: React.DragEvent, colId: string) => {
-    e.preventDefault(); setDragPropCol(null);
-    if(dragPropId){ const p=proprietarios.find(x=>x.id===dragPropId); if(p&&p.estagio!==colId) moverProp(dragPropId,colId); }
-    setDragPropId(null);
-  };
+  // ── Drag & Drop Proprietários ──
+  const onDragStartProp = (e: React.DragEvent, id: number) => { setDragPropId(id); e.dataTransfer.setData("text/plain",id.toString()); setTimeout(()=>{ const el=document.getElementById(`prop-${id}`); if(el) el.style.opacity='0.4'; },0); };
+  const onDragEndProp = (e: React.DragEvent, id: number) => { setDragPropId(null); setDragPropCol(null); const el=document.getElementById(`prop-${id}`); if(el) el.style.opacity='1'; };
+  const onDropProp = (e: React.DragEvent, colId: string) => { e.preventDefault(); setDragPropCol(null); if(dragPropId){ const p=proprietarios.find(x=>x.id===dragPropId); if(p&&p.estagio!==colId) moverProp(dragPropId,colId); } setDragPropId(null); };
 
-  // ── Agenda: ações ──
-  const abrirNovaAgenda = (leadId?: number) => {
-    setFormAgenda({ tipo: 'Visita', status: 'Pendente', corretor: isCorretor ? userName : 'André', lead_id: leadId, data_hora: new Date().toISOString().slice(0,16) });
-    setModalAgenda(true);
-  };
-  const salvarAgenda = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await fetch("/api/admin/agenda", { method: "POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formAgenda) });
-    setModalAgenda(false);
-    carregarAgenda();
-  };
-  const alterarStatusAgenda = async (id: number, status: string) => {
-    setAgenda(agenda.map(a => a.id === id ? { ...a, status } : a));
-    await fetch("/api/admin/agenda", { method: "PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id, status}) });
-  };
-  const excluirAgenda = async (id: number) => {
-    if(!confirm("Cancelar compromisso?")) return;
-    await fetch(`/api/admin/agenda?id=${id}`,{method:"DELETE"});
-    setAgenda(agenda.filter(a => a.id !== id));
-  };
+  // ── Agenda Ações ──
+  const abrirNovaAgenda = (leadId?: number) => { setFormAgenda({ tipo: 'Visita', status: 'Pendente', corretor: isCorretor ? userName : 'André', lead_id: leadId, data_hora: new Date().toISOString().slice(0,16) }); setModalAgenda(true); };
+  const salvarAgenda = async (e: React.FormEvent) => { e.preventDefault(); await fetch("/api/admin/agenda", { method: "POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formAgenda) }); setModalAgenda(false); carregarAgenda(); };
+  const alterarStatusAgenda = async (id: number, status: string) => { setAgenda(agenda.map(a => a.id === id ? { ...a, status } : a)); await fetch("/api/admin/agenda", { method: "PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id, status}) }); };
+  const excluirAgenda = async (id: number) => { if(!confirm("Cancelar compromisso?")) return; await fetch(`/api/admin/agenda?id=${id}`,{method:"DELETE"}); setAgenda(agenda.filter(a => a.id !== id)); };
 
   // ── Filtros Kanban ──
   const leadsKanban = useMemo(() => leads.filter((l:any) => {
@@ -487,7 +451,6 @@ function CRMContent() {
               <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 flex-shrink-0">
                   <Key className="w-3.5 h-3.5 text-emerald-500"/>
-                  {/* RETIRADO O DISABLED DAQUI */}
                   <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] text-slate-600">
                     <option value="TODOS">Todos Corretores</option>
                     {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
@@ -642,7 +605,7 @@ function CRMContent() {
         )}
 
         {/* ════════════════════════════════════════════════════════
-            VISÃO AGENDA (NOVO MÓDULO DE COMPROMISSOS)
+            VISÃO AGENDA (COMPROMISSOS)
         ════════════════════════════════════════════════════════ */}
         {activeView==='AGENDA' && (
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar bg-slate-50/50 w-full relative">
@@ -655,7 +618,6 @@ function CRMContent() {
                  <div className="flex items-center gap-3 w-full md:w-auto">
                     <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2 w-full md:w-auto">
                       <Users className="w-4 h-4 text-slate-400"/>
-                      {/* RETIRADO O DISABLED DAQUI */}
                       <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="bg-transparent w-full text-xs font-bold outline-none cursor-pointer text-slate-700">
                         <option value="TODOS">Visão Geral da Imobiliária</option>
                         {corretores.map(c=><option key={c} value={c}>Compromissos: {c}</option>)}
@@ -665,7 +627,7 @@ function CRMContent() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* COLUNA 1: HOJE */}
+                {/* HOJE */}
                 <div className="animate-fade-up delay-100 bg-white rounded-[2rem] border border-blue-100 shadow-md overflow-hidden flex flex-col h-[600px]">
                   <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-4 flex justify-between items-center text-white shrink-0">
                     <h3 className="font-black flex items-center gap-2 text-lg"><Bell className="w-5 h-5"/> Para Hoje</h3>
@@ -698,7 +660,7 @@ function CRMContent() {
                   </div>
                 </div>
 
-                {/* COLUNA 2: ATRASADOS / PENDÊNCIAS */}
+                {/* ATRASADOS */}
                 <div className="animate-fade-up delay-200 bg-white rounded-[2rem] border border-red-100 shadow-md overflow-hidden flex flex-col h-[600px]">
                   <div className="bg-gradient-to-r from-red-500 to-rose-400 px-6 py-4 flex justify-between items-center text-white shrink-0">
                     <h3 className="font-black flex items-center gap-2 text-lg"><AlertCircle className="w-5 h-5"/> Atrasados</h3>
@@ -730,7 +692,7 @@ function CRMContent() {
                   </div>
                 </div>
 
-                {/* COLUNA 3: PRÓXIMOS DIAS */}
+                {/* PRÓXIMOS DIAS */}
                 <div className="animate-fade-up delay-300 bg-white rounded-[2rem] border border-emerald-100 shadow-md overflow-hidden flex flex-col h-[600px]">
                   <div className="bg-gradient-to-r from-emerald-500 to-teal-400 px-6 py-4 flex justify-between items-center text-white shrink-0">
                     <h3 className="font-black flex items-center gap-2 text-lg"><Calendar className="w-5 h-5"/> Próximos Dias</h3>
@@ -985,7 +947,6 @@ function CRMContent() {
                 </div>
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 shrink-0">
                   <Key className="w-3.5 h-3.5 text-violet-500"/>
-                  {/* RETIRADO O DISABLED DAQUI */}
                   <select value={filtroCorretorProp} onChange={e=>setFiltroCorretorProp(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] text-slate-600">
                     <option value="TODOS">Todos Corretores</option>
                     {CORRETORES_LIST.filter(c=>c!=="Não Atribuído").map(c=><option key={c}>{c}</option>)}
@@ -1025,18 +986,23 @@ function CRMContent() {
                           </div>
                         )}
                         {cards.map(prop=> {
-                          // VERIFICAÇÃO DE +24H NO ESTÁGIO INICIAL
                           const isAtrasado = prop.estagio === 'NOVO' && isAtrasado24h(prop.criado_em);
                           return (
                             <div key={prop.id} id={`prop-${prop.id}`} draggable
                               onDragStart={e=>onDragStartProp(e,prop.id)} onDragEnd={e=>onDragEndProp(e,prop.id)}
                               className={`bg-white border rounded-xl p-3.5 transition-all group relative flex flex-col gap-2.5 cursor-grab active:cursor-grabbing shrink-0 ${isAtrasado ? 'card-alerta-24h hover:border-red-400' : 'border-slate-200/80 hover:border-orange-300 shadow-sm hover:shadow-md'}`}>
-                              {/* Ações hover */}
+                              
+                              {/* Ações hover - ATUALIZADO COM CÂMERA E LINKS LIVRES */}
                               <div className="absolute top-2.5 right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg shadow-sm border border-slate-100">
-                                {prop.link_anuncio&&<a href={prop.link_anuncio} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg bg-blue-50 text-blue-400 hover:text-blue-700 hover:bg-blue-100 transition-all"><ExternalLink className="w-3.5 h-3.5"/></a>}
-                                <button onClick={()=>abrirModalPropEditar(prop)} className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
-                                <button onClick={()=>excluirProp(prop.id)} className="p-1.5 rounded-lg bg-red-50 text-red-300 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
+                                {prop.fotos && prop.fotos.length > 0 && (
+                                  <button onClick={() => openLightbox(prop.fotos!)} title="Ver Fotos" className="p-1.5 rounded-lg bg-orange-50 text-orange-500 hover:text-orange-700 hover:bg-orange-100 transition-all"><ImageIcon className="w-3.5 h-3.5"/></button>
+                                )}
+                                {prop.link_anuncio&&<a href={prop.link_anuncio} target="_blank" rel="noreferrer" title="Link 1" className="p-1.5 rounded-lg bg-blue-50 text-blue-400 hover:text-blue-700 hover:bg-blue-100 transition-all"><ExternalLink className="w-3.5 h-3.5"/></a>}
+                                {prop.link_anuncio_2&&<a href={prop.link_anuncio_2} target="_blank" rel="noreferrer" title="Link 2" className="p-1.5 rounded-lg bg-indigo-50 text-indigo-400 hover:text-indigo-700 hover:bg-indigo-100 transition-all"><ExternalLink className="w-3.5 h-3.5"/></a>}
+                                <button onClick={()=>abrirModalPropEditar(prop)} title="Editar" className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button>
+                                <button onClick={()=>excluirProp(prop.id)} title="Excluir" className="p-1.5 rounded-lg bg-red-50 text-red-300 hover:text-red-600 hover:bg-red-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
                               </div>
+
                               {/* Nome + data */}
                               <div className="flex items-center gap-2.5 pr-20 pointer-events-none">
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 border-2 border-white shadow-sm ${col.bg} ${col.text}`}>{getIniciais(prop.nome_proprietario)}</div>
@@ -1049,15 +1015,23 @@ function CRMContent() {
                                   </p>
                                 </div>
                               </div>
-                              {/* Tipo */}
+
+                              {/* Tipo e Indicador de Fotos */}
                               <div className="flex items-center gap-1.5 pointer-events-none flex-wrap">
                                 <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${prop.tipo_anuncio==="Venda"?'bg-emerald-50 text-emerald-600':prop.tipo_anuncio==="Aluguel"?'bg-violet-50 text-violet-600':'bg-slate-100 text-slate-500'}`}>
                                   {prop.tipo_anuncio==="Venda"?"🏡":prop.tipo_anuncio==="Aluguel"?"🔑":"❓"} {prop.tipo_anuncio}
                                 </span>
                                 <span className="text-[9px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">{prop.origem}</span>
+                                
+                                {/* Ícone de Câmera se tiver fotos */}
+                                {prop.fotos && prop.fotos.length > 0 && (
+                                   <span className="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-100 px-2 py-1 rounded-md flex items-center gap-1"><ImageIcon className="w-3 h-3"/> {prop.fotos.length}</span>
+                                )}
                               </div>
+
                               {/* Título */}
                               {prop.titulo_imovel&&<div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-lg pointer-events-none"><Home className="w-3 h-3 text-slate-400 shrink-0"/><span className="text-[11px] font-semibold text-slate-600 truncate">{prop.titulo_imovel}</span></div>}
+                              
                               {/* Preço + Local */}
                               {(prop.preco_anuncio||prop.localizacao)&&(
                                 <div className="flex items-center gap-2 pointer-events-none flex-wrap">
@@ -1155,7 +1129,6 @@ function CRMContent() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Corretor Responsável</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-blue-500 shrink-0"/>
-                      {/* AQUI NÃO TRAVAMOS MAIS O DISABLED PARA PODER AGENDAR PARA OUTROS */}
                       <select value={formAgenda.corretor||"André"} onChange={e=>setFormAgenda({...formAgenda, corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer text-slate-700`}>
                         {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
                       </select>
@@ -1188,7 +1161,7 @@ function CRMContent() {
         )}
 
         {/* ════════════════════════════════════════════════════════
-            MODAL CRM LEADS (EXISTENTE)
+            MODAL CRM LEADS
         ════════════════════════════════════════════════════════ */}
         {modal && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[99990] flex items-center justify-center p-4" onClick={e=>{if(e.target===e.currentTarget)setModal(false);}}>
@@ -1275,7 +1248,6 @@ function CRMContent() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor Responsável</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 flex-shrink-0"/>
-                      {/* AQUI NÃO TRAVAMOS MAIS O DISABLED */}
                       <select value={form.corretor||"André"} className={`w-full py-3 bg-transparent outline-none font-semibold text-sm cursor-pointer text-slate-700`} onChange={e=>setForm({...form,corretor:e.target.value})}>
                         {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
                       </select>
@@ -1306,7 +1278,7 @@ function CRMContent() {
         )}
 
         {/* ════════════════════════════════════════════════════════
-            MODAL CAPTAÇÃO — PROPRIETÁRIOS (EXISTENTE)
+            MODAL CAPTAÇÃO — PROPRIETÁRIOS (COM UPLOAD DE FOTOS E 2 LINKS)
         ════════════════════════════════════════════════════════ */}
         {modalProp && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99990] flex items-center justify-center p-4" onClick={e=>{if(e.target===e.currentTarget)setModalProp(false);}}>
@@ -1319,6 +1291,7 @@ function CRMContent() {
                 <button type="button" onClick={()=>setModalProp(false)} className="p-2 bg-white/10 hover:bg-red-500 rounded-full text-white transition-all"><X className="w-5 h-5"/></button>
               </div>
               <div className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar">
+                
                 {/* Nome */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome do Proprietário *</label>
@@ -1327,6 +1300,35 @@ function CRMContent() {
                     <input required type="text" placeholder="Nome completo" value={formProp.nome_proprietario||""} onChange={e=>setFormProp({...formProp,nome_proprietario:e.target.value})} className="w-full py-3 bg-transparent outline-none text-sm font-semibold text-slate-700"/>
                   </div>
                 </div>
+
+                {/* UPLOAD DE FOTOS AQUI */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fotos (Máx 3) - Opcional</label>
+                  <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-orange-400 rounded-2xl px-4 py-2 transition-all">
+                    <ImageIcon className="w-4 h-4 text-slate-400 shrink-0"/>
+                    <input 
+                       type="file" 
+                       accept="image/*" 
+                       multiple 
+                       onChange={handleFotosChange} 
+                       disabled={(formProp.fotos?.length || 0) >= 3}
+                       className="text-xs text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer w-full transition-all"
+                    />
+                  </div>
+                  {formProp.fotos && formProp.fotos.length > 0 && (
+                      <div className="flex gap-3 mt-3">
+                         {formProp.fotos.map((foto, idx) => (
+                             <div key={idx} className="relative w-16 h-16 rounded-xl border border-slate-200 shadow-sm group">
+                                 <img src={foto} className="w-full h-full object-cover rounded-xl" alt="Preview"/>
+                                 <button type="button" onClick={() => removerFoto(idx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+                                     <X className="w-3 h-3" />
+                                 </button>
+                             </div>
+                         ))}
+                      </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone</label>
@@ -1380,7 +1382,6 @@ function CRMContent() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-orange-400 rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 shrink-0"/>
-                      {/* AQUI NÃO TRAVAMOS MAIS O DISABLED */}
                       <select value={formProp.corretor||"Não Atribuído"} onChange={e=>setFormProp({...formProp,corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer text-slate-700`}>
                         {CORRETORES_LIST.map(c=><option key={c}>{c}</option>)}
                       </select>
@@ -1396,13 +1397,23 @@ function CRMContent() {
                     </div>
                   </div>
                 </div>
+                
+                {/* 2 LINKS LIVRES */}
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Link do Anúncio (Facebook)</label>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Link de Referência (1)</label>
                   <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-orange-400 rounded-2xl px-4 transition-all">
                     <Globe className="w-4 h-4 text-slate-400 shrink-0"/>
-                    <input type="url" placeholder="https://facebook.com/marketplace/item/..." value={formProp.link_anuncio||""} onChange={e=>setFormProp({...formProp,link_anuncio:e.target.value})} className="w-full py-3 bg-transparent outline-none text-xs font-mono text-slate-600"/>
+                    <input type="url" placeholder="Cole o link aqui..." value={formProp.link_anuncio||""} onChange={e=>setFormProp({...formProp,link_anuncio:e.target.value})} className="w-full py-3 bg-transparent outline-none text-xs font-mono text-slate-600"/>
                   </div>
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Link de Referência (2)</label>
+                  <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-orange-400 rounded-2xl px-4 transition-all">
+                    <Globe className="w-4 h-4 text-slate-400 shrink-0"/>
+                    <input type="url" placeholder="Cole outro link aqui..." value={formProp.link_anuncio_2||""} onChange={e=>setFormProp({...formProp,link_anuncio_2:e.target.value})} className="w-full py-3 bg-transparent outline-none text-xs font-mono text-slate-600"/>
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Observações Internas</label>
                   <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-orange-400 rounded-2xl px-4 transition-all">
@@ -1419,13 +1430,52 @@ function CRMContent() {
           </div>
         )}
 
+        {/* ════════════════════════════════════════════════════════
+            LIGHTBOX DE FOTOS (VISUALIZADOR EM TELA CHEIA)
+        ════════════════════════════════════════════════════════ */}
+        {lightboxOpen && (
+            <div className="fixed inset-0 z-[999999] bg-slate-900/95 flex flex-col items-center justify-center p-4 backdrop-blur-sm" style={{animation: "modalIn .2s ease-out"}}>
+               <button onClick={() => setLightboxOpen(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors bg-white/10 p-3 rounded-full backdrop-blur-md">
+                 <X className="w-6 h-6"/>
+               </button>
+               
+               {lightboxImages.length > 1 && (
+                  <div className="absolute top-1/2 w-full max-w-5xl left-1/2 -translate-x-1/2 -translate-y-1/2 flex justify-between px-4 sm:px-8 pointer-events-none">
+                     <button onClick={() => setLightboxIndex(prev => prev === 0 ? lightboxImages.length - 1 : prev - 1)} className="text-white bg-black/40 hover:bg-black/70 p-4 rounded-full backdrop-blur-md pointer-events-auto transition-all">
+                       <ArrowLeft className="w-6 h-6"/>
+                     </button>
+                     <button onClick={() => setLightboxIndex(prev => prev === lightboxImages.length - 1 ? 0 : prev + 1)} className="text-white bg-black/40 hover:bg-black/70 p-4 rounded-full backdrop-blur-md rotate-180 pointer-events-auto transition-all">
+                       <ArrowLeft className="w-6 h-6"/>
+                     </button>
+                  </div>
+               )}
+               
+               <div className="relative">
+                 <img src={lightboxImages[lightboxIndex]} alt="Preview" className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl" />
+                 <div className="absolute top-4 left-4 bg-black/60 text-white text-[10px] font-black px-3 py-1 rounded-full backdrop-blur-md tracking-widest uppercase">
+                   {lightboxIndex + 1} / {lightboxImages.length}
+                 </div>
+               </div>
+
+               {lightboxImages.length > 1 && (
+                 <div className="mt-8 flex gap-3 bg-white/10 p-2 rounded-2xl backdrop-blur-md">
+                    {lightboxImages.map((img, idx) => (
+                        <button key={idx} onClick={() => setLightboxIndex(idx)} className={`w-16 h-16 rounded-xl border-2 transition-all ${lightboxIndex === idx ? 'border-orange-500 scale-110 shadow-lg' : 'border-transparent opacity-50 hover:opacity-100'} overflow-hidden`}>
+                            <img src={img} className="w-full h-full object-cover" alt="Thumbnail" />
+                        </button>
+                    ))}
+                 </div>
+               )}
+            </div>
+        )}
+
       </div>
     </>
   );
 }
 
 // ================================================================
-// EXPORTAÇÃO PRINCIPAL ENVOLVIDA NO PROVIDER (RESOLVE O ERRO DE SESSÃO)
+// EXPORTAÇÃO PRINCIPAL
 // ================================================================
 export default function CRMImobiliaria() {
   return (
