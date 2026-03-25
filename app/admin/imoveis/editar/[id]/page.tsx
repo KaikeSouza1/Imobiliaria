@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star, Crown } from "lucide-react";
 import Link from "next/link";
 import { PublicarRedes } from "@/components/PublicarRedes";
+import imageCompression from "browser-image-compression";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
   ssr: false,
@@ -71,13 +72,31 @@ export default function EditarImovelPage() {
     if (!files || files.length === 0) return null;
     setUploading(true);
     const data = new FormData();
-    Array.from(files).forEach((file) => data.append("file", file));
+    
     try {
+      // Comprimir no lado do cliente
+      for (const file of Array.from(files)) {
+        const options = {
+          maxSizeMB: 1, 
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+        data.append("file", compressedFile);
+      }
+
       const res = await fetch("/api/upload", { method: "POST", body: data });
+      
+      if (!res.ok) {
+        if (res.status === 413) throw new Error("A imagem continua muito grande após a compressão.");
+        throw new Error("Erro no servidor ao processar o arquivo.");
+      }
+
       const json = await res.json();
       return json.urls;
-    } catch {
-      alert("Erro no upload.");
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message || "Erro no upload.");
       return null;
     } finally {
       setUploading(false);
@@ -183,7 +202,7 @@ export default function EditarImovelPage() {
                     className="hidden"
                     onChange={async (e) => {
                       const urls = await uploadFiles(e.target.files);
-                      if (urls) setFormData((p) => ({ ...p, imagem_url: urls[0] }));
+                      if (urls && urls.length > 0) setFormData((p) => ({ ...p, imagem_url: urls[0] }));
                     }}
                   />
                 </label>

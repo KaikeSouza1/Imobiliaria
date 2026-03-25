@@ -26,20 +26,20 @@ async function otimizarComMarcaDagua(buffer: Buffer): Promise<Buffer> {
   const imagem = sharp(buffer);
   const { width = 1280, height = 960 } = await imagem.metadata();
 
-  // Redimensiona o logo para 45% da largura
-  const logoWidth = Math.round(width * 0.45);
+  // Redimensiona o logo para 25% da largura (menor e mais discreto)
+  const logoWidth = Math.round(width * 0.25);
   const logoResized = await sharp(logoBuffer)
     .resize(logoWidth)
     .ensureAlpha()
     .toBuffer();
 
-  // Aplica opacidade de 35% manipulando o canal alpha
+  // Aplica opacidade de 15% para ficar bem suave
   const { data, info } = await sharp(logoResized)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  const opacidade = 0.35;
+  const opacidade = 0.15; // Bem menos visível
   for (let i = 3; i < data.length; i += 4) {
     data[i] = Math.round(data[i] * opacidade);
   }
@@ -50,10 +50,9 @@ async function otimizarComMarcaDagua(buffer: Buffer): Promise<Buffer> {
     .png()
     .toBuffer();
 
-  const { width: lw = 0, height: lh = 0 } =
-    await sharp(logoComOpacidade).metadata();
+  const { width: lw = 0, height: lh = 0 } = await sharp(logoComOpacidade).metadata();
 
-  // Centraliza
+  // Centraliza exato no meio da foto
   const left = Math.round((width - lw) / 2);
   const top = Math.round((height - lh) / 2);
 

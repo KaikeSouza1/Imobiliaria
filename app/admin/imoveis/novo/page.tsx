@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, Star, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { PublicarRedes } from "@/components/PublicarRedes";
+import imageCompression from "browser-image-compression";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
   ssr: false,
@@ -35,15 +36,31 @@ export default function NovoImovelPage() {
     if (!files || files.length === 0) return null;
     setUploading(true);
     const data = new FormData();
-    Array.from(files).forEach(file => data.append("file", file));
+    
     try {
+      // Comprimir as imagens no lado do cliente antes de enviar para o servidor
+      for (const file of Array.from(files)) {
+        const options = {
+          maxSizeMB: 1, // Limita o tamanho do arquivo gerado para aprox 1MB
+          maxWidthOrHeight: 1920, // Resolução máxima para web
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+        data.append("file", compressedFile);
+      }
+
       const res = await fetch("/api/upload", { method: "POST", body: data });
+      
+      if (!res.ok) {
+        if (res.status === 413) throw new Error("A imagem é muito grande mesmo após a compressão.");
+        throw new Error("Erro no servidor ao processar o upload das imagens.");
+      }
+      
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Erro no upload");
       return json.urls;
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Erro ao enviar imagem.");
+      alert(error.message || "Erro ao enviar imagem.");
       return null;
     } finally {
       setUploading(false);
