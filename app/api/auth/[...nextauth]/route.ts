@@ -1,8 +1,9 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { query } from "@/lib/db";
 
-const handler = NextAuth({
+// Separamos as opções para podermos importar em outros lugares (como na API do CRM)
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -52,12 +53,14 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as any).role;
+        token.name = user.name;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).role = token.role;
+        session.user.name = token.name;
       }
       return session;
     }
@@ -66,6 +69,8 @@ const handler = NextAuth({
     signIn: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

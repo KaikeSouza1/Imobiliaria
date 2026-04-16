@@ -1,18 +1,41 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function GET(req: Request) {
+  // Verifica a sessão atual logada
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const action = searchParams.get("action");
+  
+  const userRole = (session.user as any).role;
+  const userName = session.user?.name;
+
+  // Monta os filtros de segurança baseado no papel do usuário
+  let baseCondition = "WHERE estagio != 'ARQUIVADO'";
+  let params: any[] = [];
+  let listCondition = "";
+
+  if (userRole === "corretor") {
+     baseCondition += " AND corretor = $1";
+     listCondition = "WHERE corretor = $1";
+     params.push(userName);
+  }
 
   try {
     if (action === "relatorios") {
       const funilRes = await query(`
         SELECT estagio, COUNT(*) as qtd, COALESCE(SUM(valor_estimado), 0) as valor
         FROM crm_leads
-        WHERE estagio != 'ARQUIVADO'
+        ${baseCondition}
         GROUP BY estagio
-      `);
+      `, params);
       
       const kpiRes = await query(`
         SELECT 
@@ -23,8 +46,8 @@ export async function GET(req: Request) {
           COALESCE(MAX(CASE WHEN estagio = 'FECHADO' THEN valor_estimado ELSE 0 END), 0) as maior_venda,
           COALESCE(SUM(CASE WHEN estagio NOT IN ('FECHADO', 'ARQUIVADO') THEN valor_estimado ELSE 0 END), 0) as pipeline_aberto
         FROM crm_leads
-        WHERE estagio != 'ARQUIVADO'
-      `);
+        ${baseCondition}
+      `, params);
 
       return NextResponse.json({
         funil: funilRes.rows,
@@ -32,7 +55,9 @@ export async function GET(req: Request) {
       });
     }
 
-    const result = await query("SELECT * FROM crm_leads ORDER BY criado_em DESC");
+    // Listagem da Tabela (Kanban)
+    const listQuery = `SELECT * FROM crm_leads ${listCondition} ORDER BY criado_em DESC`;
+    const result = await query(listQuery, params);
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error(error);
@@ -49,7 +74,6 @@ export async function POST(req: Request) {
       categoria_imovel, link_origem 
     } = body;
     
-    // --- MÁGICA DA VALIDAÇÃO (NÃO DEIXA DUPLICAR O MESMO POST) ---
     if (link_origem) {
       const check = await query("SELECT id FROM crm_leads WHERE link_origem = $1", [link_origem]);
       if (check.rows.length > 0) {
@@ -86,7 +110,6 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
     
-    // Se o frontend enviar o cliente_nome, significa que é uma EDIÇÃO COMPLETA do Modal
     if (body.cliente_nome) {
       const { 
         id, cliente_nome, telefone, email, interesse, valor_estimado, 
@@ -102,7 +125,6 @@ export async function PUT(req: Request) {
       );
       return NextResponse.json(result.rows[0]);
     } else {
-      // Atualização rápida de estágio (ex: mover para ARQUIVADO ou arrastar no Kanban)
       const { id, estagio } = body;
       const result = await query(
         "UPDATE crm_leads SET estagio = $1 WHERE id = $2 RETURNING *",

@@ -451,10 +451,14 @@ function CRMContent() {
               <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 flex-shrink-0">
                   <Key className="w-3.5 h-3.5 text-emerald-500"/>
-                  <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] text-slate-600">
-                    <option value="TODOS">Todos Corretores</option>
-                    {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
-                  </select>
+                  {isCorretor ? (
+                    <span className="py-2.5 px-2 text-xs font-bold text-slate-600">{userName}</span>
+                  ) : (
+                    <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] text-slate-600">
+                      <option value="TODOS">Todos Corretores</option>
+                      {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
+                    </select>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 flex-shrink-0">
                   <Tag className="w-3.5 h-3.5 text-blue-500"/>
@@ -618,10 +622,14 @@ function CRMContent() {
                  <div className="flex items-center gap-3 w-full md:w-auto">
                     <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2 w-full md:w-auto">
                       <Users className="w-4 h-4 text-slate-400"/>
-                      <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="bg-transparent w-full text-xs font-bold outline-none cursor-pointer text-slate-700">
-                        <option value="TODOS">Visão Geral da Imobiliária</option>
-                        {corretores.map(c=><option key={c} value={c}>Compromissos: {c}</option>)}
-                      </select>
+                      {isCorretor ? (
+                        <span className="bg-transparent w-full text-xs font-bold text-slate-700 py-1.5">{userName}</span>
+                      ) : (
+                        <select value={filtroCorretorKanban} onChange={e=>setFiltroCorretorKanban(e.target.value)} className="bg-transparent w-full text-xs font-bold outline-none cursor-pointer text-slate-700">
+                          <option value="TODOS">Visão Geral da Imobiliária</option>
+                          {corretores.map(c=><option key={c} value={c}>Compromissos: {c}</option>)}
+                        </select>
+                      )}
                     </div>
                  </div>
               </div>
@@ -750,10 +758,14 @@ function CRMContent() {
                   </div>
                   <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-1.5 w-full md:w-auto">
                     <Users className="w-4 h-4 text-slate-400"/>
-                    <select value={filtroCorretor} onChange={e=>setFiltroCorretor(e.target.value)} className="bg-transparent py-2 w-full text-xs font-bold text-slate-700 outline-none cursor-pointer">
-                      <option value="TODOS">Todos os Corretores</option>
-                      {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
-                    </select>
+                    {isCorretor ? (
+                      <span className="bg-transparent py-2 w-full text-xs font-bold text-slate-700">{userName}</span>
+                    ) : (
+                      <select value={filtroCorretor} onChange={e=>setFiltroCorretor(e.target.value)} className="bg-transparent py-2 w-full text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                        <option value="TODOS">Todos os Corretores</option>
+                        {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>
@@ -947,10 +959,14 @@ function CRMContent() {
                 </div>
                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 shrink-0">
                   <Key className="w-3.5 h-3.5 text-violet-500"/>
-                  <select value={filtroCorretorProp} onChange={e=>setFiltroCorretorProp(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] text-slate-600">
-                    <option value="TODOS">Todos Corretores</option>
-                    {CORRETORES_LIST.filter(c=>c!=="Não Atribuído").map(c=><option key={c}>{c}</option>)}
-                  </select>
+                  {isCorretor ? (
+                    <span className="py-2.5 px-2 text-xs font-bold text-slate-600">{userName}</span>
+                  ) : (
+                    <select value={filtroCorretorProp} onChange={e=>setFiltroCorretorProp(e.target.value)} className="py-2.5 bg-transparent outline-none text-xs font-bold cursor-pointer min-w-[140px] text-slate-600">
+                      <option value="TODOS">Todos Corretores</option>
+                      {CORRETORES_LIST.filter(c=>c!=="Não Atribuído").map(c=><option key={c}>{c}</option>)}
+                    </select>
+                  )}
                 </div>
               </div>
             </div>
@@ -1129,9 +1145,13 @@ function CRMContent() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Corretor Responsável</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-blue-400 rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-blue-500 shrink-0"/>
-                      <select value={formAgenda.corretor||"André"} onChange={e=>setFormAgenda({...formAgenda, corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer text-slate-700`}>
-                        {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
-                      </select>
+                      {isCorretor ? (
+                        <span className="w-full py-3 bg-transparent text-sm font-semibold text-slate-700">{userName}</span>
+                      ) : (
+                        <select value={formAgenda.corretor||"André"} onChange={e=>setFormAgenda({...formAgenda, corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer text-slate-700`}>
+                          {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
+                        </select>
+                      )}
                     </div>
                  </div>
                  <div>
@@ -1248,9 +1268,13 @@ function CRMContent() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor Responsável</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-emerald-400 focus-within:bg-white rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 flex-shrink-0"/>
-                      <select value={form.corretor||"André"} className={`w-full py-3 bg-transparent outline-none font-semibold text-sm cursor-pointer text-slate-700`} onChange={e=>setForm({...form,corretor:e.target.value})}>
-                        {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
-                      </select>
+                      {isCorretor ? (
+                        <span className="w-full py-3 bg-transparent text-sm font-semibold text-slate-700">{userName}</span>
+                      ) : (
+                        <select value={form.corretor||"André"} className={`w-full py-3 bg-transparent outline-none font-semibold text-sm cursor-pointer text-slate-700`} onChange={e=>setForm({...form,corretor:e.target.value})}>
+                          {corretores.map((c:string)=><option key={c} value={c}>{c}</option>)}
+                        </select>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-1.5">
@@ -1382,9 +1406,13 @@ function CRMContent() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corretor</label>
                     <div className="flex items-center gap-3 bg-slate-50 border-2 border-slate-100 focus-within:border-orange-400 rounded-2xl px-4 transition-all">
                       <Key className="w-4 h-4 text-emerald-500 shrink-0"/>
-                      <select value={formProp.corretor||"Não Atribuído"} onChange={e=>setFormProp({...formProp,corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer text-slate-700`}>
-                        {CORRETORES_LIST.map(c=><option key={c}>{c}</option>)}
-                      </select>
+                      {isCorretor ? (
+                        <span className="w-full py-3 bg-transparent text-sm font-semibold text-slate-700">{userName}</span>
+                      ) : (
+                        <select value={formProp.corretor||"Não Atribuído"} onChange={e=>setFormProp({...formProp,corretor:e.target.value})} className={`w-full py-3 bg-transparent outline-none text-sm font-semibold cursor-pointer text-slate-700`}>
+                          {CORRETORES_LIST.map(c=><option key={c}>{c}</option>)}
+                        </select>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-1.5">
