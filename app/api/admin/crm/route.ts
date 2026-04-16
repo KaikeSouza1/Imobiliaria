@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+// CORREÇÃO AQUI: Adicionado mais um '../' para subir para a pasta 'api' correta
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function GET(req: Request) {
   // Verifica a sessão atual logada
