@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Loader2, XCircle, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal } from "lucide-react";
+import { Search, Loader2, XCircle, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, Eye, EyeOff } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
 
 interface Imovel {
@@ -72,6 +72,7 @@ function AluguelContent() {
   const [loading, setLoading]     = useState(true);
   const [ordem, setOrdem]         = useState<OrdemTipo>("recentes");
   const [showOrdem, setShowOrdem] = useState(false);
+  const [ocultarIndisponiveis, setOcultarIndisponiveis] = useState(false);
   const ordemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,10 +119,16 @@ function AluguelContent() {
       }
       if (cidadeUrl && imovel.cidade !== cidadeUrl) return false;
       if (bairroUrl && imovel.bairro !== bairroUrl) return false;
+      
+      if (ocultarIndisponiveis) {
+        const status = imovel.status?.toLowerCase() || "";
+        if (status.includes("alugado") || status.includes("vendido") || status.includes("indisponível")) return false;
+      }
+
       return true;
     });
     return ordenarImoveis(filtrados, ordem);
-  }, [imoveis, tipoUrl, cidadeUrl, bairroUrl, codigoUrl, ordem]);
+  }, [imoveis, tipoUrl, cidadeUrl, bairroUrl, codigoUrl, ordem, ocultarIndisponiveis]);
 
   const updateTypeFilter = (newType: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -132,6 +139,7 @@ function AluguelContent() {
 
   const limparFiltros = () => {
     setOrdem("recentes");
+    setOcultarIndisponiveis(false);
     router.push("/imoveis/aluguel");
   };
 
@@ -149,7 +157,7 @@ function AluguelContent() {
       <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-20">
 
         {/* BARRA DE RESUMO + ORDENAÇÃO */}
-        <div className="bg-white p-4 rounded-t-2xl shadow-sm border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="bg-white p-4 rounded-t-2xl shadow-sm border-b border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-4">
           <div className="text-gray-600 font-medium text-sm">
             <span className="font-black text-gray-900 text-lg">{imoveisFiltrados.length}</span> imóveis para alugar
             {cidadeUrl && <span> em <span className="font-bold">{cidadeUrl}</span></span>}
@@ -157,7 +165,21 @@ function AluguelContent() {
             {codigoUrl && <span> · cód. <span className="font-bold">{codigoUrl}</span></span>}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setOcultarIndisponiveis(!ocultarIndisponiveis)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all border
+                ${ocultarIndisponiveis
+                  ? "bg-green-50 border-green-200 text-green-700"
+                  : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                }`}
+            >
+              {ocultarIndisponiveis ? <EyeOff size={15} /> : <Eye size={15} />}
+              <span className="hidden sm:inline">
+                {ocultarIndisponiveis ? "Ocultando Alugados" : "Ocultar Alugados"}
+              </span>
+            </button>
+
             <div className="relative" ref={ordemRef}>
               <button
                 onClick={() => setShowOrdem(!showOrdem)}
@@ -189,7 +211,7 @@ function AluguelContent() {
               )}
             </div>
 
-            {(temFiltros || ordem !== "recentes") && (
+            {(temFiltros || ordem !== "recentes" || ocultarIndisponiveis) && (
               <button
                 onClick={limparFiltros}
                 className="flex items-center gap-2 text-red-500 font-bold text-sm hover:bg-red-50 px-4 py-2.5 rounded-xl transition-colors border border-red-100"
