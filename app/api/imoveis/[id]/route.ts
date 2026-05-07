@@ -57,12 +57,23 @@ export async function PUT(
       WHERE id = $20
     `;
 
+    // 1. Atualiza os dados principais na tabela imoveis
     await query(sql, [
       body.titulo, body.descricao, preco, body.tipo, body.finalidade,
       body.cidade, body.bairro, body.endereco, area, quartos,
       banheiros, vagas, body.imagem_url, body.codigo, ativo, 
       status, latitude, longitude, destaque, id
     ]);
+
+    // 2. ATUALIZAÇÃO DA GALERIA (Fotos Adicionais)
+    // Primeiro, removemos todas as fotos atuais deste imóvel na tabela de fotos
+    await query("DELETE FROM imovel_fotos WHERE imovel_id = $1", [id]);
+
+    // Depois, inserimos a nova lista de URLs que veio do formulário (sem a foto que você excluiu)
+    const fotosAdicionais = body.fotos_adicionais || [];
+    for (const url of fotosAdicionais) {
+      await query("INSERT INTO imovel_fotos (imovel_id, url) VALUES ($1, $2)", [id, url]);
+    }
 
     return NextResponse.json({ message: "Atualizado!" });
 
@@ -81,6 +92,8 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    // Se você não tiver um ON DELETE CASCADE no banco, é bom deletar as fotos antes do imóvel
+    await query("DELETE FROM imovel_fotos WHERE imovel_id = $1", [id]);
     await query("DELETE FROM imoveis WHERE id = $1", [id]);
     return NextResponse.json({ message: "Excluído!" });
   } catch (error: any) {
