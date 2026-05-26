@@ -69,19 +69,6 @@ const corretores: Corretor[] = [
     destaque: false,
     cargo: "Corretora de Imóveis",
   },
-  {
-    nome: "Claudiney W. Otto Junior",
-    foto: "/foto claudinei.jpg",
-    creci: "37016",
-    cnai: "45505",
-    whatsapp: "5542984156013",
-    email: "juniorotto04@gmail.com",
-    instagram: "https://www.instagram.com/claudineyotto_junior_corretor?igsh=aXJhYWQ0a2dvNHUw",
-    instagramHandle: "@claudineyotto_junior_corretor",
-    telefone: "(42) 98415-6013",
-    destaque: false,
-    cargo: "Corretor de Imóveis",
-  },
 ];
 
 export default function ContatoPage() {
