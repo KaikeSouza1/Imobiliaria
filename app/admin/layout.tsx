@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Home, PlusCircle, LogOut, Sparkles, MessageSquare, BarChart3 } from "lucide-react";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../api/auth/[...nextauth]/route";
+import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 
@@ -18,7 +19,7 @@ async function getNotificacoes() {
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions as any);
+  const session = (await getServerSession(authOptions as any)) as Session | null;
   if (!session) redirect("/login");
 
   const totalNovos = await getNotificacoes();
