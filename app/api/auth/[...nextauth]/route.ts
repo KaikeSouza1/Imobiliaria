@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
           user === process.env.ADMIN_USER?.toLowerCase() &&
           pass === process.env.ADMIN_PASSWORD
         ) {
-          return { id: "admin", name: "Admin Porto Iguaçu", email: "admin@portoiguacu.com", role: "admin" };
+          return { id: "admin", name: "Admin Porto Iguaçu", email: "admin@portoiguacu.com", role: "admin", username: process.env.ADMIN_USER?.toLowerCase() };
         }
 
         // 2. Se não for admin, procura na tabela de corretores
@@ -33,12 +33,12 @@ export const authOptions: NextAuthOptions = {
             // PRIMEIRO ACESSO: Se a senha for nula no banco, a senha digitada se torna a senha oficial
             if (!corretor.password) {
               await query("UPDATE usuarios SET password = $1 WHERE username = $2", [pass, user]);
-              return { id: corretor.id.toString(), name: corretor.nome, email: `${user}@portoiguacu.com`, role: "corretor" };
+              return { id: corretor.id.toString(), name: corretor.nome, email: `${user}@portoiguacu.com`, role: "corretor", username: user };
             }
             
             // ACESSOS FUTUROS: Verifica se a senha digitada bate com a que está salva
             if (corretor.password === pass) {
-              return { id: corretor.id.toString(), name: corretor.nome, email: `${user}@portoiguacu.com`, role: "corretor" };
+              return { id: corretor.id.toString(), name: corretor.nome, email: `${user}@portoiguacu.com`, role: "corretor", username: user };
             }
           }
         } catch (error) {
@@ -54,6 +54,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.name = user.name;
+        token.username = (user as any).username;
       }
       return token;
     },
@@ -61,6 +62,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role;
         session.user.name = token.name;
+        (session.user as any).username = token.username;
       }
       return session;
     }

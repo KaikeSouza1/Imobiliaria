@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Home, PlusCircle, LogOut, Sparkles, MessageSquare, BarChart3 } from "lucide-react";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 
@@ -17,10 +18,12 @@ async function getNotificacoes() {
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions as any);
   if (!session) redirect("/login");
 
   const totalNovos = await getNotificacoes();
+
+  const adminUser = process.env.ADMIN_USER ? process.env.ADMIN_USER.replace(/^"|"$/g, "").toLowerCase() : undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-green-50 font-sans flex">
@@ -81,6 +84,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <BarChart3 size={20} className="group-hover:scale-110 transition-transform" />
             <span>Master CRM</span>
           </Link>
+
+          {((session.user as any).username?.toLowerCase() === adminUser) && (
+            <Link
+              href="/admin/corretores"
+              className="flex items-center gap-3 p-4 rounded-xl hover:bg-white/5 transition-all text-green-100 font-bold group relative"
+            >
+              <PlusCircle size={20} className="group-hover:scale-110 transition-transform" />
+              <span>Corretores</span>
+            </Link>
+          )}
         </nav>
 
         {/* FOOTER */}

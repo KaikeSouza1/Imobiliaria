@@ -102,6 +102,38 @@ function VendaContent() {
     fetchImoveis();
   }, []);
 
+  // Restore state (filters + scroll) if present
+  useEffect(() => {
+    if (!loading) {
+      try {
+        const key = `listingState:/imoveis/venda`;
+        const raw = sessionStorage.getItem(key);
+        if (raw) {
+          const obj = JSON.parse(raw || "{}") || {};
+          if (obj.ordem) setOrdem(obj.ordem as OrdemTipo);
+          if (typeof obj.ocultarIndisponiveis === "boolean") setOcultarIndisponiveis(obj.ocultarIndisponiveis);
+          if (obj.scroll) {
+            const pos = parseInt(String(obj.scroll), 10) || 0;
+            window.scrollTo(0, pos);
+            delete obj.scroll;
+            sessionStorage.setItem(key, JSON.stringify(obj));
+          }
+        }
+      } catch (e) {}
+    }
+  }, [loading]);
+
+  // Persist filters when they change
+  useEffect(() => {
+    try {
+      const key = `listingState:/imoveis/venda`;
+      const prev = JSON.parse(sessionStorage.getItem(key) || "{}") || {};
+      prev.ordem = ordem;
+      prev.ocultarIndisponiveis = ocultarIndisponiveis;
+      sessionStorage.setItem(key, JSON.stringify(prev));
+    } catch (e) {}
+  }, [ordem, ocultarIndisponiveis]);
+
   const imoveisFiltrados = useMemo(() => {
     const filtrados = imoveis.filter((imovel) => {
       if (codigoUrl && imovel.codigo?.toLowerCase() !== codigoUrl.toLowerCase()) return false;

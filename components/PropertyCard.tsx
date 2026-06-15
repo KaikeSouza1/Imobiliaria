@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { MapPin, BedDouble, Bath, Car, Maximize, ArrowRight, CheckCircle, XCircle, Eye } from "lucide-react";
 import { generateSlug } from "@/lib/slug";
 
@@ -89,11 +90,25 @@ export default function PropertyCard({ property }: PropertyProps) {
   const localizacao = formatarLocalizacao(property.endereco, property.cidade);
   const { texto: precoTexto, isConsultar } = formatarPreco(property.preco);
 
+  const pathname = usePathname();
+
+  const saveScrollPosition = () => {
+    try {
+      const key = `listingState:${pathname}`;
+      const val = window.scrollY || document.documentElement.scrollTop || 0;
+      const prev = JSON.parse(sessionStorage.getItem(key) || "{}") || {};
+      prev.scroll = Math.floor(val);
+      sessionStorage.setItem(key, JSON.stringify(prev));
+    } catch (e) {
+      // ignore
+    }
+  };
+
   return (
     <div className="rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-green-900/20 transition-all duration-500 group border border-green-900/10 bg-white">
 
       {/* FOTO */}
-      <Link href={href} className="relative block h-64 overflow-hidden">
+      <Link href={href} onClick={saveScrollPosition} className="relative block h-64 overflow-hidden">
         <ImgComFallback
           src={property.imagem}
           alt={property.titulo}
@@ -173,8 +188,9 @@ export default function PropertyCard({ property }: PropertyProps) {
             className={`mt-4 w-full font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all border
               ${isSoldOrRented
                 ? "bg-white/10 text-white/50 border-white/10 cursor-default pointer-events-none"
-                : "bg-white text-[#0f2e20] hover:bg-[#0f2e20] hover:text-white border-white/60 hover:border-[#0f2e20] shadow-md"
+                  : "bg-white text-[#0f2e20] hover:bg-[#0f2e20] hover:text-white border-white/60 hover:border-[#0f2e20] shadow-md"
               }`}
+            onClick={saveScrollPosition}
           >
             {isSoldOrRented ? "Imóvel Indisponível" : "VER DETALHES"}
             {!isSoldOrRented && <ArrowRight size={16} />}
