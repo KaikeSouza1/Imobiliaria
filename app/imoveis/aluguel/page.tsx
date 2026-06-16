@@ -50,13 +50,29 @@ const ORDEM_OPTIONS: { value: OrdemTipo; label: string; icon: React.ReactNode }[
 
 function ordenarImoveis(lista: Imovel[], ordem: OrdemTipo): Imovel[] {
   const copia = [...lista];
-  switch (ordem) {
-    case "menor_preco": return copia.sort((a, b) => a.preco - b.preco);
-    case "maior_preco": return copia.sort((a, b) => b.preco - a.preco);
-    case "menor_area":  return copia.sort((a, b) => a.area - b.area);
-    case "maior_area":  return copia.sort((a, b) => b.area - a.area);
-    default:            return copia;
-  }
+
+  // Move imóveis marcados como alugado/vendido/indisponível para o final,
+  // mas preserve a ordenação solicitada entre os demais.
+  const isUnavailable = (i: Imovel) => {
+    const s = (i.status || "").toLowerCase();
+    return s.includes("alugado") || s.includes("vendido") || s.includes("indisponível");
+  };
+
+  copia.sort((a, b) => {
+    const aUn = isUnavailable(a) ? 1 : 0;
+    const bUn = isUnavailable(b) ? 1 : 0;
+    if (aUn !== bUn) return aUn - bUn; // disponíveis first
+
+    switch (ordem) {
+      case "menor_preco": return a.preco - b.preco;
+      case "maior_preco": return b.preco - a.preco;
+      case "menor_area":  return a.area - b.area;
+      case "maior_area":  return b.area - a.area;
+      default:            return 0;
+    }
+  });
+
+  return copia;
 }
 
 function AluguelContent() {
