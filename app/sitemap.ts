@@ -4,7 +4,15 @@ const BASE_URL = "https://imobiliariaportoiguacu.com.br";
 
 async function getImoveis() {
   try {
-    const res = await fetch(`${BASE_URL}/api/imoveis`, { next: { revalidate: 3600 } });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(`${BASE_URL}/api/imoveis`, { 
+      next: { revalidate: 3600 },
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
     if (!res.ok) return [];
     return await res.json();
   } catch {
