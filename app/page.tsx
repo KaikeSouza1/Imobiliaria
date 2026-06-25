@@ -324,7 +324,7 @@ export default function Page() {
           href="/login"
           className="text-[10px] text-green-800 hover:text-green-500 uppercase font-black tracking-[0.4em] transition-all opacity-40 hover:opacity-100 flex items-center justify-center gap-2"
         >
-          <Lock size={12} /> Área Restrita
+          <Lock size={12} /> Área Restrita 
         </Link>
       </div>
     </main>
