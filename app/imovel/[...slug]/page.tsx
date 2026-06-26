@@ -7,9 +7,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { 
   MapPin, BedDouble, Bath, Car, Maximize, 
-  MessageCircle, Share2, Loader2, Camera, X, ArrowLeft, ChevronLeft, ChevronRight
+  MessageCircle, Share2, Loader2, Camera, X, ArrowLeft, ChevronLeft, ChevronRight, Youtube
 } from "lucide-react";
 import { extractIdFromSlug, generateSlug } from "@/lib/slug";
+import { getYouTubeEmbedUrl } from "@/lib/youtube";
+import { Imovel } from "@/types/imovel";
 
 import dynamic from "next/dynamic";
 const MapDisplay = dynamic(
@@ -23,28 +25,6 @@ const MapDisplay = dynamic(
     ),
   }
 );
-
-interface Imovel {
-  id: number;
-  titulo: string;
-  descricao: string;
-  preco: number;
-  tipo: string;
-  finalidade: string;
-  cidade: string;
-  bairro: string;
-  endereco: string;
-  area: number;
-  quartos: number;
-  banheiros: number;
-  vagas: number;
-  imagem_url: string;
-  fotos_adicionais: string[];
-  codigo: string;
-  latitude?: number;
-  longitude?: number;
-  status?: string;
-}
 
 function GaleriaMobile({ fotos, onOpen }: { fotos: string[]; onOpen: (index: number) => void }) {
   const thumbsRef = useRef<HTMLDivElement>(null);
@@ -292,6 +272,7 @@ function ImovelDetalhesContent() {
   );
 
   const todasFotos = [imovel.imagem_url, ...(imovel.fotos_adicionais || [])].filter(Boolean);
+  const embedUrl = imovel.video_url ? getYouTubeEmbedUrl(imovel.video_url) : null;
   const formatMoney = (val: number) =>
     val === 0
       ? "Consultar valores"
@@ -371,6 +352,23 @@ function ImovelDetalhesContent() {
         <GaleriaDesktop fotos={todasFotos} onOpen={openModal} />
       </section>
 
+      {/* VÍDEO DO YOUTUBE */}
+      {embedUrl && (
+        <section className="max-w-7xl mx-auto px-4 mt-8">
+          <h2 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-2">
+            <Youtube className="text-red-600" /> Vídeo do Imóvel
+          </h2>
+          <div className="relative overflow-hidden rounded-2xl aspect-video shadow-lg">
+            <iframe
+              src={embedUrl}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute top-0 left-0 w-full h-full border-0"
+            ></iframe>
+          </div>
+        </section>
+      )}
+
       {/* CONTEÚDO PRINCIPAL */}
       <div className="max-w-7xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-12">
         <div className="lg:col-span-2">
@@ -428,7 +426,7 @@ function ImovelDetalhesContent() {
           <div className="mb-8">
             <h3 className="text-xl font-black text-gray-900 mb-4 uppercase tracking-tight">Detalhes</h3>
             <div className="rounded-2xl border border-gray-100 overflow-hidden">
-              {[
+              {[ 
                 { label: "ID do Imóvel",   value: imovel.codigo || `#${imovel.id}` },
                 { label: "Tipo de Imóvel", value: imovel.tipo },
                 { label: "Finalidade",     value: imovel.finalidade },

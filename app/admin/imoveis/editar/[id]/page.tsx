@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star, Crown } from "lucide-react";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, MapPin, Star, Crown, Youtube } from "lucide-react";
 import Link from "next/link";
 import { PublicarRedes } from "@/components/PublicarRedes";
 import imageCompression from "browser-image-compression";
@@ -35,6 +35,7 @@ export default function EditarImovelPage() {
     imagem_url: "", fotos_adicionais: [] as string[], ativo: true,
     latitude: -26.2303,
     longitude: -51.0904,
+    video_url: "",
   });
 
   useEffect(() => {
@@ -54,11 +55,12 @@ export default function EditarImovelPage() {
           status: data.status || "disponivel",
           destaque: data.destaque || false,
           latitude: Number(data.latitude) || -26.2303,
-          longitude: Number(data.longitude) || -51.0904,
-          fotos_adicionais: data.fotos_adicionais || [],
-        });
-      } catch (error) {
-        console.error(error);
+            longitude: Number(data.longitude) || -51.0904,
+            fotos_adicionais: data.fotos_adicionais || [],
+            video_url: data.video_url || "",
+          });
+        } catch (error) {
+          console.error(error);
         alert("Erro ao carregar dados do imóvel.");
         router.push("/admin/imoveis");
       } finally {
@@ -262,6 +264,14 @@ export default function EditarImovelPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Campo Vídeo */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <label className="label-admin flex items-center gap-2">
+            <Youtube size={16} /> Link do Vídeo (YouTube)
+          </label>
+          <input name="video_url" value={formData.video_url} onChange={handleChange} className="input-admin" placeholder="https://www.youtube.com/watch?v=..." />
         </div>
 
         {/* SEÇÃO DESTAQUE + PUBLICAR NAS REDES */}

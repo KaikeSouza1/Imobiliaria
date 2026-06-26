@@ -28,15 +28,15 @@ export async function POST(req: Request) {
       INSERT INTO imoveis (
         titulo, descricao, preco, tipo, finalidade, cidade, bairro, 
         endereco, area, quartos, banheiros, vagas, imagem_url, codigo, status,
-        latitude, longitude, destaque
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        latitude, longitude, destaque, video_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING id
     `;
 
     const values = [
       body.titulo, body.descricao, preco, body.tipo, body.finalidade, body.cidade, 
       body.bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo, status,
-      latitude, longitude, destaque
+      latitude, longitude, destaque, body.video_url
     ];
 
     const result = await query(sqlImovel, values);

@@ -53,8 +53,8 @@ export async function PUT(
         titulo=$1, descricao=$2, preco=$3, tipo=$4, finalidade=$5, 
         cidade=$6, bairro=$7, endereco=$8, area=$9, quartos=$10, 
         banheiros=$11, vagas=$12, imagem_url=$13, codigo=$14, ativo=$15, 
-        status=$16, latitude=$17, longitude=$18, destaque=$19
-      WHERE id = $20
+        status=$16, latitude=$17, longitude=$18, destaque=$19, video_url=$20
+      WHERE id = $21
     `;
 
     // 1. Atualiza os dados principais na tabela imoveis
@@ -62,7 +62,7 @@ export async function PUT(
       body.titulo, body.descricao, preco, body.tipo, body.finalidade,
       body.cidade, body.bairro, body.endereco, area, quartos,
       banheiros, vagas, body.imagem_url, body.codigo, ativo, 
-      status, latitude, longitude, destaque, id
+      status, latitude, longitude, destaque, body.video_url, id
     ]);
 
     // 2. ATUALIZAÇÃO DA GALERIA (Fotos Adicionais)

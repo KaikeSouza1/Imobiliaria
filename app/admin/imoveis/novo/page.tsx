@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, Star, CheckCircle } from "lucide-react";
+import { UploadCloud, Save, ArrowLeft, Loader2, X, Plus, Star, CheckCircle, Youtube } from "lucide-react";
 import Link from "next/link";
 import { PublicarRedes } from "@/components/PublicarRedes";
 import imageCompression from "browser-image-compression";
@@ -14,9 +14,6 @@ const MapPicker = dynamic(() => import("@/components/MapPicker"), {
   loading: () => <div className="h-[400px] bg-gray-100 rounded-xl animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-gray-400" /></div>
 });
 
-// ============================================================
-// PÁGINA PRINCIPAL
-// ============================================================
 export default function NovoImovelPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -29,6 +26,7 @@ export default function NovoImovelPage() {
     bairro: "", endereco: "", area: "",
     quartos: "0", banheiros: "0", vagas: "0", descricao: "",
     imagem_url: "", fotos_adicionais: [] as string[],
+    video_url: "",
     latitude: -26.2303, longitude: -51.0904
   });
 
@@ -36,31 +34,19 @@ export default function NovoImovelPage() {
     if (!files || files.length === 0) return null;
     setUploading(true);
     const data = new FormData();
-    
     try {
-      // Comprimir as imagens no lado do cliente antes de enviar para o servidor
       for (const file of Array.from(files)) {
-        const options = {
-          maxSizeMB: 1, // Limita o tamanho do arquivo gerado para aprox 1MB
-          maxWidthOrHeight: 1920, // Resolução máxima para web
-          useWebWorker: true,
-        };
+        const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
         const compressedFile = await imageCompression(file, options);
         data.append("file", compressedFile);
       }
-
       const res = await fetch("/api/upload", { method: "POST", body: data });
-      
-      if (!res.ok) {
-        if (res.status === 413) throw new Error("A imagem é muito grande mesmo após a compressão.");
-        throw new Error("Erro no servidor ao processar o upload das imagens.");
-      }
-      
+      if (!res.ok) throw new Error("Erro no upload");
       const json = await res.json();
       return json.urls;
     } catch (error: any) {
       console.error(error);
-      alert(error.message || "Erro ao enviar imagem.");
+      alert(error.message || "Erro no upload.");
       return null;
     } finally {
       setUploading(false);
@@ -83,43 +69,22 @@ export default function NovoImovelPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.imagem_url) { alert("Por favor, selecione ao menos a Foto de Capa."); return; }
-    if (!formData.codigo) { alert("Por favor, preencha o Código do imóvel."); return; }
+    if (!formData.imagem_url) { alert("Por favor, selecione a Foto de Capa."); return; }
+    if (!formData.codigo) { alert("Por favor, preencha o Código."); return; }
     setLoading(true);
-    const dadosParaEnviar = {
-      ...formData,
-      preco: parseFloat(formData.preco) || 0,
-      area: parseInt(formData.area) || 0,
-      quartos: parseInt(formData.quartos) || 0,
-      banheiros: parseInt(formData.banheiros) || 0,
-      vagas: parseInt(formData.vagas) || 0,
-    };
     try {
       const res = await fetch("/api/imoveis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dadosParaEnviar),
+        body: JSON.stringify(formData),
       });
       if (res.ok) {
         const imovelSalvo = await res.json();
-        setImovelCriado({
-          id: String(imovelSalvo.id || imovelSalvo[0]?.id || "novo"),
-          titulo: formData.titulo, tipo: formData.tipo, finalidade: formData.finalidade,
-          preco: parseFloat(formData.preco) || 0, area: parseInt(formData.area) || 0,
-          quartos: parseInt(formData.quartos) || 0, banheiros: parseInt(formData.banheiros) || 0,
-          vagas: parseInt(formData.vagas) || 0, bairro: formData.bairro, cidade: formData.cidade,
-          descricao: formData.descricao, fotoCapa: formData.imagem_url,
-        });
+        setImovelCriado({ id: imovelSalvo.id || "novo", titulo: formData.titulo, fotoCapa: formData.imagem_url });
       } else {
-        const errorData = await res.json();
-        alert("Erro ao salvar: " + (errorData.error || "Tente novamente"));
+        alert("Erro ao salvar.");
       }
-    } catch (error) {
-      console.error(error);
-      alert("Erro de conexão com o servidor.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -128,68 +93,31 @@ export default function NovoImovelPage() {
 
   const statusOptions = [
     { value: "disponivel", label: "✅ Disponível", color: "text-green-700 bg-green-50 border-green-200" },
-    { value: "vendido",    label: "🔴 Vendido",    color: "text-red-700 bg-red-50 border-red-200" },
-    { value: "alugado",    label: "🟠 Alugado",    color: "text-orange-700 bg-orange-50 border-orange-200" },
-    { value: "reservado",  label: "🟡 Reservado",  color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
+    { value: "vendido", label: "🔴 Vendido", color: "text-red-700 bg-red-50 border-red-200" },
+    { value: "alugado", label: "🟠 Alugado", color: "text-orange-700 bg-orange-50 border-orange-200" },
+    { value: "reservado", label: "🟡 Reservado", color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
   ];
 
-  // ============================================================
-  // TELA DE SUCESSO
-  // ============================================================
   if (imovelCriado) {
     return (
       <div className="max-w-xl mx-auto pb-20 px-4 pt-16">
-        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-10 flex flex-col items-center gap-6">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-            <CheckCircle className="text-green-600" size={42} />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-black text-gray-900">Imóvel cadastrado!</h1>
-            <p className="text-gray-500 text-sm mt-2"><span className="font-bold text-gray-700">{imovelCriado.titulo}</span> foi salvo com sucesso.</p>
-          </div>
-          {imovelCriado.fotoCapa && (
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-              <Image src={imovelCriado.fotoCapa} fill className="object-cover" alt="Capa" />
-            </div>
-          )}
-          {/* PUBLICAR NAS REDES na tela de sucesso */}
-          <div className="w-full bg-gradient-to-br from-blue-50 to-pink-50 rounded-2xl p-5 border border-blue-100">
-            <PublicarRedes imovel={imovelCriado} inline={true} />
-          </div>
-          <div className="flex gap-3 w-full">
-            <Link href="/admin/imoveis" className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm text-center transition-all">
-              Ver todos os imóveis
-            </Link>
-            <button onClick={() => {
-              setImovelCriado(null);
-              setFormData({ titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
-                status: "disponivel", destaque: true, cidade: "Porto União", bairro: "", endereco: "", area: "",
-                quartos: "0", banheiros: "0", vagas: "0", descricao: "", imagem_url: "", fotos_adicionais: [],
-                latitude: -26.2303, longitude: -51.0904 });
-            }} className="flex-1 bg-[#0f2e20] hover:bg-black text-white font-bold py-3 rounded-xl text-sm transition-all">
-              Cadastrar outro
-            </button>
-          </div>
+        <div className="bg-white rounded-[2rem] p-10 flex flex-col items-center gap-6">
+          <CheckCircle className="text-green-600" size={42} />
+          <h1 className="text-2xl font-black text-gray-900">Imóvel cadastrado!</h1>
+          <button onClick={() => window.location.reload()} className="bg-[#0f2e20] text-white font-bold py-3 px-6 rounded-xl">Cadastrar outro</button>
         </div>
       </div>
     );
   }
 
-  // ============================================================
-  // FORMULÁRIO
-  // ============================================================
   return (
     <div className="max-w-5xl mx-auto pb-20 px-4">
       <div className="flex items-center gap-4 mb-8 pt-10">
-        <Link href="/admin/imoveis" className="p-3 bg-white hover:bg-gray-100 rounded-2xl shadow-sm text-gray-500 transition-all border border-gray-100">
-          <ArrowLeft size={24} />
-        </Link>
-        <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Novo Imóvel</h1>
+        <Link href="/admin/imoveis" className="p-3 bg-white hover:bg-gray-100 rounded-2xl shadow-sm"><ArrowLeft size={24} /></Link>
+        <h1 className="text-2xl font-black text-gray-900 uppercase">Novo Imóvel</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-
-        {/* SEÇÃO 1: IMAGENS */}
         <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="col-span-1">
             <label className="text-[10px] font-black uppercase text-gray-400 ml-2 mb-2 block">Capa Principal</label>
@@ -209,7 +137,7 @@ export default function NovoImovelPage() {
             </div>
           </div>
           <div className="col-span-2">
-            <label className="text-[10px] font-black uppercase text-gray-400 ml-2 mb-2 block">Galeria de Fotos</label>
+            <label className="text-[10px] font-black uppercase text-gray-400 ml-2 mb-2 block">Galeria</label>
             <div className="grid grid-cols-4 gap-3">
               <label className="aspect-square bg-gray-50 border-2 border-dashed rounded-2xl flex items-center justify-center cursor-pointer hover:bg-green-50 transition-colors">
                 <Plus className="text-green-600" />
@@ -225,57 +153,14 @@ export default function NovoImovelPage() {
           </div>
         </div>
 
-        {/* SEÇÃO 2: DESTAQUE + PUBLICAR NAS REDES */}
-        <div className={`p-6 rounded-[2rem] border-2 transition-all shadow-sm ${formData.destaque ? "bg-amber-50 border-amber-400" : "bg-white border-gray-100"}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-5">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${formData.destaque ? "bg-amber-400 text-white shadow-lg shadow-amber-200" : "bg-gray-100 text-gray-400"}`}>
-                <Star size={28} fill={formData.destaque ? "currentColor" : "none"} />
-              </div>
-              <div>
-                <h3 className={`font-black uppercase text-sm tracking-widest ${formData.destaque ? "text-amber-900" : "text-gray-900"}`}>
-                  {formData.destaque ? "Cadastrando como DESTAQUE" : "Cadastro Padrão"}
-                </h3>
-                <p className="text-xs text-gray-500 font-medium">Imóvel aparecerá automaticamente no topo da home.</p>
-              </div>
-            </div>
-            <button type="button" onClick={() => setFormData({ ...formData, destaque: !formData.destaque })}
-              className={`w-16 h-8 rounded-full relative transition-all ${formData.destaque ? "bg-amber-500" : "bg-gray-200"}`}>
-              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${formData.destaque ? "left-9" : "left-1"}`} />
-            </button>
-          </div>
-
-          {/* PUBLICAR NAS REDES — só aparece quando tiver foto de capa */}
-          {formData.imagem_url && (
-            <div className="mt-4 bg-white rounded-2xl p-4 border border-gray-100">
-              <PublicarRedes imovel={{
-                id: "novo",
-                titulo: formData.titulo || "Novo Imóvel",
-                tipo: formData.tipo, finalidade: formData.finalidade,
-                preco: parseFloat(formData.preco) || 0, area: parseInt(formData.area) || 0,
-                quartos: parseInt(formData.quartos) || 0, banheiros: parseInt(formData.banheiros) || 0,
-                vagas: parseInt(formData.vagas) || 0, bairro: formData.bairro, cidade: formData.cidade,
-                descricao: formData.descricao, fotoCapa: formData.imagem_url,
-              }} inline={true} />
-            </div>
-          )}
+        {/* Campo Vídeo */}
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+          <label className="text-[10px] font-black uppercase text-gray-400 ml-2 flex items-center gap-2">
+            <Youtube size={16} /> Link do Vídeo (YouTube)
+          </label>
+          <input name="video_url" value={formData.video_url} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold mt-2 focus:ring-2 focus:ring-[#0f2e20]" placeholder="https://www.youtube.com/watch?v=..." />
         </div>
 
-        {/* SEÇÃO 3: STATUS */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Status do Imóvel</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {statusOptions.map((opt) => (
-              <label key={opt.value} className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer font-bold text-sm transition-all
-                  ${formData.status === opt.value ? opt.color + " border-current shadow-md scale-[1.02]" : "bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300"}`}>
-                <input type="radio" name="status" value={opt.value} checked={formData.status === opt.value} onChange={handleChange} className="hidden" />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* SEÇÃO 4: DADOS BÁSICOS */}
         <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
           <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Informações do Imóvel</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -291,63 +176,11 @@ export default function NovoImovelPage() {
               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Código / Referência</label>
               <input name="codigo" required value={formData.codigo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" placeholder="Ex: REF-1234" />
             </div>
-            <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Tipo de Imóvel</label>
-              <select name="tipo" value={formData.tipo} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
-                <option value="Apartamento">Apartamento</option>
-                <option value="Barracão">Barracão</option>
-                <option value="Casa">Casa</option>
-                <option value="Comercial">Comercial</option>
-                <option value="Imóvel Litoral">Imóvel Litoral</option>
-                <option value="Imóvel Rural">Imóvel Rural</option>
-                <option value="Kitnet">Kitnet</option>
-                <option value="Sobrado">Sobrado</option>
-                <option value="Terreno Rural">Terreno Rural</option>
-                <option value="Terreno Urbano">Terreno Urbano</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Finalidade</label>
-              <select name="finalidade" value={formData.finalidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]">
-                <option value="Venda">Venda</option>
-                <option value="Aluguel">Aluguel</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Cidade</label>
-              <input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
-              <datalist id="cidades"><option value="Porto União" /><option value="União da Vitória" /></datalist>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Bairro</label>
-              <input name="bairro" value={formData.bairro} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Endereço Completo</label>
-              <input name="endereco" value={formData.endereco} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
-            </div>
-            <div className="grid grid-cols-4 gap-4 md:col-span-2">
-              <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Área (m²)</label><input name="area" type="number" value={formData.area} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
-              <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Quartos</label><input name="quartos" type="number" value={formData.quartos} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
-              <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Banheiros</label><input name="banheiros" type="number" value={formData.banheiros} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
-              <div><label className="text-[10px] font-black uppercase text-gray-400 ml-2">Vagas</label><input name="vagas" type="number" value={formData.vagas} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold" /></div>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Descrição Completa</label>
-              <textarea name="descricao" rows={5} value={formData.descricao} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-medium focus:ring-2 focus:ring-[#0f2e20]" placeholder="Descreva os detalhes do imóvel..." />
-            </div>
+            <button type="submit" disabled={loading || uploading} className="w-full bg-[#0f2e20] text-white font-black py-6 rounded-[2rem] col-span-2 shadow-2xl hover:bg-black transition-all uppercase tracking-widest text-sm">
+              {loading ? <Loader2 className="animate-spin" /> : "Publicar Imóvel"}
+            </button>
           </div>
         </div>
-
-        {/* SEÇÃO 5: MAPA */}
-        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
-          <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Localização no Mapa</h2>
-          <MapPicker lat={formData.latitude} lng={formData.longitude} onLocationChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))} />
-        </div>
-
-        <button type="submit" disabled={loading || uploading} className="w-full bg-[#0f2e20] text-white font-black py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl hover:bg-black transition-all uppercase tracking-widest text-sm">
-          {loading ? <Loader2 className="animate-spin" /> : <Save size={20} />} Publicar Imóvel
-        </button>
       </form>
     </div>
   );
