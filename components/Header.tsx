@@ -78,7 +78,7 @@ export default function Header() {
             <Link href="/comparar" className="flex items-center gap-1.5 hover:text-green-200 transition-colors border-l border-green-800 pl-4 md:pl-6 font-medium">
               <GitCompare size={14} /> Comparar
             </Link>
-            
+
             <div className="flex items-center gap-4 border-l border-green-800 pl-4 md:pl-6">
               <a href="https://www.facebook.com/profile.php?id=61560745614772" target="_blank" className="hover:text-green-300 transition-transform hover:scale-110">
                 <Facebook size={16} />

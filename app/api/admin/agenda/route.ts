@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
   try {
     // Fazemos um JOIN com crm_leads para pegar o nome do cliente associado (se houver)
     const result = await query(`
@@ -18,6 +23,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
   try {
     const body = await req.json();
     const { titulo, descricao, data_hora, corretor, lead_id, tipo } = body;
@@ -35,6 +43,9 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
   try {
     const body = await req.json();
     const { id, status } = body;
@@ -52,10 +63,13 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    
+
     await query("DELETE FROM crm_agenda WHERE id = $1", [id]);
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 const PAGE_TOKEN = process.env.META_PAGE_ACCESS_TOKEN!;
 const PAGE_ID = process.env.META_PAGE_ID!;
@@ -201,6 +203,9 @@ async function publishInstagram(imovel: any, fotos: string[]) {
 // ENDPOINT: PREVIEW (GET)
 // ============================================================
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
   try {
     const { searchParams } = new URL(req.url);
     const imovelId = searchParams.get("imovelId");
@@ -228,6 +233,9 @@ export async function GET(req: NextRequest) {
 // ENDPOINT: PUBLICAR (POST)
 // ============================================================
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ sucesso: false, erro: "Não autorizado" }, { status: 401 });
+
   try {
     const { imovel, publicarFacebook, publicarInstagram } = await req.json();
 

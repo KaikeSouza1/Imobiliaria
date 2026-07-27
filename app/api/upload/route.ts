@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import sharp from "sharp";
 import path from "path";
 import fs from "fs";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 const R2 = new S3Client({
   region: "auto",
@@ -64,6 +66,9 @@ async function otimizarComMarcaDagua(buffer: Buffer): Promise<Buffer> {
 }
 
 export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
   try {
     const formData = await request.formData();
     const files = formData.getAll("file") as File[];
