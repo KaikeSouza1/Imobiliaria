@@ -43,7 +43,6 @@ const tiposConfig = [
   { value: "Comercial",     label: "Comerciais",    icon: Store,     color: "from-orange-600 to-orange-800" },
   { value: "Kitnet",        label: "Kitnets",       icon: DoorOpen,  color: "from-pink-600 to-pink-800" },
   { value: "Sobrado",       label: "Sobrados",      icon: Building2, color: "from-indigo-600 to-indigo-800" },
-  { value: "Terreno Rural", label: "T. Rurais",     icon: TreePine,  color: "from-green-600 to-green-800" },
   { value: "Terreno Urbano",label: "T. Urbanos",    icon: TreePine,  color: "from-teal-600 to-teal-800" },
 ];
 

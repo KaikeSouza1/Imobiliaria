@@ -189,7 +189,6 @@ export default function Page() {
                   { label: "Imóvel Rural",   value: "Imóvel Rural" },
                   { label: "Kitnet",         value: "Kitnet" },
                   { label: "Sobrado",        value: "Sobrado" },
-                  { label: "Terreno Rural",  value: "Terreno Rural" },
                   { label: "Terreno Urbano", value: "Terreno Urbano" },
                 ]}
               />

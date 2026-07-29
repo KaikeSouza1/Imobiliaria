@@ -28,7 +28,7 @@ interface Imovel {
   status: string;
 }
 
-const TIPOS = ["Todos", "Apartamento", "Barracão", "Casa", "Comercial", "Sobrado", "Terreno Rural", "Terreno Urbano"];
+const TIPOS = ["Todos", "Apartamento", "Barracão", "Casa", "Comercial", "Sobrado", "Terreno Urbano"];
 
 function formatPreco(preco: number, finalidade: string) {
   if (preco === 0) return "Consultar";

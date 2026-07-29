@@ -34,7 +34,6 @@ const categories = [
   { label: "Imóvel Litoral", value: "Imóvel Litoral" },
   { label: "Kitnets",      value: "Kitnet" },
   { label: "Sobrados",     value: "Sobrado" },
-  { label: "T. Rurais",    value: "Terreno Rural" },
   { label: "T. Urbanos",   value: "Terreno Urbano" },
 ];
 

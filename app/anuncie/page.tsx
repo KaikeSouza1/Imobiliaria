@@ -257,7 +257,6 @@ export default function AnunciePage() {
                             <option>Apartamento</option>
                             <option>Sobrado</option>
                             <option>Terreno</option>
-                            <option>Terreno Rural</option>
                             <option>Comercial</option>
                           </select>
                         </div>

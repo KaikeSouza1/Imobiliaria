@@ -35,7 +35,6 @@ export default function Header() {
     "Imóvel Litoral",
     "Imóvel Rural",
     "Sobrado",
-    "Terreno Rural",
     "Terreno Urbano",
   ];
 
@@ -48,7 +47,6 @@ export default function Header() {
     "Imóvel Rural",
     "Kitnet",
     "Sobrado",
-    "Terreno Rural",
     "Terreno Urbano",
   ];
 

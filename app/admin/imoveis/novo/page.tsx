@@ -302,7 +302,6 @@ export default function NovoImovelPage() {
                 <option value="Imóvel Rural">Imóvel Rural</option>
                 <option value="Kitnet">Kitnet</option>
                 <option value="Sobrado">Sobrado</option>
-                <option value="Terreno Rural">Terreno Rural</option>
                 <option value="Terreno Urbano">Terreno Urbano</option>
               </select>
             </div>
