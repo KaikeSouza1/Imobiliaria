@@ -10,7 +10,7 @@ import {
   MessageCircle, Share2, Loader2, Camera, X, ArrowLeft, ChevronLeft, ChevronRight, Youtube
 } from "lucide-react";
 import { extractIdFromSlug, generateSlug } from "@/lib/slug";
-import { getYouTubeEmbedUrl } from "@/lib/youtube";
+import { getYouTubeEmbedUrl, isYouTubeShort } from "@/lib/youtube";
 import { Imovel } from "@/types/imovel";
 
 import dynamic from "next/dynamic";
@@ -273,6 +273,7 @@ function ImovelDetalhesContent() {
 
   const todasFotos = [imovel.imagem_url, ...(imovel.fotos_adicionais || [])].filter(Boolean);
   const embedUrl = imovel.video_url ? getYouTubeEmbedUrl(imovel.video_url) : null;
+  const isShort = imovel.video_url ? isYouTubeShort(imovel.video_url) : false;
   const formatMoney = (val: number) =>
     val === 0
       ? "Consultar valores"
@@ -356,9 +357,13 @@ function ImovelDetalhesContent() {
       {embedUrl && (
         <section className="max-w-7xl mx-auto px-4 mt-8">
           <h2 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-2">
-            <Youtube className="text-red-600" /> Vídeo do Imóvel
+            <Youtube className="text-red-600" /> {isShort ? "Short do Imóvel" : "Vídeo do Imóvel"}
           </h2>
-          <div className="relative overflow-hidden rounded-2xl aspect-video shadow-lg">
+          <div
+            className={`relative overflow-hidden rounded-2xl shadow-lg bg-black ${
+              isShort ? "aspect-[9/16] max-w-sm mx-auto" : "aspect-video"
+            }`}
+          >
             <iframe
               src={embedUrl}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

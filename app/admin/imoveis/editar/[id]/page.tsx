@@ -269,9 +269,10 @@ export default function EditarImovelPage() {
         {/* Campo Vídeo */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <label className="label-admin flex items-center gap-2">
-            <Youtube size={16} /> Link do Vídeo (YouTube)
+            <Youtube size={16} /> Link do Vídeo (YouTube ou Shorts)
           </label>
-          <input name="video_url" value={formData.video_url} onChange={handleChange} className="input-admin" placeholder="https://www.youtube.com/watch?v=..." />
+          <input name="video_url" value={formData.video_url} onChange={handleChange} className="input-admin" placeholder="https://www.youtube.com/watch?v=... ou .../shorts/..." />
+          <p className="text-xs text-gray-400 mt-1">Aceita link normal do YouTube ou de um Short.</p>
         </div>
 
         {/* SEÇÃO DESTAQUE + PUBLICAR NAS REDES */}
