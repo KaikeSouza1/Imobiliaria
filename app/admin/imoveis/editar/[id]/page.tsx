@@ -25,6 +25,7 @@ export default function EditarImovelPage() {
 
   const [loading, setLoading] = useState(true);
   const [bairrosExistentes, setBairrosExistentes] = useState<string[]>([]);
+  const [cidadesExistentes, setCidadesExistentes] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -43,8 +44,8 @@ export default function EditarImovelPage() {
     fetch("/api/imoveis")
       .then((r) => r.json())
       .then((lista: any[]) => {
-        const unicos = Array.from(new Set(lista.map((i) => i.bairro).filter(Boolean))).sort();
-        setBairrosExistentes(unicos);
+        setBairrosExistentes(Array.from(new Set(lista.map((i) => i.bairro).filter(Boolean))).sort());
+        setCidadesExistentes(Array.from(new Set(lista.map((i) => i.cidade).filter(Boolean))).sort());
       })
       .catch(() => {});
   }, []);
@@ -381,8 +382,7 @@ export default function EditarImovelPage() {
             <label className="label-admin">Cidade</label>
             <input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="input-admin" />
             <datalist id="cidades">
-              <option value="Porto União" />
-              <option value="União da Vitória" />
+              {cidadesExistentes.map((c) => <option key={c} value={c} />)}
             </datalist>
           </div>
           <div>

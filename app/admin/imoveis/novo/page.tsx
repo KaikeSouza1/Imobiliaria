@@ -23,13 +23,14 @@ export default function NovoImovelPage() {
   const [uploading, setUploading] = useState(false);
   const [imovelCriado, setImovelCriado] = useState<any>(null);
   const [bairrosExistentes, setBairrosExistentes] = useState<string[]>([]);
+  const [cidadesExistentes, setCidadesExistentes] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/imoveis")
       .then((r) => r.json())
       .then((lista: any[]) => {
-        const unicos = Array.from(new Set(lista.map((i) => i.bairro).filter(Boolean))).sort();
-        setBairrosExistentes(unicos);
+        setBairrosExistentes(Array.from(new Set(lista.map((i) => i.bairro).filter(Boolean))).sort());
+        setCidadesExistentes(Array.from(new Set(lista.map((i) => i.cidade).filter(Boolean))).sort());
       })
       .catch(() => {});
   }, []);
@@ -326,7 +327,7 @@ export default function NovoImovelPage() {
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Cidade</label>
               <input name="cidade" list="cidades" value={formData.cidade} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
-              <datalist id="cidades"><option value="Porto União" /><option value="União da Vitória" /></datalist>
+              <datalist id="cidades">{cidadesExistentes.map((c) => <option key={c} value={c} />)}</datalist>
             </div>
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Bairro</label>
