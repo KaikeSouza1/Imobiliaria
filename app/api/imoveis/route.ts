@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     const destaque = body.destaque || false; // Adicionado
     const latitude = body.latitude || -26.2303;
     const longitude = body.longitude || -51.0904;
+    const bairro = (body.bairro || "").trim().replace(/\s+/g, " ");
 
     const sqlImovel = `
       INSERT INTO imoveis (
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
 
     const values = [
       body.titulo, body.descricao, preco, body.tipo, body.finalidade, body.cidade, 
-      body.bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo, status,
+      bairro, body.endereco, area, quartos, banheiros, vagas, body.imagem_url, body.codigo, status,
       latitude, longitude, destaque, body.video_url
     ];
 

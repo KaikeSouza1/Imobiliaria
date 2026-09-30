@@ -52,6 +52,7 @@ export async function PUT(
     const ativo = body.ativo !== undefined ? body.ativo : true;
     const latitude = body.latitude || -26.2303;
     const longitude = body.longitude || -51.0904;
+    const bairro = (body.bairro || "").trim().replace(/\s+/g, " ");
 
     const sql = `
       UPDATE imoveis SET 
@@ -65,7 +66,7 @@ export async function PUT(
     // 1. Atualiza os dados principais na tabela imoveis
     await query(sql, [
       body.titulo, body.descricao, preco, body.tipo, body.finalidade,
-      body.cidade, body.bairro, body.endereco, area, quartos,
+      body.cidade, bairro, body.endereco, area, quartos,
       banheiros, vagas, body.imagem_url, body.codigo, ativo, 
       status, latitude, longitude, destaque, body.video_url, id
     ]);

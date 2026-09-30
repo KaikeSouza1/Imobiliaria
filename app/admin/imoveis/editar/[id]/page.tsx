@@ -24,6 +24,7 @@ export default function EditarImovelPage() {
   const id = params.id;
 
   const [loading, setLoading] = useState(true);
+  const [bairrosExistentes, setBairrosExistentes] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -37,6 +38,16 @@ export default function EditarImovelPage() {
     longitude: -51.0904,
     video_url: "",
   });
+
+  useEffect(() => {
+    fetch("/api/imoveis")
+      .then((r) => r.json())
+      .then((lista: any[]) => {
+        const unicos = Array.from(new Set(lista.map((i) => i.bairro).filter(Boolean))).sort();
+        setBairrosExistentes(unicos);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function loadImovel() {
@@ -378,8 +389,7 @@ export default function EditarImovelPage() {
             <label className="label-admin">Bairro</label>
             <input name="bairro" list="bairros" value={formData.bairro} onChange={handleChange} className="input-admin" />
             <datalist id="bairros">
-              <option value="Centro" />
-              <option value="São Cristóvão" />
+              {bairrosExistentes.map((b) => <option key={b} value={b} />)}
             </datalist>
           </div>
           <div className="md:col-span-2">

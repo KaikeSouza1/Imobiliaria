@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -22,6 +22,17 @@ export default function NovoImovelPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imovelCriado, setImovelCriado] = useState<any>(null);
+  const [bairrosExistentes, setBairrosExistentes] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/imoveis")
+      .then((r) => r.json())
+      .then((lista: any[]) => {
+        const unicos = Array.from(new Set(lista.map((i) => i.bairro).filter(Boolean))).sort();
+        setBairrosExistentes(unicos);
+      })
+      .catch(() => {});
+  }, []);
 
   const [formData, setFormData] = useState({
     titulo: "", codigo: "", preco: "", tipo: "Casa", finalidade: "Venda",
@@ -319,7 +330,8 @@ export default function NovoImovelPage() {
             </div>
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Bairro</label>
-              <input name="bairro" value={formData.bairro} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
+              <input name="bairro" list="bairros" value={formData.bairro} onChange={handleChange} className="w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]" />
+              <datalist id="bairros">{bairrosExistentes.map((b) => <option key={b} value={b} />)}</datalist>
             </div>
             <div className="md:col-span-2">
               <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Endereço Completo</label>
