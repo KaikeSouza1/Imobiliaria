@@ -46,7 +46,7 @@ const fotosCorretores: Record<string, string> = {
   "André": "/foto andre.jpeg", 
   "Anna": "/foto anna.jpeg",
   "Barbara": "/foto barbara.jpeg",
-  "Claudinei": "/foto claudinei.jpg", 
+  "Claudiney": "/foto claudinei.jpg", 
   "Jessica": "/foto jessica.jpeg",
   "Luane": "/foto luane.jpeg"
 };
@@ -56,7 +56,7 @@ const categoriasDeImoveis = [
   "Comercial","Sítio / Chácara","Galpão","Sobrado"
 ];
 
-const CORRETORES_LIST = ["André","Anna","Barbara","Claudinei","Jessica","Luane","Não Atribuído"];
+const CORRETORES_LIST = ["André","Anna","Barbara","Claudiney","Jessica","Luane","Não Atribuído"];
 
 const ESTAGIOS_CAPTACAO = [
   { id:"NOVO", nome:"Novos Anúncios", cor:"from-sky-500 to-sky-600", bg:"bg-sky-50", text:"text-sky-700", badge:"bg-sky-100 text-sky-700", border:"border-sky-200", icon:<AlertCircle className="w-4 h-4 text-sky-500"/>, desc:"Capturados, aguardando contato" },
@@ -155,7 +155,7 @@ function CRMContent() {
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const corretores: string[] = ["André","Anna","Barbara","Claudinei","Jessica","Luane"];
+  const corretores: string[] = ["André","Anna","Barbara","Claudiney","Jessica","Luane"];
 
   const estagios: Estagio[] = [
     { id:"LEAD", nome:"Novos Contatos", cor:"from-blue-500 to-blue-600", border:"border-blue-200", text:"text-blue-700", bg:"bg-blue-50", badge:"bg-blue-100 text-blue-700", icone:<User className="w-4 h-4 text-blue-500"/> },
