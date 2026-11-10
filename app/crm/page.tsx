@@ -261,8 +261,11 @@ function CRMContent() {
   const onDropProp = (e: React.DragEvent, colId: string) => { e.preventDefault(); setDragPropCol(null); if(dragPropId){ const p=proprietarios.find(x=>x.id===dragPropId); if(p&&p.estagio!==colId) moverProp(dragPropId,colId); } setDragPropId(null); };
 
   // ── Agenda Ações ──
-  const abrirNovaAgenda = (leadId?: number) => { setFormAgenda({ tipo: 'Visita', status: 'Pendente', corretor: isCorretor ? userName : 'André', lead_id: leadId, data_hora: new Date().toISOString().slice(0,16) }); setModalAgenda(true); };
-  const salvarAgenda = async (e: React.FormEvent) => { e.preventDefault(); await fetch("/api/admin/agenda", { method: "POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formAgenda) }); setModalAgenda(false); carregarAgenda(); };
+  // datetime-local trabalha com horário local (sem fuso). Montamos o valor padrão no horário local
+  // e, ao salvar, convertemos para ISO com fuso (UTC) para o servidor não interpretar como UTC.
+  const agoraLocalInput = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
+  const abrirNovaAgenda = (leadId?: number) => { setFormAgenda({ tipo: 'Visita', status: 'Pendente', corretor: isCorretor ? userName : 'André', lead_id: leadId, data_hora: agoraLocalInput() }); setModalAgenda(true); };
+  const salvarAgenda = async (e: React.FormEvent) => { e.preventDefault(); const payload = { ...formAgenda, data_hora: formAgenda.data_hora ? new Date(formAgenda.data_hora).toISOString() : formAgenda.data_hora }; await fetch("/api/admin/agenda", { method: "POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) }); setModalAgenda(false); carregarAgenda(); };
   const alterarStatusAgenda = async (id: number, status: string) => { setAgenda(agenda.map(a => a.id === id ? { ...a, status } : a)); await fetch("/api/admin/agenda", { method: "PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id, status}) }); };
   const excluirAgenda = async (id: number) => { if(!confirm("Cancelar compromisso?")) return; await fetch(`/api/admin/agenda?id=${id}`,{method:"DELETE"}); setAgenda(agenda.filter(a => a.id !== id)); };
 
