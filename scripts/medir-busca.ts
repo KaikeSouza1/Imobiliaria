@@ -25,6 +25,12 @@ async function main() {
     user: process.env.DATABASE_USER, password: process.env.DATABASE_PASSWORD, database: process.env.DATABASE_NAME,
   });
   const c = await pool.connect();
+  // Sequências não voltam com ROLLBACK: guarda a posição atual para restaurar no fim
+  // (senão os próximos códigos automáticos pulariam para CL-2xxxx / CT-2xxxx).
+  const sequencias = (
+    await c.query(`SELECT s, (SELECT last_value FROM pg_sequences WHERE schemaname || '.' || sequencename = s) AS valor
+                     FROM unnest(ARRAY[pg_get_serial_sequence('clientes','id'), pg_get_serial_sequence('locacoes','id')]) s`)
+  ).rows as { s: string; valor: string | null }[];
   try {
     await c.query("BEGIN");
     console.log(`Gerando ${N} contratos fictícios (serão descartados)...`);
@@ -62,6 +68,10 @@ async function main() {
     }
   } finally {
     await c.query("ROLLBACK");
+    for (const { s, valor } of sequencias) {
+      // valor nulo = sequência ainda não usada: volta para o início.
+      await c.query("SELECT setval($1, $2, $3)", [s, valor ?? 1, valor !== null]);
+    }
     c.release();
     await pool.end();
     console.log("Transação desfeita: nenhum dado gravado.");

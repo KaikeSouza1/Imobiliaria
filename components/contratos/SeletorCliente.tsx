@@ -47,7 +47,7 @@ export default function SeletorCliente({
       setBuscando(true);
       try {
         // Busca em todos os clientes: quem é proprietário também pode ser inquilino.
-        const res = await fetch(`/api/admin/clientes?q=${encodeURIComponent(termo.trim())}`);
+        const res = await fetch(`/api/admin/clientes/sugestoes?q=${encodeURIComponent(termo.trim())}`);
         const data = await res.json();
         setOpcoes(Array.isArray(data) ? data : []);
       } finally {

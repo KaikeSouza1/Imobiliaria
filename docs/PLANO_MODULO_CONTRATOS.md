@@ -1,6 +1,6 @@
 # Plano: módulo de contratos e documentos com busca global
 
-Status: **Fase 4 concluída em 25/11/2026. Aguardando validação para a Fase 5.**
+Status: **Fase 5 concluída em 25/11/2026. Aguardando validação para a Fase 6.**
 
 ## Ajustes combinados após a aprovação (25/11/2026)
 
@@ -114,7 +114,7 @@ Uma caixa de busca no topo do layout do admin leva para `/admin/busca?q=...` e f
 | 2 ✅ | Contratos (F1, F3, F4, F6) | APIs ampliadas, listagem com filtros (status, reajuste entre datas), detalhes com as abas "Dados do Contrato" e "Documentos" (menu adiado) | `feat(contratos): ...` |
 | 3 ✅ | Documentos (F2) | upload em três passos, validação, ver e baixar autenticados, exclusão lógica, log, tela "Gestão de Documentos", cópia dos anexos antigos | `feat(documentos): ...` |
 | 4 ✅ | Busca global (F5) | API e tela, caixa de busca no layout | `feat(busca): ...` |
-| 5 | Clientes (F7) | painel único de inquilinos e proprietários, seletor no formulário do contrato | `feat(clientes): ...` |
+| 5 ✅ | Clientes (F7) | painel único de inquilinos e proprietários, seletor no formulário do contrato | `feat(clientes): ...` |
 | 6 | Permissões (F9) | `lib/permissoes.ts`, login respeitando o `role`, aplicação nas rotas e no menu, tela de perfis | `feat(permissoes): ...` |
 | 7 | Importação e contratos antigos (F8) | scripts de PDF e CSV, tela de pendências | `feat(importacao): ...` |
 | 8 | Fechamento | seed fictício, testes, `COMO_USAR_MODULO_CONTRATOS.md`, guia de backup e restauração (`pg_dump` + `rclone` do bucket) | `docs: ...` |
@@ -286,6 +286,57 @@ A aba "Documentos" mostra um estado vazio. O botão "Anexar PDF" fica desabilita
 - `next build` compila sem erros.
 - O teste ponta a ponta passou em 21 de 21 checagens, rodando duas vezes: com a chave desligada e com a chave ligada. Ele cobriu palavras em qualquer ordem, filtros avançados, inquilino e proprietário sem confusão, pessoa com 2 contratos, foco em pessoa e em imóvel, renomear um cliente e o CPF mascarado.
 - Os dados `TESTE-` foram apagados ao final.
+
+## 4.4 Registro da Fase 5
+
+**Telas** (ainda fora do menu):
+- `/admin/clientes`: lista com busca por nome, código, CPF/CNPJ ou cidade (cada palavra procurada separadamente, sem acento). Tem filtro Todos / Inquilinos / Proprietários, cards de resumo e paginação de 25 por página. O CPF aparece **mascarado** na lista.
+- `/admin/clientes/novo` (aceita `?papel=proprietario`) e `/admin/clientes/[id]/editar`. O formulário é o mesmo nos dois casos e tem estas seções:
+  - tipo: inquilino, proprietário ou os dois;
+  - dados pessoais: nome, CPF/CNPJ, RG, nascimento, estado civil e profissão;
+  - contato;
+  - endereço: CEP, rua, número, complemento, bairro, cidade e UF;
+  - observações.
+- `/admin/clientes/[id]` é o **painel único** da pessoa. Ele reúne:
+  - dados pessoais, contato e endereço;
+  - os contratos em que a pessoa é inquilina **e** os contratos em que é proprietária, com o papel de cada um;
+  - os imóveis em que ela aparece como proprietária;
+  - os documentos pessoais, com envio de PDF (tipo "Documento pessoal"), ver, baixar e excluir;
+  - atalho para a busca global já filtrada pela pessoa.
+
+**Validação** (`lib/clientes.ts`):
+- CPF e CNPJ têm os **dígitos verificadores** conferidos. A mesma regra vale para inquilino e proprietário cadastrados direto no formulário do contrato.
+- E-mail, CEP com 8 dígitos, UF, estado civil a partir de uma lista e data de nascimento entre 1900 e hoje.
+- Exige o nome e pelo menos um tipo (inquilino ou proprietário).
+- CPF/CNPJ repetido é recusado com o erro 409 e a orientação de usar a busca.
+
+**Exclusão.** Só é permitida quando a pessoa não tem contrato, imóvel nem documento vinculado. Nesse caso os dados pessoais são apagados de verdade do banco, o que atende ao pedido de eliminação previsto na LGPD. Se houver vínculo, a mensagem informa quantos contratos, imóveis e documentos existem.
+
+**Sincronização.** Quando o cadastro da pessoa é editado, o contrato e a Área do Cliente passam a mostrar os dados novos. Isso usa os gatilhos da migração 004.
+
+**Rotas:**
+- `GET /api/admin/clientes` (lista) e `POST /api/admin/clientes` (cadastro).
+- `GET`, `PUT` e `DELETE /api/admin/clientes/[id]`.
+- O seletor do formulário de contrato passou a usar `GET /api/admin/clientes/sugestoes?q=|id=`, que reaproveita a busca por palavras da busca global e sempre devolve o CPF mascarado.
+
+**Correção nesta fase.** O script de medição da Fase 4 inseria 20 mil registros dentro de uma transação desfeita depois. O ROLLBACK não devolve os números das sequências do banco, então os códigos automáticos pularam para CL-6xxxx e CT-6xxxx. As sequências foram reposicionadas, e o script agora guarda e restaura a numeração no fim.
+
+**LGPD.** Hoje qualquer usuário logado vê o CPF completo no painel do cliente. Isso será restringido por perfil na Fase 6.
+
+**Verificação:**
+- 52 testes unitários passam, cobrindo CPF/CNPJ válidos e inválidos, as mensagens de erro, a validação do cadastro e o endereço.
+- `tsc` e lint sem erros.
+- `next build` compila sem erros.
+- O teste ponta a ponta passou em 29 de 29 checagens, cobrindo:
+  - acesso sem login devolve 401;
+  - CPF inválido é recusado e CPF repetido devolve 409;
+  - busca por nome sem acento, por parte do CPF, por cidade e por código;
+  - CPF mascarado na lista e no seletor;
+  - edição refletida no contrato e na busca;
+  - documento pessoal anexado;
+  - exclusão bloqueada quando há vínculo e liberada quando não há;
+  - todas as telas abrem.
+- Os dados de teste foram apagados do banco e do bucket.
 
 ## 5. O que preciso de você antes de fases específicas
 

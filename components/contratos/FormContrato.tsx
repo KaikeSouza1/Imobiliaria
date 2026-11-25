@@ -137,7 +137,7 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
     }));
     // Se o imóvel já tem proprietário cadastrado, já sugere no contrato.
     if (!proprietario && im.proprietario_id) {
-      const r = await fetch(`/api/admin/clientes?id=${im.proprietario_id}`);
+      const r = await fetch(`/api/admin/clientes/sugestoes?id=${im.proprietario_id}`);
       if (r.ok) {
         const c = await r.json();
         setProprietario({ modo: "existente", id: c.id, nome: c.nome, documento: c.documento, codigo: c.codigo || undefined });

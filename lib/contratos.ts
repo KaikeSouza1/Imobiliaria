@@ -1,5 +1,6 @@
 // Regras do contrato de locação (validação e normalização). Funções puras: usadas na API e nos testes.
 import { apenasDigitos } from "./texto";
+import { erroCpfCnpj } from "./clientes";
 
 export const STATUS_CONTRATO = ["ativo", "encerrado", "rescindido"] as const;
 export const FINALIDADES = ["residencial", "comercial"] as const;
@@ -75,9 +76,8 @@ function novoCliente(valor: unknown, erros: string[], papel: string): NovoClient
   const nome = texto(v.nome, 255);
   if (!nome) return null;
   const doc = apenasDigitos(String(v.cpf_cnpj ?? ""));
-  if (doc && doc.length !== 11 && doc.length !== 14) {
-    erros.push(`CPF/CNPJ do ${papel} deve ter 11 ou 14 dígitos.`);
-  }
+  const erroDoc = erroCpfCnpj(doc, papel);
+  if (erroDoc) erros.push(erroDoc);
   return {
     nome,
     cpf_cnpj: doc || null,
