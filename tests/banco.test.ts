@@ -43,6 +43,32 @@ describe.skipIf(!ativo)("esquema do módulo de contratos", () => {
     }
   });
 
+  it("f_proximo_reajuste calcula o próximo aniversário sem escorregar o dia", async () => {
+    const casos: [string, number, string, string][] = [
+      ["2025-01-31", 1, "2025-02-01", "2025-02-28"],
+      ["2025-01-31", 1, "2025-03-01", "2025-03-31"],
+      ["2024-03-10", 12, "2026-11-25", "2027-03-10"],
+      ["2024-03-10", 12, "2027-03-10", "2027-03-10"],
+      ["2026-06-01", 12, "2026-01-01", "2027-06-01"],
+    ];
+    for (const [inicio, meses, ref, esperado] of casos) {
+      const { rows } = await pool.query("SELECT f_proximo_reajuste($1::date, $2, $3::date)::text AS r", [inicio, meses, ref]);
+      expect(rows[0].r, `${inicio} +${meses}m ref ${ref}`).toBe(esperado);
+    }
+  });
+
+  it("a listagem roda com todos os filtros (consulta real, só leitura)", async () => {
+    const { listarContratos } = await import("../lib/contratos-db");
+    const r = await listarContratos({
+      q: "a", codigo: "1", inquilino: "a", proprietario: "a", endereco: "a",
+      status: "ativo", finalidade: "residencial", corretor: "x",
+      reajuste_de: "2020-01-01", reajuste_ate: "2030-12-31",
+    });
+    expect(Array.isArray(r.itens)).toBe(true);
+    const todos = await listarContratos({});
+    expect(todos.total).toBeGreaterThanOrEqual(0);
+  });
+
   it("busca por nome usa índice trigram", async () => {
     const cliente = await pool.connect();
     try {

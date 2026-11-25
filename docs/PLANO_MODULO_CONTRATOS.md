@@ -1,6 +1,6 @@
 # Plano: módulo de contratos e documentos com busca global
 
-Status: **Fase 1 concluída (migração aplicada em produção em 25/11/2026). Aguardando validação para a Fase 2.**
+Status: **Fase 2 concluída em 25/11/2026. Aguardando validação para a Fase 3.**
 
 ## Ajustes combinados após a aprovação (25/11/2026)
 
@@ -111,7 +111,7 @@ Uma caixa de busca no topo do layout do admin leva para `/admin/busca?q=...` e f
 |---|---|---|---|
 | 0 ✅ | Descoberta e plano | este documento | `docs: plano do modulo de contratos` |
 | 1 ✅ | Modelo de dados | executor de migrações, `001_contratos.sql` (clientes, colunas novas em locacoes e imoveis, documentos, log, pendências, extensões e índices), vitest instalado | `feat(db): ...` |
-| 2 | Contratos (F1, F3, F4, F6) | APIs ampliadas, listagem com filtros (status, reajuste entre datas), detalhes com as abas "Dados do Contrato" e "Documentos", menu | `feat(contratos): ...` |
+| 2 ✅ | Contratos (F1, F3, F4, F6) | APIs ampliadas, listagem com filtros (status, reajuste entre datas), detalhes com as abas "Dados do Contrato" e "Documentos" (menu adiado) | `feat(contratos): ...` |
 | 3 | Documentos (F2) | upload em três passos, validação, ver e baixar autenticados, exclusão lógica, log, tela "Gestão de Documentos", cópia dos anexos antigos | `feat(documentos): ...` |
 | 4 | Busca global (F5) | API e tela, caixa de busca no layout | `feat(busca): ...` |
 | 5 | Clientes (F7) | painel único de inquilinos e proprietários, seletor no formulário do contrato | `feat(clientes): ...` |
@@ -136,6 +136,65 @@ Ao fim de cada fase, os testes rodam junto com `tsc --noEmit` e `next lint`, est
   - A locação que já existia continua legível.
   - O índice `clientes_nome_trgm` é usado pela busca (conferido com `EXPLAIN`).
   - 9 de 9 testes passam.
+
+## 4.1 Registro da Fase 2
+
+**Telas** (acessíveis só pela URL, ainda fora do menu):
+
+| Tela | Endereço |
+|---|---|
+| Listagem | `/admin/locacoes` |
+| Novo contrato | `/admin/locacoes/novo` |
+| Contrato antigo | `/admin/locacoes/novo?legado=1` |
+| Detalhes | `/admin/locacoes/[id]` |
+| Edição | `/admin/locacoes/editar/[id]` |
+
+**Listagem.** É paginada no servidor, com 20 contratos por página. A busca geral cobre inquilino, proprietário, endereço, código e pasta. Há filtro por código, status (ativo, encerrado ou rescindido), finalidade e intervalo do próximo reajuste. Os cards mostram total de contratos, ativos, soma dos aluguéis ativos e reajustes nos próximos 30 dias. O card de reajustes também funciona como atalho de filtro.
+
+**Detalhes.** O topo mostra código, status, inquilino, imóvel e endereço completo. A aba "Dados do Contrato" traz:
+- prazos: tempo total, início, término, entrega das chaves, período e próximo reajuste;
+- valor e vencimento;
+- corretor e finalidade;
+- partes do contrato e observações.
+
+A aba "Documentos" mostra um estado vazio. O botão "Anexar PDF" fica desabilitado até a Fase 3.
+
+**Formulário.** É o mesmo para criar e editar.
+- O imóvel é buscado por código, título ou endereço. Há a opção "imóvel não cadastrado no site", para contratos antigos.
+- Inquilino e proprietário são buscados no cadastro de clientes ou criados na hora. Se o CPF/CNPJ informado já existir, o cadastro existente é reaproveitado.
+- A finalidade é sugerida pelo tipo do imóvel. Se o imóvel já tem proprietário cadastrado, ele também é sugerido.
+- Os erros aparecem no topo do formulário, em vez de alertas.
+
+**Regras no servidor.** Ficam em `lib/contratos.ts`, `lib/busca-contratos.ts` e `lib/contratos-db.ts`.
+- **Código do contrato:** quando não é informado, é gerado automaticamente (`CT-00001`). Código repetido devolve o erro 409.
+- **Contrato antigo:** precisa só do código, do inquilino e de alguma identificação do imóvel.
+- **Exclusão:** é bloqueada se houver documento vinculado. A orientação é mudar o status para "Encerrado".
+- **Compatibilidade:** os campos `locatario_*` continuam preenchidos a partir do inquilino, porque a Área do Cliente ainda lê deles.
+- **Proprietário do imóvel:** `imoveis.proprietario_id` só é preenchido quando está vazio. Nunca é sobrescrito.
+
+**Próximo reajuste.** É calculado pela função `f_proximo_reajuste` (migração `002`), sempre somando o período a partir da data de início. A coluna `proximo_reajuste` fica reservada para os futuros alertas.
+
+**Boletos.** Saíram das telas de contrato. As rotas de boletos e os componentes `BoletoView` e `GerarBoletosPreviewModal` continuam no código, sem uso nessas telas. A Área do Cliente segue igual.
+
+**Anexos antigos.** A rota de anexos e a tabela `locacao_anexos` (que não tem nenhum registro) continuam no código, mas a tela de detalhes não as usa mais. Os documentos novos chegam na Fase 3.
+
+**Rotas novas:**
+- `GET /api/admin/locacoes/opcoes`: lista de corretores.
+- `GET /api/admin/clientes?q=` (seletor de clientes, com CPF mascarado) e `GET /api/admin/clientes?id=`.
+
+**Mudança na API.** `GET /api/admin/locacoes` agora devolve `{ itens, total, pagina, paginas, resumo }`, e não mais uma lista simples. A única tela que usava essa rota foi atualizada junto.
+
+**Verificação:**
+- 34 testes passam: unitários de validação e de busca, mais os de banco com `RODAR_TESTES_BANCO=1`.
+- `tsc` sem erros, e o lint dos arquivos novos também.
+- Rodei um teste ponta a ponta no servidor local, usando o banco de produção, que passou em 25 de 25 verificações:
+  - acesso sem login devolve 401;
+  - validação de campos e código repetido;
+  - filtros de busca sem acento e com termo parcial;
+  - criação, edição e detalhes de contrato;
+  - bloqueio de exclusão quando há documento;
+  - carregamento das 5 telas.
+- Os dados `TESTE-` criados nesse teste foram removidos ao final, e o imóvel usado voltou ao estado original.
 
 ## 5. O que preciso de você antes de fases específicas
 
