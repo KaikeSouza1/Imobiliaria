@@ -13,6 +13,8 @@ export interface FiltrosContrato {
   status?: string;
   finalidade?: string;
   corretor?: string;
+  cliente_id?: number;   // contratos em que a pessoa é inquilina OU proprietária
+  imovel_id?: number;    // histórico de contratos do imóvel
   reajuste_de?: string;  // YYYY-MM-DD
   reajuste_ate?: string; // YYYY-MM-DD
   pagina?: number;
@@ -35,21 +37,32 @@ export const EXPRESSAO_PROXIMO_REAJUSTE = "f_proximo_reajuste(l.data_inicio, l.p
 
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
 
+// Divide o texto em palavras (no máximo 8), ignorando espaços extras.
+export function separarPalavras(valor?: string | null): string[] {
+  return (valor || "").trim().split(/\s+/).filter(Boolean).slice(0, 8);
+}
+
 export function montarFiltroContratos(f: FiltrosContrato) {
   const condicoes: string[] = [];
   const params: unknown[] = [];
 
   const termo = (valor: string) => {
-    params.push(`%${escaparLike(valor.trim())}%`);
+    params.push(`%${escaparLike(valor)}%`);
     return `f_busca($${params.length})`;
   };
+  // Cada palavra digitada precisa aparecer em algum dos campos, em qualquer ordem:
+  // "maria flores" acha a inquilina Maria do imóvel da Rua das Flores.
+  // O campo único l.texto_busca (índice trigram, mantido por gatilho no banco) contém todos os campos abaixo.
+  // Nos filtros específicos ele entra como pré-filtro: o índice reduz os candidatos e o campo exato confirma.
   const contem = (campos: string[], valor?: string) => {
-    if (!valor || !valor.trim()) return;
-    const p = termo(valor);
-    condicoes.push(`(${campos.map((c) => `${c} LIKE ${p}`).join(" OR ")})`);
+    for (const palavra of separarPalavras(valor)) {
+      const p = termo(palavra);
+      const exato = campos.length === 1 ? `${campos[0]} LIKE ${p}` : `(${campos.map((c) => `${c} LIKE ${p}`).join(" OR ")})`;
+      condicoes.push(campos[0] === "l.texto_busca" ? exato : `l.texto_busca LIKE ${p} AND ${exato}`);
+    }
   };
 
-  contem(Object.values(CAMPO), f.q);
+  contem(["l.texto_busca"], f.q);
   contem([CAMPO.codigoContrato, CAMPO.codigoImovel, CAMPO.legado], f.codigo);
   contem([CAMPO.inquilino], f.inquilino);
   contem([CAMPO.proprietario], f.proprietario);
@@ -66,6 +79,15 @@ export function montarFiltroContratos(f: FiltrosContrato) {
   if (f.corretor && f.corretor.trim()) {
     params.push(f.corretor.trim().toLowerCase());
     condicoes.push(`lower(l.corretor_responsavel) = $${params.length}`);
+  }
+  const idValido = (v: unknown) => Number.isInteger(v) && (v as number) > 0;
+  if (idValido(f.cliente_id)) {
+    params.push(f.cliente_id);
+    condicoes.push(`(l.inquilino_id = $${params.length} OR l.proprietario_id = $${params.length})`);
+  }
+  if (idValido(f.imovel_id)) {
+    params.push(f.imovel_id);
+    condicoes.push(`l.imovel_id = $${params.length}`);
   }
   if (f.reajuste_de && RE_DATA.test(f.reajuste_de)) {
     params.push(f.reajuste_de);
@@ -99,6 +121,8 @@ export function filtrosDaUrl(searchParams: URLSearchParams): FiltrosContrato {
     status: g("status"),
     finalidade: g("finalidade"),
     corretor: g("corretor"),
+    cliente_id: Number(g("cliente_id")) || undefined,
+    imovel_id: Number(g("imovel_id")) || undefined,
     reajuste_de: g("reajuste_de"),
     reajuste_ate: g("reajuste_ate"),
     pagina: Number(g("pagina")) || 1,

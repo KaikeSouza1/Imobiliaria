@@ -5,6 +5,8 @@ import { authOptions } from "../api/auth/[...nextauth]/route";
 import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
+import { moduloContratosVisivel } from "@/lib/modulo-contratos";
+import BuscaGlobalTopo from "@/components/BuscaGlobalTopo";
 
 async function getNotificacoes() {
   try {
@@ -112,6 +114,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* CONTEÚDO */}
       <main className="flex-1 ml-72 p-10">
         <div className="max-w-[1600px] mx-auto">
+          {moduloContratosVisivel() && (
+            <div className="mb-8 flex justify-end">
+              <BuscaGlobalTopo />
+            </div>
+          )}
           {children}
         </div>
       </main>

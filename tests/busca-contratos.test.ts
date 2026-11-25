@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { montarFiltroContratos, filtrosDaUrl } from "../lib/busca-contratos";
+import { montarFiltroContratos, filtrosDaUrl, separarPalavras } from "../lib/busca-contratos";
 import { normalizarBusca, escaparLike, mesesEntre, descreverPrazo, mascararCpfCnpj, formatarData } from "../lib/texto";
 
 describe("montarFiltroContratos", () => {
@@ -11,20 +11,33 @@ describe("montarFiltroContratos", () => {
     expect(r.offset).toBe(0);
   });
 
-  it("busca geral procura em todos os campos com um parâmetro só", () => {
-    const r = montarFiltroContratos({ q: "joão" });
-    expect(r.params).toEqual(["%joão%"]);
-    expect(r.where).toContain("f_busca(coalesce(inq.nome, l.locatario_nome)) LIKE f_busca($1)");
-    expect(r.where).toContain("f_busca(prop.nome) LIKE f_busca($1)");
-    expect(r.where).toContain("f_busca(l.codigo) LIKE f_busca($1)");
-    expect(r.where).toContain("f_busca(i.codigo) LIKE f_busca($1)");
+  it("busca geral usa o campo único indexado, uma condição por palavra", () => {
+    const r = montarFiltroContratos({ q: "  maria   flores " });
+    expect(r.params).toEqual(["%maria%", "%flores%"]);
+    expect(r.where).toBe("WHERE l.texto_busca LIKE f_busca($1) AND l.texto_busca LIKE f_busca($2)");
+  });
+
+  it("filtro específico exige cada palavra em algum dos campos dele", () => {
+    const r = montarFiltroContratos({ inquilino: "joao silva" });
+    expect(r.where).toBe(
+      "WHERE l.texto_busca LIKE f_busca($1) AND f_busca(coalesce(inq.nome, l.locatario_nome)) LIKE f_busca($1)" +
+        " AND l.texto_busca LIKE f_busca($2) AND f_busca(coalesce(inq.nome, l.locatario_nome)) LIKE f_busca($2)"
+    );
+    const c = montarFiltroContratos({ codigo: "A1" });
+    expect(c.where).toContain("f_busca(l.codigo) LIKE f_busca($1) OR f_busca(i.codigo) LIKE f_busca($1)");
   });
 
   it("valores do usuário nunca entram no SQL, só nos parâmetros", () => {
     const malicioso = "'; DROP TABLE locacoes; --";
     const r = montarFiltroContratos({ q: malicioso, inquilino: malicioso, corretor: malicioso });
     expect(r.where).not.toContain("DROP");
-    expect(r.params).toHaveLength(3);
+    expect(r.where).not.toContain("'");
+    expect(r.params.some((p) => /drop/i.test(String(p)))).toBe(true);
+  });
+
+  it("limita a 8 palavras", () => {
+    expect(separarPalavras("a b c d e f g h i j")).toHaveLength(8);
+    expect(separarPalavras("   ")).toEqual([]);
   });
 
   it("escapa curingas do LIKE", () => {
@@ -35,7 +48,7 @@ describe("montarFiltroContratos", () => {
   it("combina filtros com AND e numera os parâmetros em ordem", () => {
     const r = montarFiltroContratos({ inquilino: "ana", status: "ativo", reajuste_de: "2026-01-01", reajuste_ate: "2026-12-31" });
     expect(r.params).toEqual(["%ana%", "ativo", "2026-01-01", "2026-12-31"]);
-    expect(r.where.split(" AND ")).toHaveLength(4);
+    expect(r.where.split(" AND ")).toHaveLength(5); // inquilino = pré-filtro indexado + campo exato
     expect(r.where).toContain("l.status = $2");
     expect(r.where).toContain("f_proximo_reajuste(l.data_inicio, l.periodo_reajuste_meses, CURRENT_DATE) >= $3::date");
   });
@@ -50,6 +63,14 @@ describe("montarFiltroContratos", () => {
     expect(r.porPagina).toBe(100);
     expect(r.offset).toBe(200);
     expect(montarFiltroContratos({ pagina: -2 }).pagina).toBe(1);
+  });
+
+  it("filtra por pessoa (inquilina ou proprietária) e por imóvel", () => {
+    const r = montarFiltroContratos({ cliente_id: 7, imovel_id: 9 });
+    expect(r.params).toEqual([7, 9]);
+    expect(r.where).toContain("(l.inquilino_id = $1 OR l.proprietario_id = $1)");
+    expect(r.where).toContain("l.imovel_id = $2");
+    expect(montarFiltroContratos({ cliente_id: -1, imovel_id: 1.5 }).where).toBe("");
   });
 
   it("lê os filtros da URL", () => {

@@ -1,6 +1,6 @@
 # Plano: módulo de contratos e documentos com busca global
 
-Status: **Fase 3 concluída em 25/11/2026. Aguardando validação para a Fase 4.**
+Status: **Fase 4 concluída em 25/11/2026. Aguardando validação para a Fase 5.**
 
 ## Ajustes combinados após a aprovação (25/11/2026)
 
@@ -113,7 +113,7 @@ Uma caixa de busca no topo do layout do admin leva para `/admin/busca?q=...` e f
 | 1 ✅ | Modelo de dados | executor de migrações, `001_contratos.sql` (clientes, colunas novas em locacoes e imoveis, documentos, log, pendências, extensões e índices), vitest instalado | `feat(db): ...` |
 | 2 ✅ | Contratos (F1, F3, F4, F6) | APIs ampliadas, listagem com filtros (status, reajuste entre datas), detalhes com as abas "Dados do Contrato" e "Documentos" (menu adiado) | `feat(contratos): ...` |
 | 3 ✅ | Documentos (F2) | upload em três passos, validação, ver e baixar autenticados, exclusão lógica, log, tela "Gestão de Documentos", cópia dos anexos antigos | `feat(documentos): ...` |
-| 4 | Busca global (F5) | API e tela, caixa de busca no layout | `feat(busca): ...` |
+| 4 ✅ | Busca global (F5) | API e tela, caixa de busca no layout | `feat(busca): ...` |
 | 5 | Clientes (F7) | painel único de inquilinos e proprietários, seletor no formulário do contrato | `feat(clientes): ...` |
 | 6 | Permissões (F9) | `lib/permissoes.ts`, login respeitando o `role`, aplicação nas rotas e no menu, tela de perfis | `feat(permissoes): ...` |
 | 7 | Importação e contratos antigos (F8) | scripts de PDF e CSV, tela de pendências | `feat(importacao): ...` |
@@ -246,6 +246,46 @@ A aba "Documentos" mostra um estado vazio. O botão "Anexar PDF" fica desabilita
 - **Envios abandonados:** se o navegador fechar entre o envio e a confirmação, o arquivo fica no bucket sem registro. É raro e ocupa pouco espaço. Fica para a Fase 8 um script de limpeza de objetos sem registro com mais de 1 dia.
 - **Arquivos excluídos continuam ocupando espaço,** porque a exclusão é lógica. É intencional, por causa da trilha.
 - **As chaves do bucket apareceram no chat.** Recomendação: clicar em "Roll" no token e atualizar o `.env` e a Vercel.
+
+## 4.3 Registro da Fase 4
+
+**Tela `/admin/busca`.** Tem uma caixa principal e filtros avançados que podem ser abertos: inquilino, proprietário, código, endereço, status e intervalo do próximo reajuste. Os critérios ficam sempre visíveis e também vão para a URL, então dá para mandar o link de uma busca para outra pessoa.
+
+**Como a busca funciona:**
+- Cada palavra digitada é procurada separadamente, em qualquer ordem e em qualquer campo. Por exemplo, "maria flores" encontra a inquilina Maria do imóvel da Rua das Flores.
+- Ignora acentos e diferença entre maiúsculas e minúsculas, e aceita parte da palavra.
+- Também encontra pelo número da pasta física, digitando "pasta 12".
+
+**Resultados:**
+- Até 6 pessoas e 6 imóveis encontrados, cada um com o número de contratos.
+- Clicar numa pessoa ou num imóvel "foca" a busca nele. Para uma pessoa, aparecem todos os contratos em que ela é inquilina **ou** proprietária. Para um imóvel, aparece o histórico de contratos dele. É isso que junta os dados de uma mesma pessoa ou imóvel.
+- Os contratos vêm paginados e cada um tem atalho para "Detalhes" e para "Documentos (n)".
+- O CPF aparece sempre mascarado.
+
+**Caixa de busca no topo do painel.** Fica escondida enquanto a chave `MODULO_CONTRATOS_VISIVEL` estiver desligada. Para ligar, defina `MODULO_CONTRATOS_VISIVEL=1` no `.env` e na Vercel; a mudança vale a partir do próximo deploy. A mesma chave vai controlar o menu quando o módulo for liberado.
+- Ainda falta: o CRM (`/crm`) tem layout próprio e vai ganhar a caixa na liberação.
+
+**Desempenho:**
+- As migrações `003` e `004` criaram o campo `locacoes.texto_busca`, com índice trigram. Ele reúne código, pasta, inquilino, proprietário, código, título e endereço do imóvel, e os dados de contratos antigos.
+- Esse campo é mantido por gatilhos no banco. Ele é recalculado quando o contrato é gravado, quando o nome de um cliente muda e quando o código, o título ou o endereço de um imóvel mudam.
+- Nos filtros específicos, esse campo serve de pré-filtro indexado, e o campo exato confirma o resultado.
+- Medição com 20 mil contratos fictícios dentro de uma transação desfeita depois (`npx tsx scripts/medir-busca.ts 20000`):
+
+  | Busca | Antes | Depois |
+  |---|---|---|
+  | Busca geral | 0,8 a 1,8 s | 16 a 65 ms |
+  | Filtros específicos | 0,2 a 0,7 s | 36 a 75 ms |
+  | Status + intervalo de reajuste | — | 180 ms |
+
+**Migração `004`.** Agora, quando o cadastro de um cliente muda, as cópias `locatario_*` do contrato acompanham a mudança (a Área do Cliente lê esses campos). O texto de busca passa a usar o nome do cadastro de clientes, e `locatario_nome` só entra em contrato antigo que não tem inquilino vinculado.
+- Ponto de atenção: há um gatilho novo na tabela `imoveis`. Ele só age quando mudam o código, o título ou o endereço do imóvel, e só atualiza os contratos daquele imóvel.
+
+**Verificação:**
+- 50 testes passam (unitários e de banco).
+- `tsc` e lint sem erros nos arquivos novos.
+- `next build` compila sem erros.
+- O teste ponta a ponta passou em 21 de 21 checagens, rodando duas vezes: com a chave desligada e com a chave ligada. Ele cobriu palavras em qualquer ordem, filtros avançados, inquilino e proprietário sem confusão, pessoa com 2 contratos, foco em pessoa e em imóvel, renomear um cliente e o CPF mascarado.
+- Os dados `TESTE-` foram apagados ao final.
 
 ## 5. O que preciso de você antes de fases específicas
 
