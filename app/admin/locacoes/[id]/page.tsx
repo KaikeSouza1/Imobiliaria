@@ -5,7 +5,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Edit, Loader2, Home, User, KeyRound, CalendarClock, CalendarRange,
-  Briefcase, Building2, FileText, Paperclip, CheckCircle2, Trash2, Archive, Phone,
+  Briefcase, Building2, FileText, Paperclip, CheckCircle2, Trash2, Archive, Phone, FilePlus2,
 } from "lucide-react";
 import EnvioDocumentos from "@/components/documentos/EnvioDocumentos";
 import ItemDocumento from "@/components/documentos/ItemDocumento";
@@ -107,12 +107,13 @@ function DetalheContrato() {
   const router = useRouter();
   const parametros = useSearchParams();
   const salvo = parametros.get("salvo") === "1";
+  const gerado = parametros.get("gerado") === "1";
 
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [erro, setErro] = useState("");
   const [versao, setVersao] = useState(0); // muda para recarregar após anexar/excluir
   const [aba, setAba] = useState<"dados" | "documentos">(parametros.get("aba") === "documentos" ? "documentos" : "dados");
-  const [aviso, setAviso] = useState(salvo ? "Contrato salvo com sucesso." : "");
+  const [aviso, setAviso] = useState(salvo ? "Contrato salvo com sucesso." : gerado ? "Documento gerado e guardado nos documentos do contrato." : "");
 
   useEffect(() => {
     let ativo = true;
@@ -273,7 +274,11 @@ function DetalheContrato() {
           <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-4">
             <Paperclip size={16} className="text-green-600" /> Documentos do contrato
           </h2>
-          <div className="mb-6">
+          <div className="mb-6 flex flex-col gap-4">
+            <Link href={`/admin/documentos/gerar?locacao_id=${c.id}`}
+              className="self-start flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all">
+              <FilePlus2 size={16} /> Gerar documento (contrato, termo, notificação)
+            </Link>
             <EnvioDocumentos vinculo={{ locacao_id: c.id }} onConcluido={() => setVersao((v) => v + 1)} />
           </div>
 

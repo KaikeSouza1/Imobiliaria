@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  FolderOpen, FilePlus2, FolderInput, Search, X, Loader2, Folder, Files, ChevronLeft, ChevronRight, FileText,
+  FolderOpen, FilePlus2, FileSignature, FolderInput, Search, X, Loader2, Folder, Files, ChevronLeft, ChevronRight, FileText,
 } from "lucide-react";
 import EnvioDocumentos from "@/components/documentos/EnvioDocumentos";
 import ItemDocumento, { type DocumentoResumo } from "@/components/documentos/ItemDocumento";
-import { TIPOS_DOCUMENTO, ROTULO_TIPO_DOCUMENTO } from "@/lib/documentos";
+import { TIPOS_TODOS, ROTULO_TIPO_DOCUMENTO } from "@/lib/documentos";
 
 interface ContratoOpcao {
   id: number;
@@ -128,6 +128,10 @@ export default function GestaoDocumentosPage() {
           <p className="text-gray-500 text-sm mt-1 ml-7">Contratos assinados, vistorias e comprovantes em PDF</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Link href="/admin/documentos/gerar"
+            className="bg-white border border-green-300 hover:bg-green-50 text-green-800 px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition-all">
+            <FileSignature size={18} /> Gerar Documento
+          </Link>
           <button disabled title="Importação de pastas: disponível na etapa de importação em lote"
             className="bg-white border border-gray-200 text-gray-400 px-5 py-3 rounded-xl font-bold flex items-center gap-2 cursor-not-allowed">
             <FolderInput size={18} /> Usar Pasta
@@ -181,7 +185,7 @@ export default function GestaoDocumentosPage() {
           {modo === "recentes" && (
             <select value={tipo} onChange={(e) => { setTipo(e.target.value); setPagina(1); }} className={CLASSE_INPUT}>
               <option value="">Todos os tipos</option>
-              {TIPOS_DOCUMENTO.map((t) => <option key={t} value={t}>{ROTULO_TIPO_DOCUMENTO[t]}</option>)}
+              {TIPOS_TODOS.map((t) => <option key={t} value={t}>{ROTULO_TIPO_DOCUMENTO[t]}</option>)}
             </select>
           )}
         </div>

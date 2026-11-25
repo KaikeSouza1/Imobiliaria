@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Edit, Trash2, Loader2, User, MapPin, Phone, FileText, Home, Paperclip, CheckCircle2, Search,
+  ArrowLeft, Edit, Trash2, Loader2, User, MapPin, Phone, FileText, Home, Paperclip, CheckCircle2, Search, FilePlus2,
 } from "lucide-react";
 import EnvioDocumentos from "@/components/documentos/EnvioDocumentos";
 import ItemDocumento, { type DocumentoResumo } from "@/components/documentos/ItemDocumento";
@@ -55,7 +55,9 @@ function PainelCliente() {
   const [c, setC] = useState<Painel | null>(null);
   const [erro, setErro] = useState("");
   const [versao, setVersao] = useState(0);
-  const [aviso, setAviso] = useState(sp.get("salvo") === "1" ? "Cliente salvo com sucesso." : "");
+  const [aviso, setAviso] = useState(
+    sp.get("salvo") === "1" ? "Cliente salvo com sucesso." : sp.get("gerado") === "1" ? "Documento gerado e guardado no cadastro." : ""
+  );
 
   useEffect(() => {
     let ativo = true;
@@ -221,7 +223,15 @@ function PainelCliente() {
         <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
           <Paperclip size={16} className="text-green-600" /> Documentos pessoais ({c.documentos.length})
         </h2>
-        <div className="mb-5">
+        <div className="mb-5 flex flex-col gap-4">
+          {c.eh_proprietario && (
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/admin/documentos/gerar?modelo=administracao_locacao&cliente_id=${c.id}`}
+                className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-md"><FilePlus2 size={14} /> Contrato de administração</Link>
+              <Link href={`/admin/documentos/gerar?modelo=intermediacao_venda&cliente_id=${c.id}`}
+                className="flex items-center gap-2 bg-white border border-gray-200 hover:border-green-400 text-gray-700 px-4 py-2.5 rounded-xl font-bold text-xs"><FilePlus2 size={14} /> Contrato de venda</Link>
+            </div>
+          )}
           <EnvioDocumentos vinculo={{ cliente_id: c.id }} tipoInicial="documento_pessoal" onConcluido={() => setVersao((v) => v + 1)} />
         </div>
         {c.documentos.length === 0 ? (

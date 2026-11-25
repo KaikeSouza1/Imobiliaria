@@ -44,5 +44,6 @@ export const config = {
     "/api/admin/clientes/:path*",
     "/api/admin/documentos/:path*",
     "/api/admin/busca/:path*",
+    "/api/admin/modelos/:path*",
   ],
 };

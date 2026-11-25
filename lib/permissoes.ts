@@ -14,7 +14,7 @@ export function podeUsarModuloContratos(username: string | null | undefined): bo
 // Telas e rotas de API que pertencem ao módulo.
 const PREFIXOS_MODULO = [
   "/admin/locacoes", "/admin/clientes", "/admin/documentos", "/admin/busca",
-  "/api/admin/locacoes", "/api/admin/clientes", "/api/admin/documentos", "/api/admin/busca",
+  "/api/admin/locacoes", "/api/admin/clientes", "/api/admin/documentos", "/api/admin/busca", "/api/admin/modelos",
 ];
 
 export function rotaDoModuloContratos(caminho: string): boolean {

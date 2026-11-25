@@ -52,7 +52,7 @@ export default function ItemDocumento({
       <div className="flex-1 min-w-0">
         <p className="font-bold text-gray-800 text-sm truncate" title={doc.nome_original}>{doc.nome_original}</p>
         <p className="text-xs text-gray-500 truncate">
-          {ROTULO_TIPO_DOCUMENTO[doc.tipo as TipoDocumento] ?? doc.tipo} · {formatarTamanho(doc.tamanho)} ·{" "}
+          {ROTULO_TIPO_DOCUMENTO[doc.tipo] ?? doc.tipo} · {formatarTamanho(doc.tamanho)} ·{" "}
           {new Date(doc.incluido_em).toLocaleDateString("pt-BR")} · {doc.incluido_por}
           {mostrarContrato && doc.locacao_id && (
             <>

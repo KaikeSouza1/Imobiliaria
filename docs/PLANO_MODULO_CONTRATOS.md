@@ -338,6 +338,45 @@ A aba "Documentos" mostra um estado vazio. O botão "Anexar PDF" fica desabilita
   - todas as telas abrem.
 - Os dados de teste foram apagados do banco e do bucket.
 
+## 4.5 Registro: geração de documentos a partir dos modelos da imobiliária
+
+Pedido do desenvolvedor em 25/11/2026: os modelos que a equipe usa em Word (pasta `docs imo`) viraram formulários fáceis de preencher, e o PDF gerado fica guardado no sistema.
+
+**Modelos** (os textos das cláusulas foram transcritos dos arquivos originais; só os dados variáveis viraram campos):
+
+| Modelo | Gerado a partir de | Observações |
+|---|---|---|
+| Contrato de Locação | contrato | residencial ou comercial, fiador opcional, Fundo de Conservação opcional (a cláusula 4 é renumerada) |
+| Termo de Entrega de Chaves | contrato | |
+| Notificação por Falta de Pagamento | contrato | lista de débitos, prazo de 5 dias úteis |
+| Notificação Extrajudicial | contrato | lista de débitos com total, prazo em dias corridos |
+| Contrato de Administração (Locação) | proprietário | |
+| Contrato de Intermediação (Venda) | proprietário | com ou sem exclusividade |
+
+**Como a equipe usa:**
+- **Onde começar:** em Documentos → "Gerar Documento", ou pelo botão "Gerar documento" na aba Documentos do contrato. No cadastro do proprietário há atalhos para administração e venda.
+- **Preenchimento automático:** o formulário já vem com os dados do contrato, do inquilino, do proprietário e do imóvel. Só é preciso conferir e completar o que faltar.
+- **Extenso automático:** valores e prazos saem por extenso ("R$ 1.200,00 (mil e duzentos reais)"). Datas são escritas por extenso e a rescisão aparece como `18.11.27`. A concordância de gênero (Portador/Portadora, Inscrito/Inscrita) segue a escolha feita no formulário.
+- **Conferência:** o botão "Ver prévia" abre o PDF antes de salvar. "Gerar PDF e salvar" guarda o arquivo.
+
+**Onde o PDF fica guardado:**
+- No mesmo bucket privado e com as mesmas regras dos outros documentos: ver e baixar só com login, com histórico e exclusão lógica.
+- O PDF é vinculado ao contrato ou ao cadastro do proprietário.
+- Tipos novos de documento: "Contrato gerado", "Termo" e "Notificação".
+- Cada documento guarda de qual modelo saiu e com quais dados, então dá para gerar de novo corrigindo um campo.
+- Gerar duas vezes com os mesmos dados é recusado. Essa verificação é feita pelos dados, porque o PDF leva a hora de criação e nunca é idêntico byte a byte.
+
+**Dados da imobiliária e do procurador** (CNPJ, CRECI, RG e CPF do procurador, PIX, sede, foro) ficam na tabela `parametros` do banco, e não no código. Para trocar o procurador ou o endereço, basta alterar essa tabela. A migração `005` criou essa tabela e os tipos novos de documento.
+
+**Privacidade:** a pasta `docs imo` contém dados pessoais reais (nomes e CPFs de clientes dos contratos usados como modelo). Ela foi incluída no `.gitignore` e **não vai para o git**. Nenhum dado real foi copiado para o código ou para os testes, e uma busca nos arquivos versionados não encontrou nenhum CPF nem nome de cliente dos modelos. Os exemplos de teste usam só dados fictícios.
+
+**Verificação:**
+- 90 testes passam, incluindo 14 que geram os 6 PDFs e conferem validações, concordância de gênero e a renumeração da cláusula.
+- O teste ponta a ponta passou em 23 de 23 checagens, com banco e bucket reais. Ele cobriu preencher a partir do contrato, validar, prévia, salvar, recusar duplicidade, abrir o PDF guardado pelo link temporário, listar no contrato e no repositório, e gerar de novo a partir do documento. Os dados de teste foram apagados.
+- Conferi o visual dos PDFs e dos formulários (logo no topo, páginas numeradas, texto justificado).
+
+**Pendente:** o texto dos modelos foi transcrito fielmente, inclusive pequenos erros de digitação do original, como "Oprimeiro" (corrigido para "O primeiro"), a numeração repetida da "CLAUSULA 2ª" e o "16.1" dentro da cláusula 13 da administração. Recomendo que a equipe revise o texto dos modelos e me diga o que ajustar.
+
 ## 5. O que preciso de você antes de fases específicas
 
 1. ~~Antes da Fase 1: extensões e banco de teste~~ (resolvido: produção liberada).

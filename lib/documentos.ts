@@ -3,12 +3,20 @@
 export const TIPOS_DOCUMENTO = ["contrato_assinado", "vistoria", "comprovante", "documento_pessoal", "outro"] as const;
 export type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
 
-export const ROTULO_TIPO_DOCUMENTO: Record<TipoDocumento, string> = {
+// Tipos que só o gerador de documentos usa (não aparecem na escolha de upload).
+export const TIPOS_GERADOS = ["contrato_gerado", "termo", "notificacao"] as const;
+export const TIPOS_TODOS = [...TIPOS_DOCUMENTO, ...TIPOS_GERADOS] as const;
+export type TipoQualquerDocumento = (typeof TIPOS_TODOS)[number];
+
+export const ROTULO_TIPO_DOCUMENTO: Record<string, string> = {
   contrato_assinado: "Contrato assinado",
   vistoria: "Vistoria",
   comprovante: "Comprovante",
   documento_pessoal: "Documento pessoal",
   outro: "Outro",
+  contrato_gerado: "Contrato gerado",
+  termo: "Termo",
+  notificacao: "Notificação",
 };
 
 export const TAMANHO_MAXIMO_DOCUMENTO = 20 * 1024 * 1024; // 20 MB

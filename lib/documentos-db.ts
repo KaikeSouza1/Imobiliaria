@@ -1,7 +1,7 @@
 // Acesso ao banco para documentos. Só usar no servidor.
 import { query, transacao } from "./db";
 import { escaparLike } from "./texto";
-import type { TipoDocumento, Vinculo } from "./documentos";
+import type { TipoQualquerDocumento, Vinculo } from "./documentos";
 
 export type AcaoLog = "incluir" | "visualizar" | "baixar" | "excluir";
 
@@ -44,7 +44,7 @@ export async function documentoDuplicado(sha256: string, v: Vinculo) {
 
 export interface NovoDocumento {
   vinculo: Vinculo;
-  tipo: TipoDocumento;
+  tipo: TipoQualquerDocumento;
   chave: string;
   nome: string;
   tamanho: number;
@@ -52,16 +52,20 @@ export interface NovoDocumento {
   usuario: string;
   ip: string | null;
   origem_importacao?: string | null;
+  /** Documento gerado pelo sistema: de qual modelo e com quais dados (para gerar de novo). */
+  modelo?: string | null;
+  dados_modelo?: unknown;
 }
 
 export async function gravarDocumento(d: NovoDocumento) {
   try {
     return await transacao(async (c) => {
       const r = await c.query(
-        `INSERT INTO documentos (locacao_id, cliente_id, imovel_id, tipo, chave_storage, nome_original, tamanho, sha256, incluido_por, origem_importacao)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-         RETURNING id, locacao_id, cliente_id, imovel_id, tipo, nome_original, tamanho, incluido_por, incluido_em`,
-        [d.vinculo.locacao_id, d.vinculo.cliente_id, d.vinculo.imovel_id, d.tipo, d.chave, d.nome, d.tamanho, d.sha256, d.usuario, d.origem_importacao ?? null]
+        `INSERT INTO documentos (locacao_id, cliente_id, imovel_id, tipo, chave_storage, nome_original, tamanho, sha256, incluido_por, origem_importacao, modelo, dados_modelo)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         RETURNING id, locacao_id, cliente_id, imovel_id, tipo, nome_original, tamanho, incluido_por, incluido_em, modelo`,
+        [d.vinculo.locacao_id, d.vinculo.cliente_id, d.vinculo.imovel_id, d.tipo, d.chave, d.nome, d.tamanho, d.sha256, d.usuario, d.origem_importacao ?? null,
+         d.modelo ?? null, d.dados_modelo === undefined ? null : JSON.stringify(d.dados_modelo)]
       );
       await c.query("INSERT INTO documentos_log (documento_id, acao, usuario, ip) VALUES ($1, 'incluir', $2, $3)", [
         r.rows[0].id, d.usuario, d.ip ? d.ip.slice(0, 64) : null,
