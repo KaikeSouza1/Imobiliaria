@@ -5,8 +5,10 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Edit, Loader2, Home, User, KeyRound, CalendarClock, CalendarRange,
-  Briefcase, Building2, FileText, Paperclip, Upload, CheckCircle2, Trash2, Archive, Phone,
+  Briefcase, Building2, FileText, Paperclip, CheckCircle2, Trash2, Archive, Phone,
 } from "lucide-react";
+import EnvioDocumentos from "@/components/documentos/EnvioDocumentos";
+import ItemDocumento from "@/components/documentos/ItemDocumento";
 import { ROTULO_STATUS, type StatusContrato } from "@/lib/contratos";
 import { formatarData, formatarMoeda, mesesEntre, descreverPrazo, formatarCpfCnpj } from "@/lib/texto";
 
@@ -68,20 +70,6 @@ const COR_STATUS: Record<string, string> = {
   rescindido: "bg-red-600",
 };
 
-const ROTULO_TIPO_DOC: Record<string, string> = {
-  contrato_assinado: "Contrato assinado",
-  vistoria: "Vistoria",
-  comprovante: "Comprovante",
-  documento_pessoal: "Documento pessoal",
-  outro: "Outro",
-};
-
-function formatarTamanho(bytes: number) {
-  if (!bytes) return "—";
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 function Campo({ rotulo, valor, icone: Icone }: { rotulo: string; valor: React.ReactNode; icone?: React.ElementType }) {
   return (
     <div>
@@ -117,11 +105,13 @@ function CartaoPessoa({ titulo, nome, codigo, documento, telefone, email }: {
 function DetalheContrato() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
-  const salvo = useSearchParams().get("salvo") === "1";
+  const parametros = useSearchParams();
+  const salvo = parametros.get("salvo") === "1";
 
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [erro, setErro] = useState("");
-  const [aba, setAba] = useState<"dados" | "documentos">("dados");
+  const [versao, setVersao] = useState(0); // muda para recarregar após anexar/excluir
+  const [aba, setAba] = useState<"dados" | "documentos">(parametros.get("aba") === "documentos" ? "documentos" : "dados");
   const [aviso, setAviso] = useState(salvo ? "Contrato salvo com sucesso." : "");
 
   useEffect(() => {
@@ -135,7 +125,7 @@ function DetalheContrato() {
       })
       .catch(() => ativo && setErro("Erro de conexão com o servidor."));
     return () => { ativo = false; };
-  }, [id]);
+  }, [id, versao]);
   useEffect(() => {
     if (!aviso) return;
     const t = setTimeout(() => setAviso(""), 4000);
@@ -280,37 +270,23 @@ function DetalheContrato() {
         </div>
       ) : (
         <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-8">
-          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Paperclip size={16} className="text-green-600" /> Documentos do contrato
-            </h2>
-            {/* Upload seguro entra na Fase 3 (bucket privado). */}
-            <button disabled title="Disponível na próxima etapa"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-gray-100 text-gray-400 cursor-not-allowed">
-              <Upload size={14} /> Anexar PDF
-            </button>
+          <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+            <Paperclip size={16} className="text-green-600" /> Documentos do contrato
+          </h2>
+          <div className="mb-6">
+            <EnvioDocumentos vinculo={{ locacao_id: c.id }} onConcluido={() => setVersao((v) => v + 1)} />
           </div>
 
           {c.documentos.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
               <Paperclip className="mx-auto text-gray-300 mb-3" size={40} />
               <p className="text-gray-600 font-bold">Nenhum documento anexado a este contrato.</p>
-              <p className="text-gray-400 text-sm mt-1">Contrato assinado, vistorias e comprovantes aparecerão aqui.</p>
+              <p className="text-gray-400 text-sm mt-1">Use &quot;Anexar PDF&quot; acima para incluir o contrato assinado, vistorias ou comprovantes.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {c.documentos.map((d) => (
-                <div key={d.id} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
-                  <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-red-600 flex-shrink-0 border border-gray-100">
-                    <FileText size={18} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-800 text-sm truncate">{d.nome_original}</p>
-                    <p className="text-xs text-gray-500">
-                      {ROTULO_TIPO_DOC[d.tipo] ?? d.tipo} · {formatarTamanho(d.tamanho)} · {new Date(d.incluido_em).toLocaleDateString("pt-BR")} · {d.incluido_por}
-                    </p>
-                  </div>
-                </div>
+                <ItemDocumento key={d.id} doc={d} onExcluido={() => setVersao((v) => v + 1)} />
               ))}
             </div>
           )}

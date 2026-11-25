@@ -1,6 +1,6 @@
 # Plano: módulo de contratos e documentos com busca global
 
-Status: **Fase 2 concluída em 25/11/2026. Aguardando validação para a Fase 3.**
+Status: **Fase 3 concluída em 25/11/2026. Aguardando validação para a Fase 4.**
 
 ## Ajustes combinados após a aprovação (25/11/2026)
 
@@ -112,7 +112,7 @@ Uma caixa de busca no topo do layout do admin leva para `/admin/busca?q=...` e f
 | 0 ✅ | Descoberta e plano | este documento | `docs: plano do modulo de contratos` |
 | 1 ✅ | Modelo de dados | executor de migrações, `001_contratos.sql` (clientes, colunas novas em locacoes e imoveis, documentos, log, pendências, extensões e índices), vitest instalado | `feat(db): ...` |
 | 2 ✅ | Contratos (F1, F3, F4, F6) | APIs ampliadas, listagem com filtros (status, reajuste entre datas), detalhes com as abas "Dados do Contrato" e "Documentos" (menu adiado) | `feat(contratos): ...` |
-| 3 | Documentos (F2) | upload em três passos, validação, ver e baixar autenticados, exclusão lógica, log, tela "Gestão de Documentos", cópia dos anexos antigos | `feat(documentos): ...` |
+| 3 ✅ | Documentos (F2) | upload em três passos, validação, ver e baixar autenticados, exclusão lógica, log, tela "Gestão de Documentos", cópia dos anexos antigos | `feat(documentos): ...` |
 | 4 | Busca global (F5) | API e tela, caixa de busca no layout | `feat(busca): ...` |
 | 5 | Clientes (F7) | painel único de inquilinos e proprietários, seletor no formulário do contrato | `feat(clientes): ...` |
 | 6 | Permissões (F9) | `lib/permissoes.ts`, login respeitando o `role`, aplicação nas rotas e no menu, tela de perfis | `feat(permissoes): ...` |
@@ -195,6 +195,57 @@ A aba "Documentos" mostra um estado vazio. O botão "Anexar PDF" fica desabilita
   - bloqueio de exclusão quando há documento;
   - carregamento das 5 telas.
 - Os dados `TESTE-` criados nesse teste foram removidos ao final, e o imóvel usado voltou ao estado original.
+
+## 4.2 Registro da Fase 3
+
+**Bucket.** `imobiliaria-documentos` no R2, privado, região ENAM, classe Standard. Ele usa um token próprio do tipo *Object Read & Write*, que só acessa esse bucket. Testamos que esse token não acessa o bucket das fotos. O CORS libera `PUT` para o domínio do site e para `localhost:3000`.
+- Variáveis: `R2_DOCUMENTOS_BUCKET`, `R2_DOCUMENTOS_ACCESS_KEY_ID` e `R2_DOCUMENTOS_SECRET_ACCESS_KEY`. Elas precisam estar no `.env` local e também na Vercel.
+
+**Envio em 3 passos.** O arquivo vai do navegador direto para o R2, sem passar pela Vercel, que limita cada requisição a 4,5 MB.
+1. `POST /api/admin/documentos/envio` valida o pedido: o vínculo existe, o tipo é conhecido, a extensão é `.pdf` e o tamanho é de até 20 MB. A resposta traz:
+   - uma URL de envio assinada, válida por 5 minutos, com o tamanho e o `Content-Type` incluídos na assinatura. Se o arquivo enviado tiver outro tamanho, o R2 recusa com 403.
+   - um comprovante assinado com HMAC (`lib/token-envio.ts`), válido por 15 minutos e ligado ao usuário que pediu o envio.
+2. O navegador envia o arquivo com `PUT` direto para o R2.
+3. `POST /api/admin/documentos/confirmar` confere o comprovante e lê o arquivo que está no R2. Ele confere o tamanho, a assinatura `%PDF-` (o tipo real do arquivo, não só a extensão) e o SHA-256, e verifica se o mesmo arquivo já está anexado ao mesmo registro.
+   - Se algo falhar, o arquivo é apagado do R2 na hora e o usuário recebe uma mensagem clara.
+   - Se der certo, cria o registro em `documentos` e grava o log de inclusão.
+   - Confirmar o mesmo envio de novo devolve 409 e não apaga o arquivo.
+
+**Nome do arquivo.** O arquivo é guardado como `documentos/<uuid>.pdf`, nunca com o nome enviado pelo usuário. O nome original passa por limpeza (tira caminho, caracteres de controle e símbolos perigosos) e é usado só para exibição.
+
+**Ver e baixar.** A rota `GET /api/admin/documentos/[id]/arquivo?modo=ver|baixar` confere o login, grava o log e redireciona para uma URL assinada que expira em **60 segundos**. O endereço do arquivo sem assinatura é bloqueado (400).
+- Decisão: usar redirecionamento em vez de repassar o arquivo pelo servidor, porque a Vercel limita a resposta a 4,5 MB e repassar custaria tempo de execução.
+
+**Exclusão lógica.** A rota `DELETE /api/admin/documentos/[id]` preenche `removido_em` e `removido_por`. O arquivo continua no bucket e a trilha fica no log. Um documento excluído não abre mais.
+- Depois de excluído, o mesmo arquivo pode ser anexado de novo, porque o índice de duplicidade ignora documentos removidos.
+
+**Log.** Registra incluir, visualizar, baixar e excluir. Guarda só o id do documento, a ação, o usuário e o IP.
+
+**Telas:**
+- Aba "Documentos" do contrato: escolha do tipo, envio de um ou vários PDFs (o resultado de cada arquivo aparece na hora), lista com ver, baixar e excluir (com confirmação) e estado vazio com orientação. Abre direto com `?aba=documentos`.
+- `/admin/documentos` ("Gestão de Documentos"):
+  - "Adicionar Arquivo": escolhe o contrato pela busca e envia o arquivo.
+  - "Documentos Recentes": busca sem acento por nome do arquivo, código do contrato ou imóvel, inquilino ou proprietário; filtro por tipo; 25 documentos por página.
+  - "Pastas por contrato": cada contrato com documentos aparece como uma pasta e abre direto na aba Documentos.
+  - O botão "Usar Pasta" fica desativado até a Fase 7.
+
+**Anexos antigos.** A tabela `locacao_anexos` tem 0 registros em produção, então a cópia planejada para o bucket privado não é necessária. A rota antiga de anexos continua no código, sem uso nas telas.
+
+**Verificação:**
+- 41 testes unitários passam, cobrindo:
+  - assinatura de PDF;
+  - limpeza do nome do arquivo;
+  - validação do pedido de envio;
+  - `Content-Disposition` (cabeçalho com o nome do arquivo no download);
+  - comprovante HMAC (expirado, adulterado ou de outro usuário).
+- O teste ponta a ponta com banco de produção e bucket real passou em 35 de 35 checagens. Os dados e arquivos de teste foram apagados no final.
+- `next build` compila sem erros.
+- Com o servidor de produção local e login de administrador, 9 páginas responderam como esperado: 8 com 200 (`/admin/documentos`, a aba de documentos, contratos, imóveis, mensagens, CRM e área do cliente) e `/admin/documentos` sem login redirecionou para o login (307).
+
+**Riscos e pendências:**
+- **Envios abandonados:** se o navegador fechar entre o envio e a confirmação, o arquivo fica no bucket sem registro. É raro e ocupa pouco espaço. Fica para a Fase 8 um script de limpeza de objetos sem registro com mais de 1 dia.
+- **Arquivos excluídos continuam ocupando espaço,** porque a exclusão é lógica. É intencional, por causa da trilha.
+- **As chaves do bucket apareceram no chat.** Recomendação: clicar em "Roll" no token e atualizar o `.env` e a Vercel.
 
 ## 5. O que preciso de você antes de fases específicas
 
