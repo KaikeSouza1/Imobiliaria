@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, PlusCircle, LogOut, Sparkles, MessageSquare, BarChart3 } from "lucide-react";
+import { Home, PlusCircle, LogOut, Sparkles, MessageSquare, BarChart3, FileText, Users, FolderOpen, Search } from "lucide-react";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import type { Session } from "next-auth";
@@ -48,7 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
 
         {/* NAVEGAÇÃO */}
-        <nav className="flex-1 p-6 space-y-2">
+        <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
           <Link
             href="/admin/imoveis"
             className="flex items-center gap-3 p-4 rounded-xl bg-green-700/30 hover:bg-green-700/50 transition-all text-white font-bold group"
@@ -64,6 +64,29 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <PlusCircle size={20} className="group-hover:scale-110 transition-transform" />
             <span>Cadastrar Novo</span>
           </Link>
+
+          {/* MÓDULO DE CONTRATOS (liberado por lib/modulo-contratos.ts) */}
+          {moduloContratosVisivel() && (
+            <>
+              <p className="pt-4 pb-1 px-4 text-[10px] font-black text-green-400/70 uppercase tracking-widest">Locação</p>
+              {([
+                ["/admin/locacoes", "Contratos", FileText],
+                ["/admin/clientes", "Clientes", Users],
+                ["/admin/documentos", "Documentos", FolderOpen],
+                ["/admin/busca", "Busca Global", Search],
+              ] as const).map(([href, rotulo, Icone]) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center gap-3 p-4 rounded-xl hover:bg-white/5 transition-all text-green-100 font-bold group"
+                >
+                  <Icone size={20} className="group-hover:scale-110 transition-transform" />
+                  <span>{rotulo}</span>
+                </Link>
+              ))}
+              <p className="pt-4 pb-1 px-4 text-[10px] font-black text-green-400/70 uppercase tracking-widest">Atendimento</p>
+            </>
+          )}
 
           {/* LINK MENSAGENS COM BADGE */}
           <Link

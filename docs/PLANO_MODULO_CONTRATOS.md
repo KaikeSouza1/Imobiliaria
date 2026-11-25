@@ -262,7 +262,7 @@ A aba "Documentos" mostra um estado vazio. O botão "Anexar PDF" fica desabilita
 - Os contratos vêm paginados e cada um tem atalho para "Detalhes" e para "Documentos (n)".
 - O CPF aparece sempre mascarado.
 
-**Caixa de busca no topo do painel.** Fica escondida enquanto a constante `MODULO_CONTRATOS_VISIVEL`, em `lib/modulo-contratos.ts`, estiver `false` (definido pelo desenvolvedor em 25/11/2026: a liberação é feita pelo código, não por variável de ambiente). Para ligar, troque para `true` e faça o deploy. A mesma chave vai controlar o menu quando o módulo for liberado.
+**Caixa de busca no topo do painel.** (Liberada no menu em 25/11/2026, a pedido do desenvolvedor, antes da Fase 6: até lá, todo usuário logado vê contratos, documentos e CPF.) Ficava escondida enquanto a constante `MODULO_CONTRATOS_VISIVEL`, em `lib/modulo-contratos.ts`, estiver `false` (definido pelo desenvolvedor em 25/11/2026: a liberação é feita pelo código, não por variável de ambiente). Para ligar, troque para `true` e faça o deploy. A mesma chave vai controlar o menu quando o módulo for liberado.
 - Ainda falta: o CRM (`/crm`) tem layout próprio e vai ganhar a caixa na liberação.
 
 **Desempenho:**
