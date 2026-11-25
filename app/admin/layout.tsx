@@ -6,6 +6,7 @@ import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { moduloContratosVisivel } from "@/lib/modulo-contratos";
+import { podeUsarModuloContratos } from "@/lib/permissoes";
 import BuscaGlobalTopo from "@/components/BuscaGlobalTopo";
 
 async function getNotificacoes() {
@@ -27,6 +28,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const totalNovos = await getNotificacoes();
 
   const adminUser = process.env.ADMIN_USER ? process.env.ADMIN_USER.replace(/^"|"$/g, "").toLowerCase() : undefined;
+  // Módulo de contratos: liberado no código e só para os usuários de lib/permissoes.ts.
+  const mostrarModulo = moduloContratosVisivel() && podeUsarModuloContratos((session.user as { username?: string }).username);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-green-50 font-sans flex">
@@ -66,7 +69,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
 
           {/* MÓDULO DE CONTRATOS (liberado por lib/modulo-contratos.ts) */}
-          {moduloContratosVisivel() && (
+          {mostrarModulo && (
             <>
               <p className="pt-4 pb-1 px-4 text-[10px] font-black text-green-400/70 uppercase tracking-widest">Locação</p>
               {([
@@ -137,7 +140,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* CONTEÚDO */}
       <main className="flex-1 ml-72 p-10">
         <div className="max-w-[1600px] mx-auto">
-          {moduloContratosVisivel() && (
+          {mostrarModulo && (
             <div className="mb-8 flex justify-end">
               <BuscaGlobalTopo />
             </div>
