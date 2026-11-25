@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, Search, X, Home, AlertCircle, Archive } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Search, X, Home, AlertCircle, Archive, User, Hash, CalendarRange } from "lucide-react";
 import SeletorCliente, { type ValorCliente } from "./SeletorCliente";
 import { STATUS_CONTRATO, ROTULO_STATUS, finalidadePorTipo } from "@/lib/contratos";
 import { normalizarBusca } from "@/lib/texto";
@@ -51,10 +51,11 @@ export interface ContratoCarregado {
   observacoes: string | null;
 }
 
-const CLASSE_CARD = "bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6";
-const CLASSE_TITULO = "text-sm font-black text-gray-400 uppercase tracking-widest";
-const CLASSE_INPUT = "w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]";
-const CLASSE_LABEL = "text-[10px] font-black uppercase text-gray-400 ml-2";
+// Mesmo padrão visual dos filtros da listagem: cartões compactos e campos de altura média.
+const CLASSE_CARD = "bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4";
+const CLASSE_TITULO = "text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2";
+const CLASSE_INPUT = "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-green-500 focus:bg-white transition-all";
+const CLASSE_LABEL = "text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block";
 
 const dataCurta = (v: string | null | undefined) => (v ? String(v).slice(0, 10) : "");
 
@@ -186,177 +187,165 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
   };
 
   const legado = origem === "legado";
+  const voltar = editando ? `/admin/locacoes/${contrato!.id}` : "/admin/locacoes";
 
   return (
-    <div className="max-w-3xl mx-auto pb-20 px-4">
-      <div className="flex items-center gap-4 mb-8 pt-10">
-        <Link href={editando ? `/admin/locacoes/${contrato!.id}` : "/admin/locacoes"}
-          className="p-3 bg-white hover:bg-gray-100 rounded-2xl shadow-sm text-gray-500 transition-all border border-gray-100">
-          <ArrowLeft size={24} />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
-            {editando ? `Editar Contrato ${contrato!.codigo ?? ""}` : legado ? "Cadastrar Contrato Antigo" : "Novo Contrato"}
-          </h1>
-          {legado && <p className="text-sm text-gray-500">Só os dados da lista impressa são obrigatórios. O PDF pode ser anexado depois.</p>}
-        </div>
-      </div>
-
-      <form onSubmit={salvar} className="space-y-8" noValidate>
-        {erros.length > 0 && (
-          <div className="flex gap-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-5 py-4 text-sm font-medium" role="alert">
-            <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
-            <ul className="space-y-1">{erros.map((er) => <li key={er}>{er}</li>)}</ul>
+    <form onSubmit={salvar} noValidate className="max-w-6xl mx-auto pb-28 space-y-6">
+      {/* CABEÇALHO: título à esquerda, tipo de contrato e ações à direita */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link href={voltar} className="p-2.5 bg-white hover:bg-gray-100 rounded-xl shadow-sm text-gray-500 transition-all border border-gray-100">
+            <ArrowLeft size={20} />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+              {editando ? `Editar contrato ${contrato!.codigo ?? ""}` : legado ? "Cadastrar contrato antigo" : "Novo contrato"}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {legado
+                ? "Só código, inquilino e imóvel são obrigatórios. O PDF pode ser anexado depois."
+                : "Campos com * são obrigatórios."}
+            </p>
           </div>
-        )}
-
+        </div>
         {!editando && (
-          <div className="flex gap-2">
+          <div className="inline-flex bg-gray-100 p-1 rounded-xl self-start lg:self-auto">
             {(["sistema", "legado"] as const).map((o) => (
               <button key={o} type="button" onClick={() => setOrigem(o)}
-                className={`flex-1 px-4 py-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2
-                  ${origem === o ? "bg-[#0f2e20] text-white border-[#0f2e20] shadow-sm" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}>
-                {o === "sistema" ? <><Save size={14} /> Contrato novo</> : <><Archive size={14} /> Contrato antigo (lista impressa)</>}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2
+                  ${origem === o ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                {o === "sistema" ? <><Save size={14} /> Contrato novo</> : <><Archive size={14} /> Contrato antigo</>}
               </button>
             ))}
           </div>
         )}
+      </div>
 
-        {/* IDENTIFICAÇÃO */}
-        <div className={CLASSE_CARD}>
-          <h2 className={CLASSE_TITULO}>Identificação</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {erros.length > 0 && (
+        <div className="flex gap-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-5 py-4 text-sm font-medium" role="alert">
+          <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+          <ul className="space-y-1">{erros.map((er) => <li key={er}>{er}</li>)}</ul>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* COLUNA PRINCIPAL: imóvel e partes */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className={CLASSE_CARD}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 className={CLASSE_TITULO}><Home size={14} className="text-green-600" /> Imóvel{!legado ? " *" : ""}</h2>
+              <label className="flex items-center gap-2 text-xs font-bold text-gray-500 cursor-pointer">
+                <input type="checkbox" checked={imovelForaDoSite} onChange={(e) => setImovelForaDoSite(e.target.checked)} className="rounded" />
+                Não está cadastrado no site
+              </label>
+            </div>
+
+            {imovelForaDoSite ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className={CLASSE_LABEL}>Código do imóvel</label>
+                  <input name="imovel_codigo_legado" value={form.imovel_codigo_legado} onChange={handle} className={CLASSE_INPUT} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={CLASSE_LABEL}>Endereço</label>
+                  <input name="imovel_endereco_legado" value={form.imovel_endereco_legado} onChange={handle} className={CLASSE_INPUT}
+                    placeholder="Rua, número, bairro, cidade" />
+                </div>
+                {!legado && (
+                  <p className="md:col-span-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    Contrato novo precisa de um imóvel cadastrado. Use esta opção só para contratos antigos.
+                  </p>
+                )}
+              </div>
+            ) : imovelSelecionado ? (
+              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-3">
+                <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-green-700 border border-green-100"><Home size={16} /></div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-gray-900 truncate">{imovelSelecionado.codigo ? `#${imovelSelecionado.codigo} — ` : ""}{imovelSelecionado.titulo}</p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {[imovelSelecionado.endereco, imovelSelecionado.bairro, imovelSelecionado.cidade].filter(Boolean).join(", ")}
+                  </p>
+                </div>
+                <button type="button" onClick={() => set("imovel_id", "")}
+                  className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Trocar</button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={buscaImovel} onChange={(e) => setBuscaImovel(e.target.value)} className={`${CLASSE_INPUT} pl-9`}
+                  placeholder={imoveis.length ? "Buscar por código, título ou endereço..." : "Carregando imóveis..."} />
+                {buscaImovel && (
+                  <button type="button" onClick={() => setBuscaImovel("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={14} /></button>
+                )}
+                {buscaImovel.trim().length >= 2 && (
+                  <div className="absolute z-20 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
+                    {imoveisFiltrados.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Nenhum imóvel encontrado.</p>}
+                    {imoveisFiltrados.map((im) => (
+                      <button key={im.id} type="button" onClick={() => escolherImovel(im)}
+                        className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors border-b border-gray-50">
+                        <p className="font-bold text-sm text-gray-900">{im.codigo ? `#${im.codigo} — ` : ""}{im.titulo}</p>
+                        <p className="text-xs text-gray-500">{[im.endereco, im.bairro, im.cidade].filter(Boolean).join(", ")}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className={`${CLASSE_LABEL} mb-0`}>Finalidade</span>
+              <div className="inline-flex bg-gray-100 p-1 rounded-xl">
+                {[["", "Não informada"], ["residencial", "Residencial"], ["comercial", "Comercial"]].map(([v, r]) => (
+                  <button key={v} type="button" onClick={() => set("finalidade", v)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all
+                      ${form.finalidade === v ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className={CLASSE_CARD}>
+              <h2 className={CLASSE_TITULO}><User size={14} className="text-green-600" /> Inquilino *</h2>
+              <SeletorCliente papel="inquilino" valor={inquilino} onChange={setInquilino} obrigatorio />
+            </div>
+            <div className={CLASSE_CARD}>
+              <h2 className={CLASSE_TITULO}><User size={14} className="text-orange-500" /> Proprietário</h2>
+              <SeletorCliente papel="proprietario" valor={proprietario} onChange={setProprietario} />
+            </div>
+          </div>
+
+          <div className={CLASSE_CARD}>
+            <h2 className={CLASSE_TITULO}>Observações</h2>
+            <textarea name="observacoes" rows={3} value={form.observacoes} onChange={handle}
+              className={`${CLASSE_INPUT} font-medium`} placeholder="Detalhes adicionais do contrato..." />
+          </div>
+        </div>
+
+        {/* COLUNA LATERAL: identificação, prazos e valores */}
+        <div className="space-y-6">
+          <div className={CLASSE_CARD}>
+            <h2 className={CLASSE_TITULO}><Hash size={14} className="text-green-600" /> Identificação</h2>
             <div>
               <label className={CLASSE_LABEL}>Código do contrato{legado ? " *" : ""}</label>
               <input name="codigo" value={form.codigo} onChange={handle} className={CLASSE_INPUT}
                 placeholder={legado ? "Como está na lista" : "Automático se vazio"} />
             </div>
-            <div>
-              <label className={CLASSE_LABEL}>Status</label>
-              <select name="status" value={form.status} onChange={handle} className={CLASSE_INPUT}>
-                {STATUS_CONTRATO.map((s) => <option key={s} value={s}>{ROTULO_STATUS[s]}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={CLASSE_LABEL}>Nº da pasta física</label>
-              <input name="numero_pasta" value={form.numero_pasta} onChange={handle} className={CLASSE_INPUT} placeholder="Ex: 12" />
-            </div>
-          </div>
-        </div>
-
-        {/* IMÓVEL */}
-        <div className={CLASSE_CARD}>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className={CLASSE_TITULO}>Imóvel{!legado ? " *" : ""}</h2>
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-500 cursor-pointer">
-              <input type="checkbox" checked={imovelForaDoSite} onChange={(e) => setImovelForaDoSite(e.target.checked)} className="rounded" />
-              Imóvel não está cadastrado no site
-            </label>
-          </div>
-
-          {imovelForaDoSite ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={CLASSE_LABEL}>Código do imóvel</label>
-                <input name="imovel_codigo_legado" value={form.imovel_codigo_legado} onChange={handle} className={CLASSE_INPUT} />
+                <label className={CLASSE_LABEL}>Status</label>
+                <select name="status" value={form.status} onChange={handle} className={CLASSE_INPUT}>
+                  {STATUS_CONTRATO.map((s) => <option key={s} value={s}>{ROTULO_STATUS[s]}</option>)}
+                </select>
               </div>
-              <div className="md:col-span-2">
-                <label className={CLASSE_LABEL}>Endereço</label>
-                <input name="imovel_endereco_legado" value={form.imovel_endereco_legado} onChange={handle} className={CLASSE_INPUT}
-                  placeholder="Rua, número, bairro, cidade" />
+              <div>
+                <label className={CLASSE_LABEL}>Pasta física</label>
+                <input name="numero_pasta" value={form.numero_pasta} onChange={handle} className={CLASSE_INPUT} placeholder="Ex: 12" />
               </div>
-              {!legado && (
-                <p className="md:col-span-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                  Contrato novo precisa de um imóvel cadastrado. Use esta opção só para contratos antigos.
-                </p>
-              )}
-            </div>
-          ) : imovelSelecionado ? (
-            <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-green-700 border border-green-100"><Home size={18} /></div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-900 truncate">{imovelSelecionado.codigo ? `#${imovelSelecionado.codigo} — ` : ""}{imovelSelecionado.titulo}</p>
-                <p className="text-xs text-gray-500 truncate">
-                  {[imovelSelecionado.endereco, imovelSelecionado.bairro, imovelSelecionado.cidade].filter(Boolean).join(", ")}
-                </p>
-              </div>
-              <button type="button" onClick={() => set("imovel_id", "")}
-                className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Trocar</button>
-            </div>
-          ) : (
-            <div className="relative">
-              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input value={buscaImovel} onChange={(e) => setBuscaImovel(e.target.value)} className={`${CLASSE_INPUT} pl-10`}
-                placeholder={imoveis.length ? "Buscar por código, título ou endereço..." : "Carregando imóveis..."} />
-              {buscaImovel && (
-                <button type="button" onClick={() => setBuscaImovel("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"><X size={14} /></button>
-              )}
-              {buscaImovel.trim().length >= 2 && (
-                <div className="absolute z-20 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
-                  {imoveisFiltrados.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Nenhum imóvel encontrado.</p>}
-                  {imoveisFiltrados.map((im) => (
-                    <button key={im.id} type="button" onClick={() => escolherImovel(im)}
-                      className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors border-b border-gray-50">
-                      <p className="font-bold text-sm text-gray-900">{im.codigo ? `#${im.codigo} — ` : ""}{im.titulo}</p>
-                      <p className="text-xs text-gray-500">{[im.endereco, im.bairro, im.cidade].filter(Boolean).join(", ")}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div>
-            <label className={CLASSE_LABEL}>Finalidade</label>
-            <div className="flex gap-2 mt-1">
-              {[["", "Não informada"], ["residencial", "Residencial"], ["comercial", "Comercial"]].map(([v, r]) => (
-                <button key={v} type="button" onClick={() => set("finalidade", v)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border
-                    ${form.finalidade === v ? "bg-[#0f2e20] text-white border-[#0f2e20]" : "bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300"}`}>
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* PARTES */}
-        <div className={CLASSE_CARD}>
-          <h2 className={CLASSE_TITULO}>Inquilino *</h2>
-          <SeletorCliente papel="inquilino" valor={inquilino} onChange={setInquilino} obrigatorio />
-          <h2 className={`${CLASSE_TITULO} pt-2`}>Proprietário</h2>
-          <SeletorCliente papel="proprietario" valor={proprietario} onChange={setProprietario} />
-        </div>
-
-        {/* PRAZOS E VALORES */}
-        <div className={CLASSE_CARD}>
-          <h2 className={CLASSE_TITULO}>Prazos e valores</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className={CLASSE_LABEL}>Valor do aluguel (R$){!legado ? " *" : ""}</label>
-              <input name="valor_aluguel" type="number" step="0.01" min="0" value={form.valor_aluguel} onChange={handle} className={CLASSE_INPUT} placeholder="0,00" />
             </div>
             <div>
-              <label className={CLASSE_LABEL}>Dia de vencimento</label>
-              <input name="dia_vencimento" type="number" min="1" max="31" value={form.dia_vencimento} onChange={handle} className={CLASSE_INPUT} />
-            </div>
-            <div>
-              <label className={CLASSE_LABEL}>Início{!legado ? " *" : ""}</label>
-              <input name="data_inicio" type="date" value={form.data_inicio} onChange={handle} className={CLASSE_INPUT} />
-            </div>
-            <div>
-              <label className={CLASSE_LABEL}>Término</label>
-              <input name="data_fim" type="date" value={form.data_fim} onChange={handle} className={CLASSE_INPUT} />
-            </div>
-            <div>
-              <label className={CLASSE_LABEL}>Entrega das chaves</label>
-              <input name="data_entrega_chaves" type="date" value={form.data_entrega_chaves} onChange={handle} className={CLASSE_INPUT} />
-            </div>
-            <div>
-              <label className={CLASSE_LABEL}>Reajuste a cada (meses)</label>
-              <input name="periodo_reajuste_meses" type="number" min="1" max="120" value={form.periodo_reajuste_meses} onChange={handle} className={CLASSE_INPUT} />
-            </div>
-            <div className="md:col-span-2">
               <label className={CLASSE_LABEL}>Corretor responsável</label>
               <select name="corretor_responsavel" value={form.corretor_responsavel} onChange={handle} className={CLASSE_INPUT}>
                 <option value="">Não definido</option>
@@ -366,19 +355,50 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
                 )}
               </select>
             </div>
-            <div className="md:col-span-2">
-              <label className={CLASSE_LABEL}>Observações</label>
-              <textarea name="observacoes" rows={4} value={form.observacoes} onChange={handle}
-                className="w-full bg-gray-50 border-none p-4 rounded-xl font-medium focus:ring-2 focus:ring-[#0f2e20]" placeholder="Detalhes adicionais do contrato..." />
+          </div>
+
+          <div className={CLASSE_CARD}>
+            <h2 className={CLASSE_TITULO}><CalendarRange size={14} className="text-green-600" /> Prazos e valores</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className={CLASSE_LABEL}>Valor do aluguel (R$){!legado ? " *" : ""}</label>
+                <input name="valor_aluguel" type="number" step="0.01" min="0" value={form.valor_aluguel} onChange={handle} className={CLASSE_INPUT} placeholder="0,00" />
+              </div>
+              <div>
+                <label className={CLASSE_LABEL}>Início{!legado ? " *" : ""}</label>
+                <input name="data_inicio" type="date" value={form.data_inicio} onChange={handle} className={CLASSE_INPUT} />
+              </div>
+              <div>
+                <label className={CLASSE_LABEL}>Término</label>
+                <input name="data_fim" type="date" value={form.data_fim} onChange={handle} className={CLASSE_INPUT} />
+              </div>
+              <div>
+                <label className={CLASSE_LABEL}>Entrega das chaves</label>
+                <input name="data_entrega_chaves" type="date" value={form.data_entrega_chaves} onChange={handle} className={CLASSE_INPUT} />
+              </div>
+              <div>
+                <label className={CLASSE_LABEL}>Vencimento (dia)</label>
+                <input name="dia_vencimento" type="number" min="1" max="31" value={form.dia_vencimento} onChange={handle} className={CLASSE_INPUT} />
+              </div>
+              <div className="col-span-2">
+                <label className={CLASSE_LABEL}>Reajuste a cada (meses)</label>
+                <input name="periodo_reajuste_meses" type="number" min="1" max="120" value={form.periodo_reajuste_meses} onChange={handle} className={CLASSE_INPUT} />
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <button type="submit" disabled={salvando}
-          className="w-full bg-[#0f2e20] text-white font-black py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl hover:bg-black transition-all uppercase tracking-widest text-sm disabled:opacity-60">
-          {salvando ? <Loader2 className="animate-spin" /> : <Save size={20} />} {editando ? "Salvar Alterações" : "Cadastrar Contrato"}
-        </button>
-      </form>
-    </div>
+      {/* BARRA DE AÇÕES FIXA NO RODAPÉ (área de conteúdo, ao lado do menu) */}
+      <div className="fixed bottom-0 left-72 right-0 z-10 bg-white/90 backdrop-blur border-t border-gray-200">
+        <div className="max-w-6xl mx-auto px-10 py-3 flex items-center justify-end gap-3">
+          <Link href={voltar} className="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-100 transition-all">Cancelar</Link>
+          <button type="submit" disabled={salvando}
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all disabled:opacity-60">
+            {salvando ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} {editando ? "Salvar alterações" : "Cadastrar contrato"}
+          </button>
+        </div>
+      </div>
+    </form>
   );
 }

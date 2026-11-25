@@ -141,7 +141,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <main className="flex-1 ml-72 p-10">
         <div className="max-w-[1600px] mx-auto">
           {mostrarModulo && (
-            <div className="mb-8 flex justify-end">
+            <div className="mb-6 flex justify-end">
               <BuscaGlobalTopo />
             </div>
           )}

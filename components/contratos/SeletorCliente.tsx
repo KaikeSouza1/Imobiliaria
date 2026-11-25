@@ -16,8 +16,8 @@ interface ClienteOpcao {
   telefone: string | null;
 }
 
-const CLASSE_INPUT = "w-full bg-gray-50 border-none p-4 rounded-xl font-bold focus:ring-2 focus:ring-[#0f2e20]";
-const CLASSE_LABEL = "text-[10px] font-black uppercase text-gray-400 ml-2";
+const CLASSE_INPUT = "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-green-500 focus:bg-white transition-all";
+const CLASSE_LABEL = "text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block";
 
 export default function SeletorCliente({
   papel,
@@ -58,7 +58,7 @@ export default function SeletorCliente({
 
   if (valor?.modo === "existente") {
     return (
-      <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
+      <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-3">
         <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-green-700 border border-green-100">
           <User size={18} />
         </div>
@@ -79,7 +79,7 @@ export default function SeletorCliente({
   if (valor?.modo === "novo") {
     const set = (campo: "nome" | "cpf_cnpj" | "telefone" | "email", v: string) => onChange({ ...valor, [campo]: v });
     return (
-      <div className="space-y-4 bg-gray-50/60 border border-dashed border-gray-200 rounded-2xl p-4">
+      <div className="space-y-3 bg-gray-50/60 border border-dashed border-gray-200 rounded-xl p-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-black text-gray-500 uppercase tracking-wider flex items-center gap-2">
             <UserPlus size={14} className="text-green-600" /> Novo {rotulo}
@@ -89,8 +89,8 @@ export default function SeletorCliente({
             Buscar cadastrado
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2">
             <label className={CLASSE_LABEL}>Nome completo{obrigatorio ? " *" : ""}</label>
             <input value={valor.nome} onChange={(e) => set("nome", e.target.value)} className={CLASSE_INPUT} placeholder="Ex: Maria Exemplo" />
           </div>
@@ -102,7 +102,7 @@ export default function SeletorCliente({
             <label className={CLASSE_LABEL}>Telefone</label>
             <input value={valor.telefone} onChange={(e) => set("telefone", e.target.value)} className={CLASSE_INPUT} placeholder="(42) 99999-9999" />
           </div>
-          <div className="md:col-span-2">
+          <div className="sm:col-span-2">
             <label className={CLASSE_LABEL}>E-mail</label>
             <input type="email" value={valor.email} onChange={(e) => set("email", e.target.value)} className={CLASSE_INPUT} placeholder="email@exemplo.com" />
           </div>
@@ -115,13 +115,13 @@ export default function SeletorCliente({
   return (
     <div className="relative">
       <div className="relative">
-        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           value={termo}
           onChange={(e) => { setTermo(e.target.value); setAberto(true); }}
           onFocus={() => setAberto(true)}
           onBlur={() => setTimeout(() => setAberto(false), 150)}
-          className={`${CLASSE_INPUT} pl-10`}
+          className={`${CLASSE_INPUT} pl-9`}
           placeholder={`Buscar ${rotulo} por nome, código ou CPF...`}
         />
         {buscando && <Loader2 size={15} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}

@@ -25,7 +25,7 @@ export default function BuscaGlobalTopo() {
         onChange={(e) => setTermo(e.target.value)}
         aria-label="Busca global de contratos"
         placeholder="Buscar contrato, inquilino, proprietário, endereço..."
-        className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium shadow-sm outline-none focus:border-green-500 transition-all"
+        className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium shadow-sm outline-none focus:border-green-500 transition-all"
       />
     </form>
   );
