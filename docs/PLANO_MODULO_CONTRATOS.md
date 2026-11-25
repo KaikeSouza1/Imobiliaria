@@ -245,7 +245,7 @@ A aba "Documentos" mostra um estado vazio. O botão "Anexar PDF" fica desabilita
 **Riscos e pendências:**
 - **Envios abandonados:** se o navegador fechar entre o envio e a confirmação, o arquivo fica no bucket sem registro. É raro e ocupa pouco espaço. Fica para a Fase 8 um script de limpeza de objetos sem registro com mais de 1 dia.
 - **Arquivos excluídos continuam ocupando espaço,** porque a exclusão é lógica. É intencional, por causa da trilha.
-- **As chaves do bucket apareceram no chat.** Recomendação: clicar em "Roll" no token e atualizar o `.env` e a Vercel.
+- **As chaves do bucket apareceram no chat.** O desenvolvedor decidiu não trocar a chave (risco aceito em 25/11/2026). O token só tem acesso ao bucket de documentos.
 
 ## 4.3 Registro da Fase 4
 
@@ -262,7 +262,7 @@ A aba "Documentos" mostra um estado vazio. O botão "Anexar PDF" fica desabilita
 - Os contratos vêm paginados e cada um tem atalho para "Detalhes" e para "Documentos (n)".
 - O CPF aparece sempre mascarado.
 
-**Caixa de busca no topo do painel.** Fica escondida enquanto a chave `MODULO_CONTRATOS_VISIVEL` estiver desligada. Para ligar, defina `MODULO_CONTRATOS_VISIVEL=1` no `.env` e na Vercel; a mudança vale a partir do próximo deploy. A mesma chave vai controlar o menu quando o módulo for liberado.
+**Caixa de busca no topo do painel.** Fica escondida enquanto a constante `MODULO_CONTRATOS_VISIVEL`, em `lib/modulo-contratos.ts`, estiver `false` (definido pelo desenvolvedor em 25/11/2026: a liberação é feita pelo código, não por variável de ambiente). Para ligar, troque para `true` e faça o deploy. A mesma chave vai controlar o menu quando o módulo for liberado.
 - Ainda falta: o CRM (`/crm`) tem layout próprio e vai ganhar a caixa na liberação.
 
 **Desempenho:**

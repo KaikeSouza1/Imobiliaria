@@ -1,6 +1,8 @@
-// Chave de liberação do módulo de contratos na navegação (menu e caixa de busca no topo).
-// Enquanto desligada, as telas funcionam só pelo endereço direto.
-// Para liberar: MODULO_CONTRATOS_VISIVEL=1 no .env e na Vercel (vale no próximo deploy).
+// Chave de liberação do módulo de contratos na navegação (menu e caixa de busca no topo do painel).
+// Enquanto estiver false, as telas funcionam só pelo endereço direto.
+// Para liberar: troque para true, faça commit e push.
+export const MODULO_CONTRATOS_VISIVEL = false;
+
 export function moduloContratosVisivel(): boolean {
-  return process.env.MODULO_CONTRATOS_VISIVEL === "1";
+  return MODULO_CONTRATOS_VISIVEL;
 }
