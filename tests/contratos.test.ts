@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validarContrato, codigoAutomatico, finalidadePorTipo } from "../lib/contratos";
+import { validarContrato, codigoAutomatico, finalidadePorTipo, rotuloStatus } from "../lib/contratos";
 
 const base = {
   imovel_id: 10,
@@ -100,5 +100,49 @@ describe("auxiliares", () => {
     expect(finalidadePorTipo("Comercial")).toBe("comercial");
     expect(finalidadePorTipo("Barracão")).toBe("comercial");
     expect(finalidadePorTipo("Apartamento")).toBe("residencial");
+  });
+});
+
+describe("contrato de venda", () => {
+  const venda = { tipo: "venda", imovel_id: 10, novo_inquilino: { nome: "Comprador Fictício" }, valor_venda: "260000", data_inicio: "2026-11-06" };
+
+  it("aceita venda completa sem exigir valor de aluguel", () => {
+    const r = validarContrato({ ...venda, forma_pagamento: " à vista ", honorarios_percentual: "6" });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.dados.tipo).toBe("venda");
+    expect(r.dados.valor_venda).toBe(260000);
+    expect(r.dados.valor_aluguel).toBe(0);
+    expect(r.dados.forma_pagamento).toBe("à vista");
+    expect(r.dados.honorarios_percentual).toBe(6);
+  });
+
+  it("exige comprador, valor da venda e data do contrato, com mensagens de venda", () => {
+    const r = validarContrato({ tipo: "venda", imovel_id: 10 });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erros).toEqual(expect.arrayContaining(["Informe o comprador.", "Informe o valor da venda.", "Informe a data do contrato."]));
+    expect(r.erros.join(" ")).not.toMatch(/aluguel|inquilino/);
+  });
+
+  it("ignora campos de locação na venda e recusa honorários absurdos", () => {
+    const r = validarContrato({ ...venda, valor_aluguel: "1500", dia_vencimento: "99", periodo_reajuste_meses: "0", honorarios_percentual: "6" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.dados.valor_aluguel).toBe(0);
+    expect(validarContrato({ ...venda, honorarios_percentual: "150" }).ok).toBe(false);
+  });
+
+  it("locação continua igual e tipo desconhecido vira locação", () => {
+    const r = validarContrato({ imovel_id: 1, novo_inquilino: { nome: "A B" }, valor_aluguel: "900", data_inicio: "2026-01-01", tipo: "xpto" });
+    expect(r.ok && r.dados.tipo).toBe("locacao");
+    expect(validarContrato({ tipo: "xpto", imovel_id: 1 }).ok).toBe(false);
+  });
+
+  it("código automático e rótulos por tipo", () => {
+    expect(codigoAutomatico(7, "venda")).toBe("VD-00007");
+    expect(codigoAutomatico(7)).toBe("CT-00007");
+    expect(rotuloStatus("encerrado", "venda")).toBe("Concluída");
+    expect(rotuloStatus("encerrado", "locacao")).toBe("Encerrado");
+    expect(rotuloStatus("ativo", "venda")).toBe("Em andamento");
   });
 });

@@ -34,6 +34,18 @@ export async function buscarClientes(q: string, limite = 6) {
   return r.rows.map(({ cpf_cnpj, ...c }) => ({ ...c, documento: mascararCpfCnpj(cpf_cnpj) }));
 }
 
+// Cadastros mais recentes (mostrados assim que o campo de cliente recebe foco, antes de digitar).
+export async function clientesRecentes(limite = 8) {
+  const r = await query(
+    `SELECT c.id, c.codigo, c.nome, c.cpf_cnpj, c.telefone, c.cidade, c.eh_inquilino, c.eh_proprietario,
+            (SELECT COUNT(*) FROM locacoes l WHERE l.inquilino_id = c.id OR l.proprietario_id = c.id)::int AS total_contratos
+       FROM clientes c
+      ORDER BY c.atualizado_em DESC, c.id DESC
+      LIMIT ${limite}`
+  );
+  return r.rows.map(({ cpf_cnpj, ...c }) => ({ ...c, documento: mascararCpfCnpj(cpf_cnpj) }));
+}
+
 export async function buscarImoveis(q: string, limite = 6) {
   const params: unknown[] = [];
   const onde = todasAsPalavras(

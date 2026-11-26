@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   Plus, Loader2, KeyRound, Wallet, FileText, CalendarClock, Search, X, Eye, Edit,
-  SlidersHorizontal, Archive, Paperclip, ChevronLeft, ChevronRight, Home, User,
+  SlidersHorizontal, Archive, Paperclip, ChevronLeft, ChevronRight, Home, User, Handshake,
 } from "lucide-react";
-import { STATUS_CONTRATO, ROTULO_STATUS } from "@/lib/contratos";
+import { STATUS_CONTRATO, rotuloStatus } from "@/lib/contratos";
 import { formatarData, formatarMoeda } from "@/lib/texto";
 
 interface ContratoLista {
@@ -14,7 +14,9 @@ interface ContratoLista {
   codigo: string | null;
   status: string;
   origem: string;
+  tipo: "locacao" | "venda";
   valor_aluguel: number;
+  valor_venda: number | null;
   data_inicio: string | null;
   data_fim: string | null;
   finalidade: string | null;
@@ -38,11 +40,14 @@ interface Resposta {
   total: number;
   pagina: number;
   paginas: number;
-  resumo?: { total: number; ativos: number; receita_mensal: number; reajustes_30_dias: number };
+  resumo?: {
+    total: number; ativos: number; receita_mensal: number; reajustes_30_dias: number;
+    vendas: number; vendas_em_andamento: number; vendas_concluidas: number; volume_vendido: number;
+  };
 }
 
 const COR_STATUS: Record<string, string> = { ativo: "bg-green-600", encerrado: "bg-gray-500", rescindido: "bg-red-600" };
-const FILTROS_VAZIOS = { q: "", codigo: "", status: "", finalidade: "", reajuste_de: "", reajuste_ate: "" };
+const FILTROS_VAZIOS = { q: "", codigo: "", tipo: "", status: "", finalidade: "", reajuste_de: "", reajuste_ate: "" };
 
 const CLASSE_INPUT = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-green-500 focus:bg-white transition-all";
 const CLASSE_LABEL = "text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block";
@@ -100,29 +105,67 @@ export default function ContratosPage() {
         <div>
           <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
             <div className="w-1 h-8 bg-green-600 rounded-full"></div>
-            Contratos de Locação
+            Contratos
           </h1>
-          <p className="text-gray-500 text-sm mt-1 ml-7">Contratos, inquilinos, proprietários e documentos</p>
+          <p className="text-gray-500 text-sm mt-1 ml-7">Locações e vendas: partes, imóvel e documentos</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Link href="/admin/locacoes/novo?legado=1"
             className="bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-700 px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition-all">
             <Archive size={18} /> Contrato Antigo
           </Link>
+          <Link href="/admin/locacoes/novo?tipo=venda"
+            className="bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-700 px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition-all">
+            <Handshake size={18} /> Novo Contrato de Venda
+          </Link>
           <Link href="/admin/locacoes/novo"
             className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95">
-            <Plus size={20} strokeWidth={3} /> Novo Contrato
+            <Plus size={20} strokeWidth={3} /> Novo Contrato de Locação
           </Link>
         </div>
       </div>
 
+      {/* TIPO: todos / locação / venda */}
+      <div className="inline-flex bg-gray-100 p-1 rounded-xl">
+        {[["", "Todos"], ["locacao", "Locação"], ["venda", "Venda"]].map(([v, r]) => (
+          <button key={v} onClick={() => setFiltros((f) => ({ ...f, tipo: v, status: "", ...(v === "venda" ? { reajuste_de: "", reajuste_ate: "" } : {}) }))}
+            className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${filtros.tipo === v ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+            {r}
+          </button>
+        ))}
+      </div>
+
       {/* ESTATÍSTICAS */}
-      {resumo && (
+      {resumo && filtros.tipo === "venda" && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-2xl border border-blue-200">
+            <Handshake className="text-blue-700 mb-2" size={24} />
+            <p className="text-3xl font-black text-blue-900">{resumo.vendas}</p>
+            <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Vendas</p>
+          </div>
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-5 rounded-2xl border border-orange-200">
+            <CalendarClock className="text-orange-700 mb-2" size={24} />
+            <p className="text-3xl font-black text-orange-900">{resumo.vendas_em_andamento}</p>
+            <p className="text-xs font-bold text-orange-700 uppercase tracking-wider">Em andamento</p>
+          </div>
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-2xl border border-green-200">
+            <KeyRound className="text-green-700 mb-2" size={24} />
+            <p className="text-3xl font-black text-green-900">{resumo.vendas_concluidas}</p>
+            <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Concluídas</p>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-5 rounded-2xl border border-emerald-200">
+            <Wallet className="text-emerald-700 mb-2" size={24} />
+            <p className="text-2xl font-black text-emerald-900">{formatarMoeda(resumo.volume_vendido)}</p>
+            <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Vendido (concluídas)</p>
+          </div>
+        </div>
+      )}
+      {resumo && filtros.tipo !== "venda" && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-2xl border border-blue-200">
             <FileText className="text-blue-700 mb-2" size={24} />
             <p className="text-3xl font-black text-blue-900">{resumo.total}</p>
-            <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Contratos</p>
+            <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Locações</p>
           </div>
           <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-2xl border border-green-200">
             <KeyRound className="text-green-700 mb-2" size={24} />
@@ -176,7 +219,7 @@ export default function ContratosPage() {
               <div className="relative">
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={filtros.q} onChange={(e) => set("q", e.target.value)} className={`${CLASSE_INPUT} pl-9`}
-                  placeholder="Inquilino, proprietário, endereço, código ou pasta..." />
+                  placeholder="Inquilino/comprador, proprietário/vendedor, endereço, código ou pasta..." />
                 {filtros.q && (
                   <button onClick={() => set("q", "")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X size={14} /></button>
                 )}
@@ -184,7 +227,7 @@ export default function ContratosPage() {
             </div>
             <div>
               <label className={CLASSE_LABEL}>Código (contrato ou imóvel)</label>
-              <input value={filtros.codigo} onChange={(e) => set("codigo", e.target.value)} className={CLASSE_INPUT} placeholder="Ex: CT-00012" />
+              <input value={filtros.codigo} onChange={(e) => set("codigo", e.target.value)} className={CLASSE_INPUT} placeholder="Ex: CT-00012 ou VD-00003" />
             </div>
           </div>
 
@@ -194,7 +237,9 @@ export default function ContratosPage() {
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => set("status", "")} className={chip(!filtros.status)}>Todos</button>
                 {STATUS_CONTRATO.map((s) => (
-                  <button key={s} onClick={() => set("status", s)} className={chip(filtros.status === s)}>{ROTULO_STATUS[s]}</button>
+                  <button key={s} onClick={() => set("status", s)} className={chip(filtros.status === s)}>
+                    {filtros.tipo ? rotuloStatus(s, filtros.tipo) : `${rotuloStatus(s, "locacao")} / ${rotuloStatus(s, "venda")}`}
+                  </button>
                 ))}
               </div>
             </div>
@@ -206,7 +251,7 @@ export default function ContratosPage() {
                 ))}
               </div>
             </div>
-            <div className="flex-1">
+            <div className={`flex-1 ${filtros.tipo === "venda" ? "hidden" : ""}`}>
               <label className={CLASSE_LABEL}>Próximo reajuste entre</label>
               <div className="flex items-center gap-2">
                 <input type="date" value={filtros.reajuste_de} onChange={(e) => set("reajuste_de", e.target.value)} className={CLASSE_INPUT} />
@@ -239,10 +284,10 @@ export default function ContratosPage() {
               <thead>
                 <tr className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 bg-gray-50/60">
                   <th className="py-3 px-5">Contrato</th>
-                  <th className="py-3 px-4">Inquilino / Proprietário</th>
+                  <th className="py-3 px-4">Partes</th>
                   <th className="py-3 px-4">Imóvel</th>
-                  <th className="py-3 px-4">Aluguel</th>
-                  <th className="py-3 px-4">Próx. reajuste</th>
+                  <th className="py-3 px-4">Valor</th>
+                  <th className="py-3 px-4">{filtros.tipo === "venda" ? "Data" : "Próx. reajuste"}</th>
                   <th className="py-3 px-5 text-right">Ações</th>
                 </tr>
               </thead>
@@ -259,8 +304,11 @@ export default function ContratosPage() {
                       <td className="py-4 px-5">
                         <Link href={`/admin/locacoes/${l.id}`} className="font-black text-gray-900 hover:text-green-700">{l.codigo || `#${l.id}`}</Link>
                         <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase ${l.tipo === "venda" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                            {l.tipo === "venda" ? "Venda" : "Locação"}
+                          </span>
                           <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase text-white ${COR_STATUS[l.status] ?? "bg-gray-500"}`}>
-                            {ROTULO_STATUS[l.status as keyof typeof ROTULO_STATUS] ?? l.status}
+                            {rotuloStatus(l.status, l.tipo)}
                           </span>
                           {l.origem === "legado" && <span title="Contrato antigo" className="text-amber-600"><Archive size={12} /></span>}
                           {l.total_documentos > 0 && (
@@ -270,14 +318,14 @@ export default function ContratosPage() {
                       </td>
                       <td className="py-4 px-4">
                         <p className="font-bold text-gray-800 flex items-center gap-1"><User size={12} className="text-gray-400" /> {l.inquilino_nome || "—"}</p>
-                        <p className="text-xs text-gray-500 mt-1">Prop.: {l.proprietario_nome || "—"}</p>
+                        <p className="text-xs text-gray-500 mt-1">{l.tipo === "venda" ? "Vend." : "Prop."}: {l.proprietario_nome || "—"}</p>
                       </td>
                       <td className="py-4 px-4 max-w-xs">
                         <p className="font-bold text-gray-800 truncate flex items-center gap-1"><Home size={12} className="text-gray-400 flex-shrink-0" /> {imovel}</p>
                         <p className="text-xs text-gray-500 truncate mt-1">{endereco || "—"}</p>
                       </td>
-                      <td className="py-4 px-4 font-black text-green-700 whitespace-nowrap">{formatarMoeda(l.valor_aluguel)}</td>
-                      <td className="py-4 px-4 text-gray-600 whitespace-nowrap">{formatarData(l.proximo_reajuste)}</td>
+                      <td className="py-4 px-4 font-black text-green-700 whitespace-nowrap">{formatarMoeda(l.tipo === "venda" ? l.valor_venda : l.valor_aluguel)}{l.tipo === "venda" ? "" : <span className="text-[10px] text-gray-400 font-bold">/mês</span>}</td>
+                      <td className="py-4 px-4 text-gray-600 whitespace-nowrap">{l.tipo === "venda" ? formatarData(l.data_inicio) : formatarData(l.proximo_reajuste)}</td>
                       <td className="py-4 px-5">
                         <div className="flex justify-end gap-2">
                           <Link href={`/admin/locacoes/${l.id}`} title="Detalhes"

@@ -5,6 +5,9 @@ import { erroCpfCnpj } from "./clientes";
 export const STATUS_CONTRATO = ["ativo", "encerrado", "rescindido"] as const;
 export const FINALIDADES = ["residencial", "comercial"] as const;
 export const ORIGENS = ["sistema", "legado"] as const;
+export const TIPOS_CONTRATO = ["locacao", "venda"] as const;
+export type TipoContrato = (typeof TIPOS_CONTRATO)[number];
+export const ROTULO_TIPO: Record<TipoContrato, string> = { locacao: "Locação", venda: "Venda" };
 
 export type StatusContrato = (typeof STATUS_CONTRATO)[number];
 export type Finalidade = (typeof FINALIDADES)[number];
@@ -16,6 +19,18 @@ export const ROTULO_STATUS: Record<StatusContrato, string> = {
   rescindido: "Rescindido",
 };
 
+// Na venda os mesmos três status têm outro significado.
+export const ROTULO_STATUS_VENDA: Record<StatusContrato, string> = {
+  ativo: "Em andamento",
+  encerrado: "Concluída",
+  rescindido: "Cancelada",
+};
+
+export function rotuloStatus(status: string, tipo: string | null | undefined): string {
+  const mapa = tipo === "venda" ? ROTULO_STATUS_VENDA : ROTULO_STATUS;
+  return mapa[status as StatusContrato] ?? status;
+}
+
 export interface NovoCliente {
   nome: string;
   cpf_cnpj: string | null;
@@ -24,6 +39,10 @@ export interface NovoCliente {
 }
 
 export interface DadosContrato {
+  tipo: TipoContrato;
+  valor_venda: number | null;
+  forma_pagamento: string | null;
+  honorarios_percentual: number | null;
   codigo: string | null;
   origem: Origem;
   status: StatusContrato;
@@ -90,6 +109,8 @@ export function validarContrato(body: unknown): ResultadoValidacao {
   const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
   const erros: string[] = [];
 
+  const tipo: TipoContrato = b.tipo === "venda" ? "venda" : "locacao";
+  const venda = tipo === "venda";
   const origem = (ORIGENS as readonly string[]).includes(String(b.origem)) ? (b.origem as Origem) : "sistema";
   const status = (STATUS_CONTRATO as readonly string[]).includes(String(b.status)) ? (b.status as StatusContrato) : "ativo";
   const finalidadeTxt = texto(b.finalidade, 20);
@@ -115,13 +136,22 @@ export function validarContrato(body: unknown): ResultadoValidacao {
   const novo_proprietario = proprietario_id ? null : novoCliente(b.novo_proprietario, erros, "proprietário");
 
   const valorNum = b.valor_aluguel === "" || b.valor_aluguel == null ? 0 : Number(b.valor_aluguel);
-  if (!Number.isFinite(valorNum) || valorNum < 0) erros.push("Valor do aluguel inválido.");
-  const valor_aluguel = Number.isFinite(valorNum) && valorNum >= 0 ? Math.round(valorNum * 100) / 100 : 0;
+  if (!venda && (!Number.isFinite(valorNum) || valorNum < 0)) erros.push("Valor do aluguel inválido.");
+  const valor_aluguel = !venda && Number.isFinite(valorNum) && valorNum >= 0 ? Math.round(valorNum * 100) / 100 : 0;
 
-  const dia = b.dia_vencimento === "" || b.dia_vencimento == null ? 10 : Number(b.dia_vencimento);
+  // Campos próprios da venda
+  const vendaNum = b.valor_venda === "" || b.valor_venda == null ? 0 : Number(b.valor_venda);
+  if (venda && (!Number.isFinite(vendaNum) || vendaNum < 0)) erros.push("Valor da venda inválido.");
+  const valor_venda = venda && Number.isFinite(vendaNum) && vendaNum > 0 ? Math.round(vendaNum * 100) / 100 : null;
+  const honorNum = b.honorarios_percentual === "" || b.honorarios_percentual == null ? null : Number(b.honorarios_percentual);
+  if (venda && honorNum !== null && (!Number.isFinite(honorNum) || honorNum < 0 || honorNum > 100)) erros.push("Honorários devem estar entre 0% e 100%.");
+  const honorarios_percentual = venda && honorNum !== null && Number.isFinite(honorNum) && honorNum >= 0 && honorNum <= 100 ? honorNum : null;
+
+  // Vencimento e reajuste só existem na locação; na venda ficam nos valores padrão.
+  const dia = venda || b.dia_vencimento === "" || b.dia_vencimento == null ? 10 : Number(b.dia_vencimento);
   if (!Number.isInteger(dia) || dia < 1 || dia > 31) erros.push("Dia de vencimento deve ser entre 1 e 31.");
 
-  const periodo = b.periodo_reajuste_meses === "" || b.periodo_reajuste_meses == null ? 12 : Number(b.periodo_reajuste_meses);
+  const periodo = venda || b.periodo_reajuste_meses === "" || b.periodo_reajuste_meses == null ? 12 : Number(b.periodo_reajuste_meses);
   if (!Number.isInteger(periodo) || periodo < 1 || periodo > 120) erros.push("Período de reajuste deve ser entre 1 e 120 meses.");
 
   const datas = {
@@ -130,8 +160,8 @@ export function validarContrato(body: unknown): ResultadoValidacao {
     data_entrega_chaves: data(b.data_entrega_chaves),
   };
   const nomesData: Record<string, string> = {
-    data_inicio: "Início",
-    data_fim: "Término",
+    data_inicio: venda ? "Data do contrato" : "Início",
+    data_fim: venda ? "Prazo final" : "Término",
     data_entrega_chaves: "Entrega das chaves",
   };
   for (const [campo, v] of Object.entries(datas)) {
@@ -140,14 +170,14 @@ export function validarContrato(body: unknown): ResultadoValidacao {
   const ok = (v: string | null | "invalida") => (v === "invalida" ? null : v);
   const data_inicio = ok(datas.data_inicio);
   const data_fim = ok(datas.data_fim);
-  if (data_inicio && data_fim && data_fim < data_inicio) erros.push("O término não pode ser antes do início.");
+  if (data_inicio && data_fim && data_fim < data_inicio) erros.push(venda ? "O prazo final não pode ser antes da data do contrato." : "O término não pode ser antes do início.");
 
-  // Vínculos obrigatórios
-  if (!inquilino_id && !novo_inquilino) erros.push("Informe o inquilino.");
+  // Vínculos obrigatórios (na venda o "inquilino" é o comprador e o "proprietário" é o vendedor)
+  if (!inquilino_id && !novo_inquilino) erros.push(venda ? "Informe o comprador." : "Informe o inquilino.");
   if (origem === "sistema") {
     if (!imovel_id) erros.push("Selecione o imóvel.");
-    if (!data_inicio) erros.push("Informe a data de início.");
-    if (valor_aluguel <= 0) erros.push("Informe o valor do aluguel.");
+    if (!data_inicio) erros.push(venda ? "Informe a data do contrato." : "Informe a data de início.");
+    if (venda ? !valor_venda : valor_aluguel <= 0) erros.push(venda ? "Informe o valor da venda." : "Informe o valor do aluguel.");
   } else {
     if (!codigo) erros.push("Contrato antigo precisa do código que está na lista impressa.");
     if (!imovel_id && !imovel_codigo_legado && !imovel_endereco_legado) {
@@ -160,6 +190,10 @@ export function validarContrato(body: unknown): ResultadoValidacao {
   return {
     ok: true,
     dados: {
+      tipo,
+      valor_venda,
+      forma_pagamento: venda ? texto(b.forma_pagamento, 2000) : null,
+      honorarios_percentual,
       codigo,
       origem,
       status,
@@ -185,8 +219,8 @@ export function validarContrato(body: unknown): ResultadoValidacao {
 }
 
 // Código gerado para contratos novos sem código informado.
-export function codigoAutomatico(id: number): string {
-  return `CT-${String(id).padStart(5, "0")}`;
+export function codigoAutomatico(id: number, tipo: TipoContrato = "locacao"): string {
+  return `${tipo === "venda" ? "VD" : "CT"}-${String(id).padStart(5, "0")}`;
 }
 
 // Finalidade sugerida a partir do tipo do imóvel do site.

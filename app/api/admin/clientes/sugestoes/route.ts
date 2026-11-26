@@ -3,10 +3,10 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { query } from "@/lib/db";
 import { mascararCpfCnpj } from "@/lib/texto";
-import { buscarClientes } from "@/lib/busca-global";
+import { buscarClientes, clientesRecentes } from "@/lib/busca-global";
 
 // Seletor de cliente do formulário de contrato. Sempre devolve o documento mascarado.
-// GET ?q=texto  -> até 10 sugestões
+// GET ?q=texto  -> até 10 sugestões (a partir de 1 letra); sem q -> os 8 mais recentes
 // GET ?id=N     -> um cliente (para sugerir o proprietário a partir do imóvel)
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -22,7 +22,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ ...c, documento: mascararCpfCnpj(cpf_cnpj) });
     }
     const q = (searchParams.get("q") || "").trim();
-    if (q.length < 2) return NextResponse.json([]);
+    // Sem texto: os cadastros mais recentes. Com texto: filtra a partir da primeira letra.
+    if (!q) return NextResponse.json(await clientesRecentes(8));
     return NextResponse.json(await buscarClientes(q, 10));
   } catch (error) {
     console.error(error);

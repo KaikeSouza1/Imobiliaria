@@ -377,6 +377,37 @@ Pedido do desenvolvedor em 25/11/2026: os modelos que a equipe usa em Word (past
 
 **Pendente:** o texto dos modelos foi transcrito fielmente, inclusive pequenos erros de digitação do original, como "Oprimeiro" (corrigido para "O primeiro"), a numeração repetida da "CLAUSULA 2ª" e o "16.1" dentro da cláusula 13 da administração. Recomendo que a equipe revise o texto dos modelos e me diga o que ajustar.
 
+## 4.6 Registro: contratos de venda e buscas mais rápidas
+
+**Contratos de venda** (pedido do desenvolvedor em 26/11/2026). Usam o mesmo cadastro de contratos e a mesma tela da locação, marcados por um novo campo `tipo` (`locacao` ou `venda`). A migração `006` acrescentou `tipo`, `valor_venda`, `forma_pagamento` e `honorarios_percentual` em `locacoes`, sem alterar nenhum contrato existente (todos continuam `locacao`).
+
+- **Cadastro:** botão "Novo Contrato de Venda" na lista, ou a chave Locação/Venda no formulário. Na venda o formulário mostra Comprador e Vendedor (proprietário), valor da venda, data do contrato, prazo final, honorários (%), entrega das chaves e forma de pagamento. Os campos de aluguel, vencimento e reajuste não aparecem. Também dá para cadastrar venda antiga (da lista impressa).
+- **Código:** `VD-00001` para venda e `CT-00001` para locação.
+- **Status:** os mesmos três valores, com outro significado na venda. Ativo = Em andamento, Encerrado = Concluída, Rescindido = Cancelada.
+- **Imóvel do site:** venda concluída marca o imóvel como "vendido". Venda em andamento ou cancelada não mexe no imóvel. A locação continua marcando "alugado".
+- **Filtro:** a lista tem as abas Todos / Locação / Venda. A venda tem cards próprios (vendas, em andamento, concluídas e volume vendido das concluídas). A busca global também filtra por tipo. Cada contrato mostra a etiqueta Locação ou Venda.
+- **Separação dos números:** os cards de locação (contratos, ativos, receita mensal prevista e reajustes) não contam vendas. O filtro de reajuste deixa as vendas de fora.
+- **Área do Cliente (pública):** passou a mostrar só locações. Sem isso, o comprador de um imóvel veria a venda como se fosse aluguel quando consultasse o próprio CPF.
+- **Painel do cliente:** mostra "Venda · comprador" ou "Venda · vendedor" e o valor da venda.
+- **Documentos:** na venda, o botão gera o contrato de intermediação de venda a partir do vendedor.
+
+**Buscas que sugerem sem precisar digitar:**
+- **Cliente:** clicar no campo já mostra os 8 cadastros mais recentes, e a lista filtra a cada letra, sem mínimo de caracteres e sem espera longa. Mostra iniciais, código, CPF mascarado, telefone, se é inquilino ou proprietário e o número de contratos. Funciona com setas e Enter, e o "Cadastrar novo" fica sempre no final.
+- **Imóvel:** clicar no campo já lista imóveis com a **foto de capa**, código, título, endereço, status (Disponível, Alugado, Vendido), finalidade e preço. A lista abre em "Para alugar" no contrato de locação e em "À venda" no de venda, com atalho para "Todos". Filtra a cada letra por código, título, rua, bairro ou cidade, em qualquer ordem. Código exato aparece primeiro e os disponíveis vêm antes. Funciona com setas e Enter. O imóvel escolhido aparece com a foto.
+- **Contrato** (telas de gerar documento e Gestão de Documentos): o mesmo comportamento, com os contratos mais recentes ao clicar.
+
+**Verificação:** 98 testes passam. O teste ponta a ponta de venda passou em 29 de 29 checagens, cobrindo:
+- validação específica da venda;
+- código automático;
+- filtros por tipo e status;
+- resumo separado;
+- imóvel marcado como vendido ao concluir;
+- locação seguindo igual;
+- Área do Cliente sem vazar a venda;
+- todas as telas abertas.
+
+Os dados de teste foram apagados. Conferi o visual das buscas em tela, com e sem clientes cadastrados.
+
 ## 5. O que preciso de você antes de fases específicas
 
 1. ~~Antes da Fase 1: extensões e banco de teste~~ (resolvido: produção liberada).

@@ -80,7 +80,7 @@ export async function buscarCliente(id: number) {
   if (!r.rows[0]) return null;
   const [contratos, imoveis, documentos] = await Promise.all([
     query(
-      `SELECT l.id, l.codigo, l.status, l.valor_aluguel, l.data_inicio, l.data_fim,
+      `SELECT l.id, l.codigo, l.tipo, l.status, l.valor_aluguel, l.valor_venda, l.data_inicio, l.data_fim,
               CASE WHEN l.inquilino_id = $1 THEN 'inquilino' ELSE 'proprietario' END AS papel,
               coalesce(inq.nome, l.locatario_nome) AS inquilino_nome, prop.nome AS proprietario_nome,
               coalesce(i.codigo, l.imovel_codigo_legado) AS imovel_codigo, i.titulo AS imovel_titulo,

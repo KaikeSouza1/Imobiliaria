@@ -7,7 +7,7 @@ import {
   Search, X, SlidersHorizontal, Loader2, User, Home, FileText, Paperclip, Archive,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ArrowRight,
 } from "lucide-react";
-import { STATUS_CONTRATO, ROTULO_STATUS } from "@/lib/contratos";
+import { STATUS_CONTRATO, rotuloStatus } from "@/lib/contratos";
 import { formatarData, formatarMoeda } from "@/lib/texto";
 
 interface Contrato {
@@ -15,6 +15,8 @@ interface Contrato {
   codigo: string | null;
   status: string;
   origem: string;
+  tipo: "locacao" | "venda";
+  valor_venda: number | null;
   valor_aluguel: number;
   data_inicio: string | null;
   data_fim: string | null;
@@ -47,10 +49,10 @@ interface Resposta {
   foco: Foco;
 }
 
-const CAMPOS = ["q", "inquilino", "proprietario", "codigo", "endereco", "status", "reajuste_de", "reajuste_ate", "cliente_id", "imovel_id"] as const;
+const CAMPOS = ["q", "inquilino", "proprietario", "codigo", "endereco", "tipo", "status", "reajuste_de", "reajuste_ate", "cliente_id", "imovel_id"] as const;
 type Campo = (typeof CAMPOS)[number];
 type Filtros = Record<Campo, string>;
-const AVANCADOS: Campo[] = ["inquilino", "proprietario", "codigo", "endereco", "status", "reajuste_de", "reajuste_ate"];
+const AVANCADOS: Campo[] = ["inquilino", "proprietario", "codigo", "endereco", "tipo", "status", "reajuste_de", "reajuste_ate"];
 
 const COR_STATUS: Record<string, string> = { ativo: "bg-green-600", encerrado: "bg-gray-500", rescindido: "bg-red-600" };
 const CLASSE_INPUT = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-green-500 focus:bg-white transition-all";
@@ -160,10 +162,18 @@ function Busca() {
               <div><label className={CLASSE_LABEL}>Código (contrato ou imóvel)</label><input value={filtros.codigo} onChange={(e) => set("codigo", e.target.value)} className={CLASSE_INPUT} /></div>
               <div><label className={CLASSE_LABEL}>Endereço do imóvel</label><input value={filtros.endereco} onChange={(e) => set("endereco", e.target.value)} className={CLASSE_INPUT} /></div>
               <div>
+                <label className={CLASSE_LABEL}>Tipo de contrato</label>
+                <select value={filtros.tipo} onChange={(e) => set("tipo", e.target.value)} className={CLASSE_INPUT}>
+                  <option value="">Locação e venda</option>
+                  <option value="locacao">Somente locação</option>
+                  <option value="venda">Somente venda</option>
+                </select>
+              </div>
+              <div>
                 <label className={CLASSE_LABEL}>Status</label>
                 <select value={filtros.status} onChange={(e) => set("status", e.target.value)} className={CLASSE_INPUT}>
                   <option value="">Todos</option>
-                  {STATUS_CONTRATO.map((s) => <option key={s} value={s}>{ROTULO_STATUS[s]}</option>)}
+                  {STATUS_CONTRATO.map((s) => <option key={s} value={s}>{filtros.tipo ? rotuloStatus(s, filtros.tipo) : `${rotuloStatus(s, "locacao")} / ${rotuloStatus(s, "venda")}`}</option>)}
                 </select>
               </div>
               <div className="lg:col-span-2">
@@ -286,9 +296,10 @@ function Busca() {
                       <div className="flex flex-col md:flex-row md:items-center gap-4">
                         <div className="md:w-44 flex-shrink-0">
                           <Link href={`/admin/locacoes/${c.id}`} className="font-black text-gray-900 hover:text-green-700">{c.codigo || `#${c.id}`}</Link>
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${c.tipo === "venda" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>{c.tipo === "venda" ? "Venda" : "Locação"}</span>
                           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                             <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase text-white ${COR_STATUS[c.status] ?? "bg-gray-500"}`}>
-                              {ROTULO_STATUS[c.status as keyof typeof ROTULO_STATUS] ?? c.status}
+                              {rotuloStatus(c.status, c.tipo)}
                             </span>
                             {c.origem === "legado" && <span title="Contrato antigo" className="text-amber-600"><Archive size={12} /></span>}
                           </div>
@@ -296,9 +307,9 @@ function Busca() {
                         </div>
                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
                           <div className="min-w-0">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Inquilino · Proprietário</p>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{c.tipo === "venda" ? "Comprador · Vendedor" : "Inquilino · Proprietário"}</p>
                             <p className="font-bold text-gray-800 text-sm truncate">{c.inquilino_nome || "—"}</p>
-                            <p className="text-xs text-gray-500 truncate">{c.proprietario_nome || "Proprietário não informado"}</p>
+                            <p className="text-xs text-gray-500 truncate">{c.proprietario_nome || (c.tipo === "venda" ? "Vendedor não informado" : "Proprietário não informado")}</p>
                           </div>
                           <div className="min-w-0">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Imóvel</p>
@@ -307,7 +318,7 @@ function Busca() {
                           </div>
                         </div>
                         <div className="md:text-right flex-shrink-0">
-                          <p className="font-black text-green-700 text-sm">{formatarMoeda(c.valor_aluguel)}</p>
+                          <p className="font-black text-green-700 text-sm">{formatarMoeda(c.tipo === "venda" ? c.valor_venda : c.valor_aluguel)}</p>
                           <p className="text-[11px] text-gray-500">{formatarData(c.data_inicio)} a {formatarData(c.data_fim)}</p>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">

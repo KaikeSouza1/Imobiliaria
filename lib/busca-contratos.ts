@@ -2,7 +2,7 @@
 // Função pura (sem acesso ao banco) para poder ser testada. Os aliases esperados na query são:
 //   l = locacoes, i = imoveis, inq = clientes (inquilino), prop = clientes (proprietário)
 import { escaparLike } from "./texto";
-import { STATUS_CONTRATO, FINALIDADES } from "./contratos";
+import { STATUS_CONTRATO, FINALIDADES, TIPOS_CONTRATO } from "./contratos";
 
 export interface FiltrosContrato {
   q?: string;            // caixa única: procura em todos os campos abaixo
@@ -10,6 +10,7 @@ export interface FiltrosContrato {
   inquilino?: string;
   proprietario?: string;
   endereco?: string;
+  tipo?: string;         // locacao | venda
   status?: string;
   finalidade?: string;
   corretor?: string;
@@ -68,6 +69,10 @@ export function montarFiltroContratos(f: FiltrosContrato) {
   contem([CAMPO.proprietario], f.proprietario);
   contem([CAMPO.enderecoImovel, CAMPO.legado, CAMPO.tituloImovel], f.endereco);
 
+  if (f.tipo && (TIPOS_CONTRATO as readonly string[]).includes(f.tipo)) {
+    params.push(f.tipo);
+    condicoes.push(`l.tipo = $${params.length}`);
+  }
   if (f.status && (STATUS_CONTRATO as readonly string[]).includes(f.status)) {
     params.push(f.status);
     condicoes.push(`l.status = $${params.length}`);
@@ -88,6 +93,10 @@ export function montarFiltroContratos(f: FiltrosContrato) {
   if (idValido(f.imovel_id)) {
     params.push(f.imovel_id);
     condicoes.push(`l.imovel_id = $${params.length}`);
+  }
+  // Reajuste só existe em locação: filtrar por ele deixa as vendas de fora.
+  if ((f.reajuste_de && RE_DATA.test(f.reajuste_de)) || (f.reajuste_ate && RE_DATA.test(f.reajuste_ate))) {
+    condicoes.push("l.tipo = 'locacao'");
   }
   if (f.reajuste_de && RE_DATA.test(f.reajuste_de)) {
     params.push(f.reajuste_de);
@@ -118,6 +127,7 @@ export function filtrosDaUrl(searchParams: URLSearchParams): FiltrosContrato {
     inquilino: g("inquilino"),
     proprietario: g("proprietario"),
     endereco: g("endereco"),
+    tipo: g("tipo"),
     status: g("status"),
     finalidade: g("finalidade"),
     corretor: g("corretor"),

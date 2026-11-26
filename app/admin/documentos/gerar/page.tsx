@@ -3,9 +3,10 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText, Loader2, Search, FileSignature, Key, Bell, Gavel, Building2, Handshake, ChevronRight } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, FileSignature, Key, Bell, Gavel, Building2, Handshake, ChevronRight } from "lucide-react";
 import FormModelo from "@/components/modelos/FormModelo";
 import SeletorCliente, { type ValorCliente } from "@/components/contratos/SeletorCliente";
+import SeletorContrato, { type ContratoOpcao } from "@/components/contratos/SeletorContrato";
 import type { ResumoModelo } from "@/lib/modelos";
 
 const ICONES: Record<string, React.ElementType> = {
@@ -16,47 +17,6 @@ const ICONES: Record<string, React.ElementType> = {
   administracao_locacao: Building2,
   intermediacao_venda: Handshake,
 };
-
-interface ContratoOpcao { id: number; codigo: string | null; inquilino_nome: string | null; imovel_titulo: string | null; imovel_codigo_legado: string | null }
-
-function SeletorContrato({ onEscolher }: { onEscolher: (c: ContratoOpcao) => void }) {
-  const [termo, setTermo] = useState("");
-  const [opcoes, setOpcoes] = useState<ContratoOpcao[]>([]);
-  const [buscando, setBuscando] = useState(false);
-  useEffect(() => {
-    if (termo.trim().length < 2) return;
-    const t = setTimeout(async () => {
-      setBuscando(true);
-      try {
-        const r = await fetch(`/api/admin/locacoes?por_pagina=8&q=${encodeURIComponent(termo.trim())}`);
-        setOpcoes((await r.json()).itens || []);
-      } finally {
-        setBuscando(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [termo]);
-  return (
-    <div className="relative">
-      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-      <input value={termo} onChange={(e) => setTermo(e.target.value)} autoFocus
-        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-green-500 focus:bg-white"
-        placeholder="Buscar contrato por código, inquilino, proprietário ou endereço..." />
-      {buscando && <Loader2 size={15} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
-      {termo.trim().length >= 2 && !buscando && (
-        <div className="absolute z-20 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
-          {opcoes.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Nenhum contrato encontrado.</p>}
-          {opcoes.map((c) => (
-            <button key={c.id} type="button" onClick={() => onEscolher(c)} className="w-full text-left px-4 py-3 hover:bg-green-50 border-b border-gray-50">
-              <p className="font-bold text-sm text-gray-900">{c.codigo || `#${c.id}`} — {c.inquilino_nome}</p>
-              <p className="text-xs text-gray-500">{c.imovel_titulo || (c.imovel_codigo_legado ? `Imóvel #${c.imovel_codigo_legado}` : "")}</p>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function Gerar() {
   const router = useRouter();
@@ -141,7 +101,7 @@ function Gerar() {
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
           {precisaContrato ? (
-            <SeletorContrato onEscolher={(c) => { setContrato(c); ir({ modelo: modelo.id, locacao_id: c.id }); }} />
+            <SeletorContrato autoFoco onEscolher={(c) => { setContrato(c); ir({ modelo: modelo.id, locacao_id: c.id }); }} />
           ) : (
             <SeletorCliente papel="proprietario" valor={proprietario}
               onChange={(v) => { setProprietario(v); if (v?.modo === "existente") ir({ modelo: modelo.id, cliente_id: v.id }); }} />

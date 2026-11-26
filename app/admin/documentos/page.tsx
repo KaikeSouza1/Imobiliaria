@@ -7,15 +7,8 @@ import {
 } from "lucide-react";
 import EnvioDocumentos from "@/components/documentos/EnvioDocumentos";
 import ItemDocumento, { type DocumentoResumo } from "@/components/documentos/ItemDocumento";
+import SeletorContrato, { type ContratoOpcao } from "@/components/contratos/SeletorContrato";
 import { TIPOS_TODOS, ROTULO_TIPO_DOCUMENTO } from "@/lib/documentos";
-
-interface ContratoOpcao {
-  id: number;
-  codigo: string | null;
-  inquilino_nome: string | null;
-  imovel_titulo: string | null;
-  imovel_codigo_legado: string | null;
-}
 
 interface Pasta {
   id: number;
@@ -31,49 +24,6 @@ function chip(ativo: boolean) {
   return `px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 ${ativo
     ? "bg-[#0f2e20] text-white border-[#0f2e20] shadow-sm"
     : "bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300"}`;
-}
-
-// Escolha do contrato para anexar um arquivo pela tela de documentos.
-function SeletorContrato({ onEscolher }: { onEscolher: (c: ContratoOpcao) => void }) {
-  const [termo, setTermo] = useState("");
-  const [opcoes, setOpcoes] = useState<ContratoOpcao[]>([]);
-  const [buscando, setBuscando] = useState(false);
-
-  useEffect(() => {
-    if (termo.trim().length < 2) return;
-    const t = setTimeout(async () => {
-      setBuscando(true);
-      try {
-        const r = await fetch(`/api/admin/locacoes?por_pagina=8&q=${encodeURIComponent(termo.trim())}`);
-        const d = await r.json();
-        setOpcoes(d.itens || []);
-      } finally {
-        setBuscando(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [termo]);
-
-  return (
-    <div className="relative">
-      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-      <input value={termo} onChange={(e) => setTermo(e.target.value)} className={`${CLASSE_INPUT} pl-9`}
-        placeholder="Buscar contrato por código, inquilino, proprietário ou endereço..." autoFocus />
-      {buscando && <Loader2 size={15} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
-      {termo.trim().length >= 2 && !buscando && (
-        <div className="absolute z-20 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
-          {opcoes.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Nenhum contrato encontrado.</p>}
-          {opcoes.map((c) => (
-            <button key={c.id} type="button" onClick={() => { onEscolher(c); setTermo(""); setOpcoes([]); }}
-              className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors border-b border-gray-50">
-              <p className="font-bold text-sm text-gray-900">{c.codigo || `#${c.id}`} — {c.inquilino_nome}</p>
-              <p className="text-xs text-gray-500">{c.imovel_titulo || (c.imovel_codigo_legado ? `Imóvel #${c.imovel_codigo_legado}` : "")}</p>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function GestaoDocumentosPage() {
@@ -162,7 +112,7 @@ export default function GestaoDocumentosPage() {
               <EnvioDocumentos vinculo={{ locacao_id: contratoEscolhido.id }} onConcluido={() => setVersao((v) => v + 1)} />
             </>
           ) : (
-            <SeletorContrato onEscolher={setContratoEscolhido} />
+            <SeletorContrato autoFoco onEscolher={setContratoEscolhido} />
           )}
         </div>
       )}

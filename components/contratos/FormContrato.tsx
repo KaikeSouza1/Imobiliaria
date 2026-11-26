@@ -1,24 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, Search, X, Home, AlertCircle, Archive, User, Hash, CalendarRange } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Home, AlertCircle, Archive, User, Hash, CalendarRange, Handshake, KeyRound } from "lucide-react";
 import SeletorCliente, { type ValorCliente } from "./SeletorCliente";
-import { STATUS_CONTRATO, ROTULO_STATUS, finalidadePorTipo } from "@/lib/contratos";
-import { normalizarBusca } from "@/lib/texto";
-
-interface ImovelOpcao {
-  id: number;
-  titulo: string;
-  codigo: string | null;
-  tipo: string;
-  endereco: string | null;
-  bairro: string | null;
-  cidade: string | null;
-  preco: number;
-  proprietario_id: number | null;
-}
+import SeletorImovel, { CartaoImovel, type ImovelOpcao } from "./SeletorImovel";
+import { STATUS_CONTRATO, rotuloStatus, finalidadePorTipo, type TipoContrato } from "@/lib/contratos";
 
 // Dados do contrato como vêm de GET /api/admin/locacoes/[id]
 export interface ContratoCarregado {
@@ -39,6 +27,10 @@ export interface ContratoCarregado {
   locatario_cpf: string | null;
   locatario_email: string | null;
   locatario_telefone: string | null;
+  tipo?: TipoContrato;
+  valor_venda?: number | string | null;
+  forma_pagamento?: string | null;
+  honorarios_percentual?: number | string | null;
   valor_aluguel: number | string;
   dia_vencimento: number;
   data_inicio: string | null;
@@ -63,7 +55,7 @@ function clienteInicial(id: number | null, nome: string | null, codigo: string |
   return id && nome ? { modo: "existente", id, nome, codigo: codigo || undefined } : null;
 }
 
-export default function FormContrato({ contrato, legadoInicial }: { contrato?: ContratoCarregado; legadoInicial?: boolean }) {
+export default function FormContrato({ contrato, legadoInicial, tipoInicial }: { contrato?: ContratoCarregado; legadoInicial?: boolean; tipoInicial?: TipoContrato }) {
   const router = useRouter();
   const editando = !!contrato;
 
@@ -72,11 +64,12 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
   const [salvando, setSalvando] = useState(false);
   const [erros, setErros] = useState<string[]>([]);
 
+  const [tipo, setTipo] = useState<TipoContrato>(contrato?.tipo ?? tipoInicial ?? "locacao");
   const [origem, setOrigem] = useState<"sistema" | "legado">(contrato?.origem ?? (legadoInicial ? "legado" : "sistema"));
   const [imovelForaDoSite, setImovelForaDoSite] = useState(
     !!contrato && !contrato.imovel_id && !!(contrato.imovel_codigo_legado || contrato.imovel_endereco_legado)
   );
-  const [buscaImovel, setBuscaImovel] = useState("");
+  const [imoveisCarregando, setImoveisCarregando] = useState(true);
 
   const [inquilino, setInquilino] = useState<ValorCliente>(() => {
     if (!contrato) return null;
@@ -98,6 +91,9 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
     imovel_codigo_legado: contrato?.imovel_codigo_legado ?? "",
     imovel_endereco_legado: contrato?.imovel_endereco_legado ?? "",
     valor_aluguel: contrato ? String(contrato.valor_aluguel ?? "") : "",
+    valor_venda: contrato?.valor_venda != null ? String(contrato.valor_venda) : "",
+    forma_pagamento: contrato?.forma_pagamento ?? "",
+    honorarios_percentual: contrato?.honorarios_percentual != null ? String(contrato.honorarios_percentual) : "",
     dia_vencimento: String(contrato?.dia_vencimento ?? 10),
     data_inicio: dataCurta(contrato?.data_inicio),
     data_fim: dataCurta(contrato?.data_fim),
@@ -110,7 +106,7 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
   });
 
   useEffect(() => {
-    fetch("/api/imoveis").then((r) => r.json()).then((d) => setImoveis(Array.isArray(d) ? d : []));
+    fetch("/api/imoveis").then((r) => r.json()).then((d) => setImoveis(Array.isArray(d) ? d : [])).finally(() => setImoveisCarregando(false));
     fetch("/api/admin/locacoes/opcoes").then((r) => r.json()).then((d) => setCorretores(d.corretores || []));
   }, []);
 
@@ -120,21 +116,13 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
 
   const imovelSelecionado = imoveis.find((i) => String(i.id) === form.imovel_id);
 
-  const imoveisFiltrados = useMemo(() => {
-    const t = normalizarBusca(buscaImovel);
-    if (t.length < 2) return [];
-    return imoveis
-      .filter((i) => normalizarBusca(`${i.codigo} ${i.titulo} ${i.endereco} ${i.bairro} ${i.cidade}`).includes(t))
-      .slice(0, 8);
-  }, [imoveis, buscaImovel]);
-
   const escolherImovel = async (im: ImovelOpcao) => {
-    setBuscaImovel("");
     setForm((f) => ({
       ...f,
       imovel_id: String(im.id),
       finalidade: f.finalidade || finalidadePorTipo(im.tipo),
-      valor_aluguel: f.valor_aluguel || (im.preco ? String(im.preco) : ""),
+      valor_aluguel: tipo === "locacao" ? f.valor_aluguel || (im.preco ? String(im.preco) : "") : f.valor_aluguel,
+      valor_venda: tipo === "venda" ? f.valor_venda || (im.preco ? String(im.preco) : "") : f.valor_venda,
     }));
     // Se o imóvel já tem proprietário cadastrado, já sugere no contrato.
     if (!proprietario && im.proprietario_id) {
@@ -160,6 +148,7 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
     try {
       const corpo = {
         ...form,
+        tipo,
         origem,
         imovel_id: imovelForaDoSite ? "" : form.imovel_id,
         imovel_codigo_legado: imovelForaDoSite ? form.imovel_codigo_legado : "",
@@ -187,6 +176,7 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
   };
 
   const legado = origem === "legado";
+  const venda = tipo === "venda";
   const voltar = editando ? `/admin/locacoes/${contrato!.id}` : "/admin/locacoes";
 
   return (
@@ -199,15 +189,28 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
           </Link>
           <div>
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-              {editando ? `Editar contrato ${contrato!.codigo ?? ""}` : legado ? "Cadastrar contrato antigo" : "Novo contrato"}
+              {editando
+                ? `Editar contrato ${venda ? "de venda " : ""}${contrato!.codigo ?? ""}`
+                : legado ? `Cadastrar contrato ${venda ? "de venda " : ""}antigo` : venda ? "Novo contrato de venda" : "Novo contrato de locação"}
             </h1>
             <p className="text-gray-500 text-sm">
               {legado
-                ? "Só código, inquilino e imóvel são obrigatórios. O PDF pode ser anexado depois."
+                ? `Só código, ${venda ? "comprador" : "inquilino"} e imóvel são obrigatórios. O PDF pode ser anexado depois.`
                 : "Campos com * são obrigatórios."}
             </p>
           </div>
         </div>
+        {!editando && (
+          <div className="inline-flex bg-gray-100 p-1 rounded-xl self-start lg:self-auto">
+            {(["locacao", "venda"] as const).map((t) => (
+              <button key={t} type="button" onClick={() => setTipo(t)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2
+                  ${tipo === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                {t === "locacao" ? <><KeyRound size={14} /> Locação</> : <><Handshake size={14} /> Venda</>}
+              </button>
+            ))}
+          </div>
+        )}
         {!editando && (
           <div className="inline-flex bg-gray-100 p-1 rounded-xl self-start lg:self-auto">
             {(["sistema", "legado"] as const).map((o) => (
@@ -258,38 +261,9 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
                 )}
               </div>
             ) : imovelSelecionado ? (
-              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-3">
-                <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-green-700 border border-green-100"><Home size={16} /></div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-gray-900 truncate">{imovelSelecionado.codigo ? `#${imovelSelecionado.codigo} — ` : ""}{imovelSelecionado.titulo}</p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {[imovelSelecionado.endereco, imovelSelecionado.bairro, imovelSelecionado.cidade].filter(Boolean).join(", ")}
-                  </p>
-                </div>
-                <button type="button" onClick={() => set("imovel_id", "")}
-                  className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Trocar</button>
-              </div>
+              <CartaoImovel im={imovelSelecionado} onTrocar={() => set("imovel_id", "")} />
             ) : (
-              <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input value={buscaImovel} onChange={(e) => setBuscaImovel(e.target.value)} className={`${CLASSE_INPUT} pl-9`}
-                  placeholder={imoveis.length ? "Buscar por código, título ou endereço..." : "Carregando imóveis..."} />
-                {buscaImovel && (
-                  <button type="button" onClick={() => setBuscaImovel("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X size={14} /></button>
-                )}
-                {buscaImovel.trim().length >= 2 && (
-                  <div className="absolute z-20 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
-                    {imoveisFiltrados.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Nenhum imóvel encontrado.</p>}
-                    {imoveisFiltrados.map((im) => (
-                      <button key={im.id} type="button" onClick={() => escolherImovel(im)}
-                        className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors border-b border-gray-50">
-                        <p className="font-bold text-sm text-gray-900">{im.codigo ? `#${im.codigo} — ` : ""}{im.titulo}</p>
-                        <p className="text-xs text-gray-500">{[im.endereco, im.bairro, im.cidade].filter(Boolean).join(", ")}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <SeletorImovel imoveis={imoveis} carregando={imoveisCarregando} tipoContrato={tipo} onEscolher={escolherImovel} />
             )}
 
             <div className="flex items-center gap-3 flex-wrap">
@@ -308,11 +282,11 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div className={CLASSE_CARD}>
-              <h2 className={CLASSE_TITULO}><User size={14} className="text-green-600" /> Inquilino *</h2>
+              <h2 className={CLASSE_TITULO}><User size={14} className="text-green-600" /> {venda ? "Comprador" : "Inquilino"} *</h2>
               <SeletorCliente papel="inquilino" valor={inquilino} onChange={setInquilino} obrigatorio />
             </div>
             <div className={CLASSE_CARD}>
-              <h2 className={CLASSE_TITULO}><User size={14} className="text-orange-500" /> Proprietário</h2>
+              <h2 className={CLASSE_TITULO}><User size={14} className="text-orange-500" /> {venda ? "Vendedor (proprietário)" : "Proprietário"}</h2>
               <SeletorCliente papel="proprietario" valor={proprietario} onChange={setProprietario} />
             </div>
           </div>
@@ -337,7 +311,7 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
               <div>
                 <label className={CLASSE_LABEL}>Status</label>
                 <select name="status" value={form.status} onChange={handle} className={CLASSE_INPUT}>
-                  {STATUS_CONTRATO.map((s) => <option key={s} value={s}>{ROTULO_STATUS[s]}</option>)}
+                  {STATUS_CONTRATO.map((s) => <option key={s} value={s}>{rotuloStatus(s, tipo)}</option>)}
                 </select>
               </div>
               <div>
@@ -357,6 +331,38 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
             </div>
           </div>
 
+          {venda ? (
+            <div className={CLASSE_CARD}>
+              <h2 className={CLASSE_TITULO}><Handshake size={14} className="text-green-600" /> Condições da venda</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className={CLASSE_LABEL}>Valor da venda (R$){!legado ? " *" : ""}</label>
+                  <input name="valor_venda" type="number" step="0.01" min="0" value={form.valor_venda} onChange={handle} className={CLASSE_INPUT} placeholder="0,00" />
+                </div>
+                <div>
+                  <label className={CLASSE_LABEL}>Data do contrato{!legado ? " *" : ""}</label>
+                  <input name="data_inicio" type="date" value={form.data_inicio} onChange={handle} className={CLASSE_INPUT} />
+                </div>
+                <div>
+                  <label className={CLASSE_LABEL}>Prazo final</label>
+                  <input name="data_fim" type="date" value={form.data_fim} onChange={handle} className={CLASSE_INPUT} />
+                </div>
+                <div>
+                  <label className={CLASSE_LABEL}>Honorários (%)</label>
+                  <input name="honorarios_percentual" type="number" step="0.5" min="0" max="100" value={form.honorarios_percentual} onChange={handle} className={CLASSE_INPUT} placeholder="Ex: 6" />
+                </div>
+                <div>
+                  <label className={CLASSE_LABEL}>Entrega das chaves</label>
+                  <input name="data_entrega_chaves" type="date" value={form.data_entrega_chaves} onChange={handle} className={CLASSE_INPUT} />
+                </div>
+                <div className="col-span-2">
+                  <label className={CLASSE_LABEL}>Forma de pagamento</label>
+                  <textarea name="forma_pagamento" rows={3} value={form.forma_pagamento} onChange={handle} className={CLASSE_INPUT}
+                    placeholder="Ex: à vista, ou entrada de R$ ... e saldo financiado" />
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className={CLASSE_CARD}>
             <h2 className={CLASSE_TITULO}><CalendarRange size={14} className="text-green-600" /> Prazos e valores</h2>
             <div className="grid grid-cols-2 gap-3">
@@ -386,6 +392,7 @@ export default function FormContrato({ contrato, legadoInicial }: { contrato?: C
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
 

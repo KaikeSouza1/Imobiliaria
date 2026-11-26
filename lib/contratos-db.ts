@@ -21,14 +21,14 @@ export async function listarContratos(filtros: FiltrosContrato) {
   const { where, params, porPagina, offset, pagina } = montarFiltroContratos(filtros);
   const res = await query(
     `SELECT
-       l.id, l.codigo, l.status, l.origem, l.valor_aluguel, l.data_inicio, l.data_fim,
+       l.id, l.codigo, l.tipo, l.status, l.origem, l.valor_aluguel, l.valor_venda, l.data_inicio, l.data_fim,
        l.finalidade, l.numero_pasta, l.corretor_responsavel,
        coalesce(inq.nome, l.locatario_nome) AS inquilino_nome,
        prop.nome AS proprietario_nome,
        l.imovel_id, i.codigo AS imovel_codigo, i.titulo AS imovel_titulo,
        i.endereco AS imovel_endereco, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
        l.imovel_codigo_legado, l.imovel_endereco_legado,
-       ${EXPRESSAO_PROXIMO_REAJUSTE} AS proximo_reajuste,
+       CASE WHEN l.tipo = 'locacao' THEN ${EXPRESSAO_PROXIMO_REAJUSTE} END AS proximo_reajuste,
        (SELECT COUNT(*) FROM documentos d WHERE d.locacao_id = l.id AND d.removido_em IS NULL)::int AS total_documentos,
        COUNT(*) OVER()::int AS total_geral
      ${FROM_CONTRATOS}
@@ -53,13 +53,17 @@ export async function listarContratos(filtros: FiltrosContrato) {
 export async function resumoContratos() {
   const res = await query(`
     SELECT
-      COUNT(*)::int AS total,
-      COUNT(*) FILTER (WHERE status = 'ativo')::int AS ativos,
-      COALESCE(SUM(valor_aluguel) FILTER (WHERE status = 'ativo'), 0)::float AS receita_mensal,
+      COUNT(*) FILTER (WHERE tipo = 'locacao')::int AS total,
+      COUNT(*) FILTER (WHERE tipo = 'locacao' AND status = 'ativo')::int AS ativos,
+      COALESCE(SUM(valor_aluguel) FILTER (WHERE tipo = 'locacao' AND status = 'ativo'), 0)::float AS receita_mensal,
       COUNT(*) FILTER (
-        WHERE status = 'ativo'
+        WHERE tipo = 'locacao' AND status = 'ativo'
           AND f_proximo_reajuste(data_inicio, periodo_reajuste_meses, CURRENT_DATE) <= CURRENT_DATE + 30
-      )::int AS reajustes_30_dias
+      )::int AS reajustes_30_dias,
+      COUNT(*) FILTER (WHERE tipo = 'venda')::int AS vendas,
+      COUNT(*) FILTER (WHERE tipo = 'venda' AND status = 'ativo')::int AS vendas_em_andamento,
+      COUNT(*) FILTER (WHERE tipo = 'venda' AND status = 'encerrado')::int AS vendas_concluidas,
+      COALESCE(SUM(valor_venda) FILTER (WHERE tipo = 'venda' AND status = 'encerrado'), 0)::float AS volume_vendido
     FROM locacoes
   `);
   return res.rows[0];
@@ -133,6 +137,7 @@ function traduzirErroBanco(erro: unknown, codigo: string | null): never {
 }
 
 const COLUNAS = [
+  "tipo", "valor_venda", "forma_pagamento", "honorarios_percentual",
   "codigo", "origem", "status", "imovel_id", "imovel_codigo_legado", "imovel_endereco_legado",
   "inquilino_id", "proprietario_id", "locatario_nome", "locatario_cpf", "locatario_email", "locatario_telefone",
   "valor_aluguel", "dia_vencimento", "data_inicio", "data_fim", "data_entrega_chaves",
@@ -166,6 +171,22 @@ async function montarLinha(c: PoolClient, d: DadosContrato) {
   } as Record<(typeof COLUNAS)[number], unknown>;
 }
 
+// Reflete o contrato no status do imóvel do site.
+//  Locação ativa -> alugado; locação encerrada/rescindida -> volta a disponível (se estava alugado).
+//  Venda concluída -> vendido. Venda em andamento ou cancelada não mexe no imóvel.
+async function ajustarStatusDoImovel(c: PoolClient, d: DadosContrato) {
+  if (!d.imovel_id) return;
+  if (d.tipo === "venda") {
+    if (d.status === "encerrado") await c.query("UPDATE imoveis SET status = 'vendido' WHERE id = $1", [d.imovel_id]);
+    return;
+  }
+  if (d.status === "ativo") {
+    await c.query("UPDATE imoveis SET status = 'alugado' WHERE id = $1", [d.imovel_id]);
+  } else {
+    await c.query("UPDATE imoveis SET status = 'disponivel' WHERE id = $1 AND status = 'alugado'", [d.imovel_id]);
+  }
+}
+
 export async function criarContrato(d: DadosContrato) {
   try {
     return await transacao(async (c) => {
@@ -179,13 +200,10 @@ export async function criarContrato(d: DadosContrato) {
       );
       const criado = res.rows[0];
       if (!criado.codigo) {
-        criado.codigo = codigoAutomatico(criado.id);
+        criado.codigo = codigoAutomatico(criado.id, d.tipo);
         await c.query("UPDATE locacoes SET codigo = $1 WHERE id = $2", [criado.codigo, criado.id]);
       }
-      // Mantém o comportamento anterior: contrato ativo marca o imóvel como alugado.
-      if (d.imovel_id && d.status === "ativo") {
-        await c.query("UPDATE imoveis SET status = 'alugado' WHERE id = $1", [d.imovel_id]);
-      }
+      await ajustarStatusDoImovel(c, d);
       return criado as { id: number; codigo: string };
     });
   } catch (erro) {
@@ -199,16 +217,13 @@ export async function atualizarContrato(id: number, d: DadosContrato) {
       const atual = await c.query("SELECT id, codigo FROM locacoes WHERE id = $1 FOR UPDATE", [id]);
       if (!atual.rows[0]) throw new ErroContrato("Contrato não encontrado.", 404);
 
-      const linha = await montarLinha(c, { ...d, codigo: d.codigo ?? atual.rows[0].codigo ?? codigoAutomatico(id) });
+      const linha = await montarLinha(c, { ...d, codigo: d.codigo ?? atual.rows[0].codigo ?? codigoAutomatico(id, d.tipo) });
       const sets = COLUNAS.map((k, i) => `${k} = $${i + 1}`).join(", ");
       await c.query(
         `UPDATE locacoes SET ${sets}, atualizado_em = NOW() WHERE id = $${COLUNAS.length + 1}`,
         [...COLUNAS.map((k) => linha[k]), id]
       );
-      if (d.imovel_id && d.status !== "ativo") {
-        // Comportamento anterior: ao encerrar, o imóvel volta a ficar disponível.
-        await c.query("UPDATE imoveis SET status = 'disponivel' WHERE id = $1 AND status = 'alugado'", [d.imovel_id]);
-      }
+      await ajustarStatusDoImovel(c, d);
       return { id };
     });
   } catch (erro) {

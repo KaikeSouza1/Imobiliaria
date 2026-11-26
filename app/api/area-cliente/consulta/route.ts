@@ -19,7 +19,7 @@ export async function POST(req: Request) {
               i.bairro AS imovel_bairro, i.imagem_url AS imovel_imagem_url
        FROM locacoes l
        LEFT JOIN imoveis i ON i.id = l.imovel_id
-       WHERE l.locatario_cpf = $1
+       WHERE l.locatario_cpf = $1 AND l.tipo = 'locacao'
        ORDER BY l.criado_em DESC`,
       [cpf]
     );

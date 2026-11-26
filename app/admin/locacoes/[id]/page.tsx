@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import EnvioDocumentos from "@/components/documentos/EnvioDocumentos";
 import ItemDocumento from "@/components/documentos/ItemDocumento";
-import { ROTULO_STATUS, type StatusContrato } from "@/lib/contratos";
+import { rotuloStatus, type StatusContrato } from "@/lib/contratos";
 import { formatarData, formatarMoeda, mesesEntre, descreverPrazo, formatarCpfCnpj } from "@/lib/texto";
 
 interface Documento {
@@ -24,6 +24,10 @@ interface Documento {
 interface Contrato {
   id: number;
   codigo: string | null;
+  tipo: "locacao" | "venda";
+  valor_venda: number | null;
+  forma_pagamento: string | null;
+  honorarios_percentual: number | null;
   status: StatusContrato;
   origem: "sistema" | "legado";
   valor_aluguel: number;
@@ -56,6 +60,7 @@ interface Contrato {
   inq_cpf_cnpj: string | null;
   inq_telefone: string | null;
   inq_email: string | null;
+  prop_id: number | null;
   prop_nome: string | null;
   prop_codigo: string | null;
   prop_cpf_cnpj: string | null;
@@ -165,6 +170,7 @@ function DetalheContrato() {
     ? [c.imovel_endereco, c.imovel_bairro, c.imovel_cidade].filter(Boolean).join(", ")
     : c.imovel_endereco_legado;
   const prazoMeses = mesesEntre(c.data_inicio, c.data_fim);
+  const venda = c.tipo === "venda";
 
   return (
     <div className="max-w-5xl mx-auto pb-20 px-4 space-y-6">
@@ -186,8 +192,11 @@ function DetalheContrato() {
               <span className="text-xs font-black text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-lg">
                 {c.codigo || `#${c.id}`}
               </span>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${venda ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                {venda ? "Venda" : "Locação"}
+              </span>
               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase text-white ${COR_STATUS[c.status] ?? "bg-gray-500"}`}>
-                {ROTULO_STATUS[c.status] ?? c.status}
+                {rotuloStatus(c.status, c.tipo)}
               </span>
               {c.origem === "legado" && (
                 <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 flex items-center gap-1">
@@ -225,7 +234,23 @@ function DetalheContrato() {
 
       {aba === "dados" ? (
         <div className="space-y-6">
-          {/* PRAZOS */}
+          {venda ? (
+            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-8">
+              <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Condições da venda</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <Campo rotulo="Valor da venda" valor={<span className="text-green-700 font-black">{formatarMoeda(c.valor_venda)}</span>} />
+                <Campo rotulo="Data do contrato" valor={formatarData(c.data_inicio)} />
+                <Campo rotulo="Prazo final" valor={formatarData(c.data_fim)} />
+                <Campo rotulo="Entrega das chaves" valor={formatarData(c.data_entrega_chaves)} icone={KeyRound} />
+                <Campo rotulo="Honorários" valor={c.honorarios_percentual != null ? `${c.honorarios_percentual}%` : null} />
+                <Campo rotulo="Valor dos honorários"
+                  valor={c.honorarios_percentual != null && c.valor_venda ? formatarMoeda((Number(c.valor_venda) * Number(c.honorarios_percentual)) / 100) : null} />
+                <div className="col-span-2">
+                  <Campo rotulo="Forma de pagamento" valor={c.forma_pagamento ? <span className="whitespace-pre-line font-medium">{c.forma_pagamento}</span> : null} />
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-8">
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Prazos</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -239,6 +264,7 @@ function DetalheContrato() {
               <Campo rotulo="Vencimento" valor={`Todo dia ${c.dia_vencimento}`} />
             </div>
           </div>
+          )}
 
           {/* RESPONSÁVEIS E IMÓVEL */}
           <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-8">
@@ -255,9 +281,9 @@ function DetalheContrato() {
           <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-8">
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Partes</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CartaoPessoa titulo="Inquilino" nome={inquilinoNome} codigo={c.inq_codigo}
+              <CartaoPessoa titulo={venda ? "Comprador" : "Inquilino"} nome={inquilinoNome} codigo={c.inq_codigo}
                 documento={c.inq_cpf_cnpj || c.locatario_cpf} telefone={c.inq_telefone || c.locatario_telefone} email={c.inq_email || c.locatario_email} />
-              <CartaoPessoa titulo="Proprietário" nome={c.prop_nome} codigo={c.prop_codigo}
+              <CartaoPessoa titulo={venda ? "Vendedor (proprietário)" : "Proprietário"} nome={c.prop_nome} codigo={c.prop_codigo}
                 documento={c.prop_cpf_cnpj} telefone={c.prop_telefone} email={c.prop_email} />
             </div>
           </div>
@@ -275,10 +301,19 @@ function DetalheContrato() {
             <Paperclip size={16} className="text-green-600" /> Documentos do contrato
           </h2>
           <div className="mb-6 flex flex-col gap-4">
-            <Link href={`/admin/documentos/gerar?locacao_id=${c.id}`}
-              className="self-start flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all">
-              <FilePlus2 size={16} /> Gerar documento (contrato, termo, notificação)
-            </Link>
+            {venda ? (
+              c.prop_id && (
+                <Link href={`/admin/documentos/gerar?modelo=intermediacao_venda&cliente_id=${c.prop_id}${c.imovel_id ? `&imovel_id=${c.imovel_id}` : ""}`}
+                  className="self-start flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all">
+                  <FilePlus2 size={16} /> Gerar contrato de intermediação de venda
+                </Link>
+              )
+            ) : (
+              <Link href={`/admin/documentos/gerar?locacao_id=${c.id}`}
+                className="self-start flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all">
+                <FilePlus2 size={16} /> Gerar documento (contrato, termo, notificação)
+              </Link>
+            )}
             <EnvioDocumentos vinculo={{ locacao_id: c.id }} onConcluido={() => setVersao((v) => v + 1)} />
           </div>
 

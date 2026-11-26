@@ -10,14 +10,16 @@ import EnvioDocumentos from "@/components/documentos/EnvioDocumentos";
 import ItemDocumento, { type DocumentoResumo } from "@/components/documentos/ItemDocumento";
 import type { ClienteCarregado } from "@/components/clientes/FormCliente";
 import { enderecoCompleto } from "@/lib/clientes";
-import { ROTULO_STATUS } from "@/lib/contratos";
+import { rotuloStatus } from "@/lib/contratos";
 import { formatarCpfCnpj, formatarData, formatarMoeda } from "@/lib/texto";
 
 interface ContratoDoCliente {
   id: number;
   codigo: string | null;
   status: string;
+  tipo: "locacao" | "venda";
   valor_aluguel: number;
+  valor_venda: number | null;
   data_inicio: string | null;
   data_fim: string | null;
   papel: "inquilino" | "proprietario";
@@ -178,17 +180,19 @@ function PainelCliente() {
                 <div className="md:w-36 flex items-center gap-2">
                   <span className="font-black text-gray-900 text-sm">{k.codigo || `#${k.id}`}</span>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase text-white ${COR_STATUS[k.status] ?? "bg-gray-500"}`}>
-                    {ROTULO_STATUS[k.status as keyof typeof ROTULO_STATUS] ?? k.status}
+                    {rotuloStatus(k.status, k.tipo)}
                   </span>
                 </div>
                 <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg w-fit ${k.papel === "inquilino" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}>
-                  {k.papel === "inquilino" ? `Inquilino · prop. ${k.proprietario_nome || "—"}` : `Proprietário · inq. ${k.inquilino_nome || "—"}`}
+                  {k.tipo === "venda"
+                    ? k.papel === "inquilino" ? `Venda · comprador · vend. ${k.proprietario_nome || "—"}` : `Venda · vendedor · comp. ${k.inquilino_nome || "—"}`
+                    : k.papel === "inquilino" ? `Inquilino · prop. ${k.proprietario_nome || "—"}` : `Proprietário · inq. ${k.inquilino_nome || "—"}`}
                 </span>
                 <span className="flex-1 text-xs text-gray-600 truncate">
                   {[k.imovel_codigo && `#${k.imovel_codigo}`, k.imovel_titulo, k.imovel_endereco].filter(Boolean).join(" — ")}
                 </span>
                 <span className="text-xs text-gray-500 whitespace-nowrap">{formatarData(k.data_inicio)} a {formatarData(k.data_fim)}</span>
-                <span className="text-sm font-black text-green-700 whitespace-nowrap">{formatarMoeda(k.valor_aluguel)}</span>
+                <span className="text-sm font-black text-green-700 whitespace-nowrap">{formatarMoeda(k.tipo === "venda" ? k.valor_venda : k.valor_aluguel)}</span>
               </Link>
             ))}
           </div>

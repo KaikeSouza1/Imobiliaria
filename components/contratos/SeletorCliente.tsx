@@ -9,6 +9,9 @@ export type ValorCliente =
   | null;
 
 interface ClienteOpcao {
+  eh_inquilino?: boolean;
+  eh_proprietario?: boolean;
+  total_contratos?: number;
   id: number;
   codigo: string | null;
   nome: string;
@@ -36,25 +39,48 @@ export default function SeletorCliente({
   const [buscando, setBuscando] = useState(false);
   const [aberto, setAberto] = useState(false);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ultimaBusca = useRef(0);
+  const [ativoIdx, setAtivoIdx] = useState(0);
+  const [pesquisou, setPesquisou] = useState(false);
 
+  // Ao abrir (foco) mostra os cadastros mais recentes; ao digitar filtra a cada letra.
   useEffect(() => {
+    if (!aberto) return;
     if (temporizador.current) clearTimeout(temporizador.current);
-    if (termo.trim().length < 2) {
-      setOpcoes([]);
-      return;
-    }
+    const id = ++ultimaBusca.current;
     temporizador.current = setTimeout(async () => {
       setBuscando(true);
       try {
         // Busca em todos os clientes: quem é proprietário também pode ser inquilino.
         const res = await fetch(`/api/admin/clientes/sugestoes?q=${encodeURIComponent(termo.trim())}`);
         const data = await res.json();
-        setOpcoes(Array.isArray(data) ? data : []);
+        if (id === ultimaBusca.current) { setOpcoes(Array.isArray(data) ? data : []); setPesquisou(true); setAtivoIdx(0); }
       } finally {
-        setBuscando(false);
+        if (id === ultimaBusca.current) setBuscando(false);
       }
-    }, 300);
-  }, [termo]);
+    }, termo ? 120 : 0);
+    return () => { if (temporizador.current) clearTimeout(temporizador.current); };
+  }, [termo, aberto]);
+
+  const escolherCliente = (c: ClienteOpcao) => {
+    onChange({ modo: "existente", id: c.id, nome: c.nome, documento: c.documento, codigo: c.codigo || undefined });
+    setTermo("");
+    setAberto(false);
+  };
+  const cadastrarNovo = () => {
+    onChange({ modo: "novo", nome: termo.trim(), cpf_cnpj: "", telefone: "", email: "" });
+    setTermo("");
+    setAberto(false);
+  };
+  const teclado = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); setAberto(true); setAtivoIdx((i) => Math.min(i + 1, opcoes.length)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setAtivoIdx((i) => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter" && aberto) {
+      e.preventDefault();
+      if (opcoes[ativoIdx]) escolherCliente(opcoes[ativoIdx]);
+      else if (termo.trim()) cadastrarNovo();
+    } else if (e.key === "Escape") setAberto(false);
+  };
 
   if (valor?.modo === "existente") {
     return (
@@ -112,6 +138,8 @@ export default function SeletorCliente({
     );
   }
 
+  const iniciais = (nome: string) => nome.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+
   return (
     <div className="relative">
       <div className="relative">
@@ -121,41 +149,64 @@ export default function SeletorCliente({
           onChange={(e) => { setTermo(e.target.value); setAberto(true); }}
           onFocus={() => setAberto(true)}
           onBlur={() => setTimeout(() => setAberto(false), 150)}
+          onKeyDown={teclado}
+          role="combobox"
+          aria-expanded={aberto}
+          aria-controls="lista-clientes"
+          aria-autocomplete="list"
+          aria-label={`Buscar ${rotulo}`}
           className={`${CLASSE_INPUT} pl-9`}
-          placeholder={`Buscar ${rotulo} por nome, código ou CPF...`}
+          placeholder="Clique ou digite nome, código ou CPF..."
         />
         {buscando && <Loader2 size={15} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
         {!buscando && termo && (
-          <button type="button" onClick={() => setTermo("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setTermo("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
             <X size={14} />
           </button>
         )}
       </div>
 
-      {aberto && termo.trim().length >= 2 && (
-        <div className="absolute z-20 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
-          {opcoes.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange({ modo: "existente", id: c.id, nome: c.nome, documento: c.documento, codigo: c.codigo || undefined }); setTermo(""); }}
-              className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors border-b border-gray-50"
-            >
-              <p className="font-bold text-sm text-gray-900">{c.nome}</p>
-              <p className="text-xs text-gray-500">{[c.codigo, c.documento, c.telefone].filter(Boolean).join(" · ")}</p>
-            </button>
-          ))}
-          {!buscando && opcoes.length === 0 && (
-            <p className="px-4 py-3 text-sm text-gray-400">Nenhum cliente encontrado.</p>
-          )}
+      {aberto && (
+        <div className="absolute z-30 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden" onMouseDown={(e) => e.preventDefault()}>
+          <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/70 text-[11px] text-gray-400 font-bold flex items-center justify-between">
+            <span>{termo.trim() ? "Resultados" : "Cadastrados mais recentemente"}</span>
+            {pesquisou && <span>{opcoes.length}{opcoes.length >= 10 ? "+" : ""}</span>}
+          </div>
+          <div className="max-h-80 overflow-y-auto" id="lista-clientes" role="listbox">
+            {opcoes.map((c, i) => (
+              <button
+                key={c.id}
+                type="button"
+                role="option"
+                aria-selected={i === ativoIdx}
+                onClick={() => escolherCliente(c)}
+                onMouseEnter={() => setAtivoIdx(i)}
+                className={`w-full text-left flex items-center gap-3 px-3 py-2.5 border-b border-gray-50 transition-colors ${i === ativoIdx ? "bg-green-50" : "hover:bg-green-50/60"}`}
+              >
+                <div className="w-9 h-9 rounded-full bg-green-100 text-green-800 text-xs font-black flex items-center justify-center flex-shrink-0">{iniciais(c.nome)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-gray-900 truncate">{c.nome}</p>
+                  <p className="text-xs text-gray-500 truncate">{[c.codigo, c.documento, c.telefone].filter(Boolean).join(" · ") || "Sem documento ou telefone"}</p>
+                </div>
+                <div className="flex flex-col items-end gap-0.5">
+                  <div className="flex gap-1">
+                    {c.eh_inquilino && <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-green-100 text-green-800">Inq.</span>}
+                    {c.eh_proprietario && <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-orange-100 text-orange-800">Prop.</span>}
+                  </div>
+                  {typeof c.total_contratos === "number" && <span className="text-[10px] text-gray-400 font-bold">{c.total_contratos} contrato{c.total_contratos !== 1 ? "s" : ""}</span>}
+                </div>
+              </button>
+            ))}
+            {!buscando && pesquisou && opcoes.length === 0 && (
+              <p className="px-4 py-3 text-sm text-gray-400">{termo.trim() ? "Nenhum cliente encontrado com esse nome." : "Nenhum cliente cadastrado ainda."}</p>
+            )}
+          </div>
           <button
             type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => { onChange({ modo: "novo", nome: termo.trim(), cpf_cnpj: "", telefone: "", email: "" }); setTermo(""); }}
-            className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-green-50 transition-colors text-sm font-bold text-green-700 flex items-center gap-2"
+            onClick={cadastrarNovo}
+            className={`w-full text-left px-4 py-3 transition-colors text-sm font-bold text-green-700 flex items-center gap-2 ${ativoIdx === opcoes.length ? "bg-green-50" : "bg-gray-50 hover:bg-green-50"}`}
           >
-            <UserPlus size={14} /> Cadastrar novo {rotulo}: “{termo.trim()}”
+            <UserPlus size={14} /> {termo.trim() ? `Cadastrar novo ${rotulo}: “${termo.trim()}”` : `Cadastrar novo ${rotulo}`}
           </button>
         </div>
       )}

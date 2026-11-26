@@ -48,7 +48,7 @@ describe("montarFiltroContratos", () => {
   it("combina filtros com AND e numera os parâmetros em ordem", () => {
     const r = montarFiltroContratos({ inquilino: "ana", status: "ativo", reajuste_de: "2026-01-01", reajuste_ate: "2026-12-31" });
     expect(r.params).toEqual(["%ana%", "ativo", "2026-01-01", "2026-12-31"]);
-    expect(r.where.split(" AND ")).toHaveLength(5); // inquilino = pré-filtro indexado + campo exato
+    expect(r.where.split(" AND ")).toHaveLength(6); // inquilino (2) + status + "só locação" + 2 datas
     expect(r.where).toContain("l.status = $2");
     expect(r.where).toContain("f_proximo_reajuste(l.data_inicio, l.periodo_reajuste_meses, CURRENT_DATE) >= $3::date");
   });
@@ -96,5 +96,22 @@ describe("texto", () => {
   it("mascara CPF e formata data sem fuso", () => {
     expect(mascararCpfCnpj("00000000191")).toBe("***.000.001-**");
     expect(formatarData("2026-03-01T00:00:00.000Z")).toBe("01/03/2026");
+  });
+});
+
+describe("filtro por tipo de contrato", () => {
+  it("filtra venda/locação e ignora valor inválido", () => {
+    const r = montarFiltroContratos({ tipo: "venda", status: "encerrado" });
+    expect(r.where).toContain("l.tipo = $1");
+    expect(r.params).toEqual(["venda", "encerrado"]);
+    expect(montarFiltroContratos({ tipo: "hackeado" }).where).toBe("");
+  });
+  it("filtro de reajuste deixa as vendas de fora", () => {
+    expect(montarFiltroContratos({ reajuste_de: "2026-01-01" }).where).toContain("l.tipo = 'locacao'");
+    expect(montarFiltroContratos({ reajuste_ate: "2026-12-31" }).where).toContain("l.tipo = 'locacao'");
+    expect(montarFiltroContratos({}).where).not.toContain("tipo");
+  });
+  it("lê o tipo da URL", () => {
+    expect(filtrosDaUrl(new URLSearchParams("tipo=venda")).tipo).toBe("venda");
   });
 });
